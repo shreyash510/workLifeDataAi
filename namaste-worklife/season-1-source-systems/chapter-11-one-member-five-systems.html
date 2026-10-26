@@ -1,0 +1,265 @@
+<h2>Chapter 11 — One Member, Five Systems: IDs, Matching &amp; the Final Exam</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>This is the Season 1 finale. 🎬 You've now used every source system: Excel, Nexudus, ACT, NetSuite and HubSpot. Today we put them side by side and follow <b>one member through all five</b>. You'll see the single hardest problem in this whole project, <b>identity</b>, and then solve the 10 exam questions from Chapter 05 with everything you've learned.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Priya in five systems</li>
+    <li>Why there's no shared ID (and why that's normal)</li>
+    <li>Matching: exact keys, normalised keys, fuzzy matching</li>
+    <li>Lab 11.1: Build the crosswalk table by hand</li>
+    <li>Lab 11.2: Normalisation rules in SQL</li>
+    <li>The grain problem: person vs company vs site</li>
+    <li>The final exam: all 10 answers, with workings</li>
+    <li>The "questions for the client" list from Season 1</li>
+    <li>The full map of Work.Life's data</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. Priya in Five Systems</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>System</th><th>How Priya appears</th><th>ID</th><th>What it knows about her</th></tr>
+<tr><td><b>Nexudus</b></td><td>Priya Sharma, <code>priya@pixelchai.co.uk</code>, team Pixel Chai Studio</td><td>Customer M001, Team C001</td><td>Contracts K001 → K002, bookings, invoices</td></tr>
+<tr><td><b>Act!</b></td><td>Priya Sharma, <code>Priya.Sharma@pixelchai.co.uk</code>, "Pixel Chai Studio <b>Ltd</b>"</td><td>Act! contact (no Nexudus ID)</td><td>Came from website, upgrade deal, 7.7% discount</td></tr>
+<tr><td><b>HubSpot</b></td><td>Merged contact, <code>nexudus_customer_id = M001</code></td><td>HubSpot contact ID</td><td>Lifecycle "Customer", deals, notes</td></tr>
+<tr><td><b>NetSuite</b></td><td>Not Priya at all, but customer "Pixel Chai Studio Ltd"</td><td>NetSuite customer ID</td><td>Invoices, £90 credit memo, payments</td></tr>
+<tr><td><b>ACT365</b></td><td>Cardholder CH-1001, card 04A1B2C301</td><td>CH-1001 (+ email)</td><td>Taps in ~90% of working days</td></tr>
+<tr><td><b>Excel</b></td><td>Not there at all (site-level only)</td><td>—</td><td>Soho budget she's part of</td></tr>
+</table>
+
+<p>Five systems, five IDs, three spellings, and in NetSuite she's not even a person, she's a company. Welcome to real-world data. 😄</p>
+
+<hr/>
+
+<h3>2. Why There's No Shared ID</h3>
+
+<p>Each system was bought at a different time, by a different team, to do a different job. Nobody designed them to share a key. That's <b>normal</b> in every company. The warehouse's job is to create the shared key.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   THE CROSSWALK (a.k.a. identity map, xref table)           │
+│                                                             │
+│   member_key | nexudus_id | hubspot_id | act_id | act365_id │
+│   ───────────┼────────────┼────────────┼────────┼────────── │
+│   MBR-0001   | M001       | 5512       | A-117  | CH-1001   │
+│                                                             │
+│   OUR key. Never changes. Every model joins on it.          │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>3. Three Ways to Match</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Method</th><th>How</th><th>Example</th><th>Confidence</th></tr>
+<tr><td><b>1. Exact ID</b></td><td>One system stores the other's ID</td><td>HubSpot <code>nexudus_customer_id = M001</code>; ACT365 cardholder has Nexudus email</td><td>✅ High</td></tr>
+<tr><td><b>2. Normalised key</b></td><td>Clean the text, then match exactly</td><td>"Green Root Foods Ltd" → <code>greenrootfoods</code> = "GreenRoot Foods" → <code>greenrootfoods</code></td><td>🟡 Medium–high</td></tr>
+<tr><td><b>3. Fuzzy</b></td><td>Similarity score on names/emails</td><td>"Priya Sharma @pixelchai.co.uk" ≈ "priya @pixelchai.co.uk"</td><td>🟠 Needs human review</td></tr>
+</table>
+
+<p><b>Golden rule:</b> use method 1 wherever possible. Push the business to <b>store IDs across systems</b> (like the HubSpot property in Chapter 10). Methods 2 and 3 are for cleaning up the past, not for running the future.</p>
+
+<hr/>
+
+<h3>4. Lab 11.1 — Build the Crosswalk by Hand</h3>
+
+<p>In Excel, create a <code>Crosswalk_Company</code> table with one row per real company:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>company_key</th><th>Nexudus team</th><th>Act! company</th><th>NetSuite customer</th><th>Match method</th></tr>
+<tr><td>CO-01</td><td>Pixel Chai Studio (C001)</td><td>Pixel Chai Studio Ltd</td><td>Pixel Chai Studio Ltd</td><td>Normalised name</td></tr>
+<tr><td>CO-02</td><td>Brightline Legal (C002)</td><td>Brightline Legal LLP</td><td>(none in Sep, they left)</td><td>Normalised name</td></tr>
+<tr><td>CO-03</td><td>Nomad Analytics (C003)</td><td>Nomad Analytics</td><td>Nomad Analytics</td><td>Exact name</td></tr>
+<tr><td>CO-04</td><td>GreenRoot Foods (C004)</td><td>GreenRoot Foods Ltd</td><td>Green Root Foods Ltd</td><td>Normalised name</td></tr>
+<tr><td>CO-05</td><td>Kite &amp; Key Recruitment (C005)</td><td>Kite &amp; Key Recruitment</td><td>Kite and Key Recruitment Ltd</td><td>Normalised name (&amp; → and)</td></tr>
+<tr><td>CO-06</td><td>(not a member)</td><td>Ortho Robotics</td><td>—</td><td>Prospect only</td></tr>
+<tr><td>CO-07</td><td>(not a member)</td><td>Lumen Yoga</td><td>—</td><td>Lost prospect</td></tr>
+</table>
+
+<p>Then a <code>Crosswalk_Person</code> table for the 5 people who appear in Act! (Priya, Daniel, Ravi, Emma, Fatima). Match on <b>email domain + normalised full name</b>, because Act!'s emails use <code>first.last@</code> while Nexudus uses <code>first@</code>.</p>
+
+<p>Notice two things:</p>
+<ul>
+    <li><b>Prospects have no Nexudus ID.</b> The crosswalk must allow "CRM-only" companies, or pipeline analysis breaks.</li>
+    <li><b>NetSuite is company-level.</b> You can do revenue per company, never revenue per person. That's fine; know it.</li>
+</ul>
+
+<hr/>
+
+<h3>5. Lab 11.2 — Normalisation Rules in SQL</h3>
+
+<p>Here's the BigQuery SQL we'll use in Season 2. Read it now so it feels familiar:</p>
+
+<pre>
+-- Normalise a company name into a matching key
+CREATE TEMP FUNCTION company_match_key(name STRING) AS (
+  REGEXP_REPLACE(                                   -- 4. drop everything but a-z0-9
+    REGEXP_REPLACE(                                 -- 3. drop legal suffixes
+      REPLACE(LOWER(TRIM(name)), '&amp;', 'and'),       -- 1+2. lowercase, &amp; → and
+      r'\b(ltd|limited|llp|plc|inc)\b\.?', ''),
+    r'[^a-z0-9]', '')
+);
+
+SELECT
+  'Green Root Foods Ltd'          AS original, company_match_key('Green Root Foods Ltd')          AS key  -- greenrootfoods
+UNION ALL SELECT
+  'GreenRoot Foods',                          company_match_key('GreenRoot Foods')                        -- greenrootfoods
+UNION ALL SELECT
+  'Kite and Key Recruitment Ltd',             company_match_key('Kite and Key Recruitment Ltd')           -- kiteandkeyrecruitment
+UNION ALL SELECT
+  'Kite &amp; Key Recruitment',                   company_match_key('Kite &amp; Key Recruitment');               -- kiteandkeyrecruitment
+
+-- Normalise an email: lowercase + trim (never change the local part!)
+-- 'Priya.Sharma@PixelChai.co.uk' → 'priya.sharma@pixelchai.co.uk'
+-- Domain for company matching: SPLIT(LOWER(email), '@')[OFFSET(1)] → 'pixelchai.co.uk'
+</pre>
+
+<p>⚠️ Normalised keys can create <b>false matches</b>: "Nomad Analytics" and "Nomad Analytics Group" are different companies but close. Always keep a <b>manual override table</b> (owned by a person, documented) for the edge cases.</p>
+
+<hr/>
+
+<h3>6. The Grain Problem</h3>
+
+<p><b>Grain</b> = what one row means. Each system has a different grain, and mixing them is the #1 source of wrong numbers:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>System / file</th><th>One row = </th></tr>
+<tr><td>Nexudus contracts</td><td>one contract (company × resource × period)</td></tr>
+<tr><td>Nexudus members</td><td>one person</td></tr>
+<tr><td>Nexudus bookings</td><td>one booking</td></tr>
+<tr><td>NetSuite GL</td><td>one accounting line (company-level customer)</td></tr>
+<tr><td>Act!/HubSpot deals</td><td>one opportunity</td></tr>
+<tr><td>ACT365 events</td><td>one door tap</td></tr>
+<tr><td>Excel budget</td><td>one site × month</td></tr>
+</table>
+
+<p>Example bug: join <code>members</code> (6 GreenRoot people) to <code>contracts</code> (1 GreenRoot contract) on company, then <code>SUM(monthly_price)</code> → £2,700 × 6 = <b>£16,200</b> "MRR". 💥 The fix: aggregate to the same grain <b>before</b> joining. In the warehouse we'll build facts at a clear grain (e.g. <code>fct_site_month</code>) and the AI will query those, not raw joins.</p>
+
+<hr/>
+
+<h3>7. The Final Exam — Answers</h3>
+
+<p>Snapshot date 30 Sep 2026. Try them yourself first, then check.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Question</th><th>Answer</th><th>Workings / systems</th></tr>
+<tr><td>1</td><td>Active members &amp; companies per site</td><td>Soho: <b>6 members, 3 companies</b>. Reading: <b>6 members, 1 company</b>.</td><td>Nexudus contracts active on date (K002, K004, K007, K005) → teams → people</td></tr>
+<tr><td>2</td><td>Soho desk &amp; office occupancy</td><td>Desk: 6 / 34 = <b>17.6%</b>. Office: 1 / 3 = <b>33%</b>.</td><td>4 office desks + 2 hot-desk members; sellable desks from Excel</td></tr>
+<tr><td>3</td><td>MRR per site (Sep)</td><td>Soho <b>£3,040</b>, Reading <b>£2,700</b></td><td>2,400 + 320 + 320; 2,700</td></tr>
+<tr><td>4</td><td>Soho recognised revenue, and why ≠ Nexudus</td><td><b>£3,475</b> vs £3,565 invoiced</td><td>−£90 credit memo CN-2609-01 exists only in NetSuite</td></tr>
+<tr><td>5</td><td>Is Soho profitable? Why not?</td><td>No. Contribution <b>−£4,175</b>; after central <b>−£5,175</b>. (Reading: +£450 / −£50.)</td><td>Revenue 3,475 − costs 7,650. Office 102 empty all year (£5,000/month list), 103 empty since Brightline left (£1,400), 18 of 20 hot desks unsold, while costs are fixed.</td></tr>
+<tr><td>6</td><td>Soho vs budget (Sep)</td><td>Revenue <b>−£5,725 (−62%)</b>; costs on budget (£7,650)</td><td>NetSuite actual vs Excel budget, through the site mapping (Soho ↔ SOHO)</td></tr>
+<tr><td>7</td><td>Members churned in 2026</td><td><b>1 company (Brightline), 2 people, £1,400 MRR</b></td><td>3 contracts ended: K001 = upgrade, K006 = transfer, K003 = churn</td></tr>
+<tr><td>8</td><td>Why did Brightline leave?</td><td>"Moving to hybrid; downsizing to home working"</td><td>Act! / HubSpot lost reason. Not in Nexudus.</td></tr>
+<tr><td>9</td><td>Open pipeline &amp; at-risk renewal</td><td><b>£7,000/month</b> open. <b>GreenRoot</b> renewal at risk.</td><td>CRM: £2,800 + £4,200. ACT365: GreenRoot attendance 73% → 23% → ~0.</td></tr>
+<tr><td>10</td><td>Brick Lane utilisation (Sep)</td><td>9 / 220 = <b>4.1%</b></td><td>5 bookings, 9 hours; 22 working days × 10 hours</td></tr>
+</table>
+
+<p>Look at what each answer needed:</p>
+<pre>
+   Q1  Nexudus                      Q6  NetSuite + Excel + site mapping
+   Q2  Nexudus + Excel              Q7  Nexudus (+ classification logic)
+   Q3  Nexudus                      Q8  CRM
+   Q4  NetSuite vs Nexudus          Q9  CRM + ACT365
+   Q5  NetSuite + Nexudus + Excel   Q10 Nexudus + opening hours
+
+   7 of 10 questions need MORE THAN ONE SYSTEM.
+   That's why Work.Life has a warehouse, and why the AI must sit on the warehouse,
+   not on any single source system.
+</pre>
+
+<p>And here's the bigger lesson: these 10 questions + your answers are a <b>golden test set</b>. In Season 3, before any leadership team member is allowed to trust the AI, we'll ask it exactly these kinds of questions and compare its answers to answers we've verified by hand. That's the brief's <b>"accuracy is a launch gate"</b>, in practice. You just built version 1. 🎯</p>
+
+<hr/>
+
+<h3>8. Questions for the Client (from Season 1)</h3>
+
+<p>Every "we don't know yet" from the labs, in one list. This is real, useful output for the supplier response:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Question</th><th>Why it matters</th></tr>
+<tr><td>1</td><td>Is "ACT" the ACT365 access system, the Act! CRM, or something else? What data from it flows today?</td><td>Different data, different privacy rules</td></tr>
+<tr><td>2</td><td>How is Nexudus extracted today: Python on the API, or the native BigQuery integration?</td><td>Maintenance vs £/location cost</td></tr>
+<tr><td>3</td><td>How do Nexudus invoices reach NetSuite?</td><td>Explains revenue differences</td></tr>
+<tr><td>4</td><td>Is a site a Location, Department, Class or Subsidiary in NetSuite?</td><td>Needed for every site P&amp;L query</td></tr>
+<tr><td>5</td><td>What's the Xero → NetSuite cut-over date, and where does older history live?</td><td>Trend questions across years</td></tr>
+<tr><td>6</td><td>Physical occupancy: Nexudus check-ins or raw access events?</td><td>Churn signals; privacy</td></tr>
+<tr><td>7</td><td>HubSpot sync status: which fields are mapped, which direction, who owns what?</td><td>Source of truth, source agnostic</td></tr>
+<tr><td>8</td><td>Where is the true capacity per site kept?</td><td>Occupancy denominator</td></tr>
+<tr><td>9</td><td>Is there a list of test, staff and internal accounts to exclude?</td><td>Clean member counts</td></tr>
+<tr><td>10</td><td>What are the board-pack definitions of occupancy, churn and revenue?</td><td>The AI must use the same ones</td></tr>
+<tr><td>11</td><td>Which periods are closed in NetSuite, and when does the close usually finish?</td><td>Provisional vs final answers</td></tr>
+<tr><td>12</td><td>Can we get read-only access to each system and the BigQuery project?</td><td>Can't verify anything without it</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. The Full Map of Work.Life's Data</h3>
+
+<pre>
+   ┌──────────────┐  members, contracts, bookings,  ┌───────────────────────────┐
+   │   NEXUDUS    │  invoices, check-ins             │                           │
+   │ (operations) │─────────────────────────────────►│                           │
+   └──────┬───────┘  Python API / native BQ sync     │                           │
+          │ ▲ access groups                          │                           │
+          ▼ │ door events → check-ins                │                           │
+   ┌──────────────┐                                  │                           │
+   │   ACT365 ?   │──── events (aggregated only) ───►│        BIGQUERY           │
+   └──────────────┘                                  │   raw → staging → marts   │
+   ┌──────────────┐  ◄── two-way sync ──►            │    + crosswalk tables     │
+   │   HUBSPOT    │  contacts↔customers,             │    + dim_site, dim_member │
+   │ (CRM, new)   │──── companies↔teams ────────────►│                           │──► dashboards
+   └──────────────┘     Fivetran                     │                           │
+   ┌──────────────┐                                  │                           │──► 🤖 AI layer
+   │   ACT! ?     │──── legacy CRM history ─────────►│                           │    (Phase 1)
+   └──────────────┘                                  │                           │
+   ┌──────────────┐                                  │                           │
+   │   NETSUITE   │──── GL, customers, vendors ─────►│                           │
+   │  (finance)   │     Fivetran (SuiteAnalytics)    │                           │
+   └──────────────┘  (Xero history before cut-over)  │                           │
+   ┌──────────────┐                                  │                           │
+   │    EXCEL     │──── budget, capacity, leases ───►│                           │
+   └──────────────┘     file connector / script      └───────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How do you link the same customer across systems that don't share an ID?</b></p>
+<p><i>"Build a crosswalk table with our own stable key and each system's ID. Match on stored cross-system IDs first, then normalised keys like cleaned company names or email domains, and only then fuzzy matching with human review. Keep a manual override table for edge cases and push the business to store IDs across systems going forward."</i></p>
+
+<p><b>Q: What is 'grain' and why does it matter?</b></p>
+<p><i>"Grain is what one row represents: a contract, a person, a booking, a GL line. Joining tables at different grains duplicates rows, for example joining six team members to one contract multiplies MRR by six. Aggregate to a common grain before joining and document each model's grain."</i></p>
+
+<p><b>Q: How would you test an AI assistant that answers business questions?</b></p>
+<p><i>"Build a golden set of real questions with answers verified by hand against the finance and operational systems, including tricky ones like churn versus upgrades and invoiced versus recognised revenue. Run the assistant against it before launch and on every change, and only go live when accuracy meets an agreed threshold."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Identity</b></td><td>One member, five IDs. The warehouse creates the shared key.</td></tr>
+<tr><td><b>Crosswalk</b></td><td>member_key / company_key + every source ID.</td></tr>
+<tr><td><b>Match order</b></td><td>Exact IDs → normalised keys → fuzzy + review.</td></tr>
+<tr><td><b>Grain</b></td><td>Know what one row means. Aggregate before joining.</td></tr>
+<tr><td><b>7 of 10</b></td><td>Most business questions need more than one system.</td></tr>
+<tr><td><b>Golden set</b></td><td>Your exam answers = the first accuracy test for the AI.</td></tr>
+<tr><td><b>Client questions</b></td><td>12 open questions, ready for the first call.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Season 1 done! 🎉 You've used every system Work.Life runs on. In Season 2 we build the <b>pipeline</b>: ETL vs ELT, Fivetran, a real Python extractor, BigQuery, and dbt, and we load <b>your own exports</b> from these labs into a warehouse you build yourself.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

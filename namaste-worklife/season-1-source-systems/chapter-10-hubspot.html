@@ -1,0 +1,319 @@
+<h2>Chapter 10 — HubSpot: The New Source of Truth for Members (Hands-On Lab)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>One sentence in the brief changes the whole architecture: <i>"HubSpot is being integrated and is expected to become the source of truth for member data over time."</i> So the system that knows "who our members are" is going to <b>move</b>, from Nexudus to HubSpot, while the project is being built. 🏗️ That's why the brief insists on <b>"source agnostic"</b>. In this lab we set up HubSpot (free forever), load Mini Work.Life into it, and understand what "source of truth" really means.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What HubSpot is and why companies move to it</li>
+    <li>The HubSpot data model: objects, properties, associations, pipelines</li>
+    <li>Lifecycle stages: from stranger to member</li>
+    <li>Lab 10.1: Create a free HubSpot account</li>
+    <li>Lab 10.2: Import companies, contacts and deals</li>
+    <li>Lab 10.3: Custom properties (the Nexudus ID!)</li>
+    <li>Lab 10.4: Create a duplicate on purpose, then merge it</li>
+    <li>Lab 10.5: Pipelines and a renewals dashboard</li>
+    <li>The Nexudus ↔ HubSpot sync</li>
+    <li>"Source of truth": field-by-field ownership</li>
+    <li>How data leaves HubSpot (Fivetran, CRM API) + Python</li>
+    <li>HubSpot data gotchas</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Ben Carter from Ortho Robotics fills in the "Book a tour" form on the Work.Life website.</p>
+
+<ul>
+    <li><b>Today (HubSpot world):</b> the form creates a <b>contact</b> in HubSpot, a sales rep gets a task, the tour gets logged, a <b>deal</b> moves through the pipeline. Marketing knows Ben came from a LinkedIn ad.</li>
+    <li><b>He signs:</b> the deal is "Closed Won". Now he must exist in <b>Nexudus</b> too, to get a contract, a key card and invoices.</li>
+    <li><b>A year later:</b> his renewal is a new deal in HubSpot, while his contract lives in Nexudus.</li>
+</ul>
+
+<p>Two systems, one customer, both "the truth" about different things. Let's see how to tame that.</p>
+
+<hr/>
+
+<h3>2. What Is HubSpot?</h3>
+
+<p>HubSpot is a <b>CRM platform</b>. The core CRM is free; paid "hubs" add features on top:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Hub</th><th>What it adds</th><th>At Work.Life (likely)</th></tr>
+<tr><td>Free CRM</td><td>Contacts, companies, deals, tasks, basic reports</td><td>The base</td></tr>
+<tr><td>Marketing Hub</td><td>Forms, emails, ads tracking, campaigns</td><td>Website enquiries, newsletters</td></tr>
+<tr><td>Sales Hub</td><td>Pipelines, sequences, meetings, quotes</td><td>Office sales, tours, renewals</td></tr>
+<tr><td>Service Hub</td><td>Tickets, help desk, feedback surveys</td><td>Member support, NPS</td></tr>
+<tr><td>Operations Hub / Data Hub</td><td>Data sync, data quality, programmable automation</td><td>Keeping data clean across tools</td></tr>
+</table>
+
+<p>Why do companies move from older CRMs (or from "the membership system is our CRM") to HubSpot? One place for <b>marketing + sales + service</b>, good automation, and lots of native integrations (including Nexudus).</p>
+
+<hr/>
+
+<h3>3. The HubSpot Data Model</h3>
+
+<pre>
+   CONTACT (person) ──── associated ──── COMPANY (organisation)
+       │                                     │
+       └──── associated ──── DEAL ───────────┘
+                              │   (in a PIPELINE, at a STAGE)
+                              │
+       TICKET (support)       └── ACTIVITIES: calls, emails, meetings, notes, tasks
+
+   Every object = a list of PROPERTIES (fields), some built-in, some custom.
+   Every record has a numeric ID (hs_object_id).
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Meaning</th><th>Mini Work.Life example</th></tr>
+<tr><td><b>Contact</b></td><td>A person. Unique by email.</td><td>Priya Sharma</td></tr>
+<tr><td><b>Company</b></td><td>An organisation. Often matched by domain.</td><td>Pixel Chai Studio (pixelchai.co.uk)</td></tr>
+<tr><td><b>Deal</b></td><td>An opportunity with amount, stage, close date</td><td>"Ortho Robotics – Office 202", £4,200</td></tr>
+<tr><td><b>Pipeline</b></td><td>A set of stages a deal moves through</td><td>"New Business", "Renewals"</td></tr>
+<tr><td><b>Association</b></td><td>A link between records (many-to-many)</td><td>Priya ↔ Pixel Chai ↔ Office 101 deal</td></tr>
+<tr><td><b>Property</b></td><td>A field. Can be custom.</td><td><code>nexudus_customer_id</code>, <code>home_site</code></td></tr>
+<tr><td><b>Custom object</b></td><td>Your own object type (higher tiers)</td><td>Could be "Membership" or "Contract"</td></tr>
+</table>
+
+<hr/>
+
+<h3>4. Lifecycle Stages</h3>
+
+<pre>
+   Subscriber → Lead → Marketing Qualified Lead → Sales Qualified Lead
+             → Opportunity → CUSTOMER → Evangelist         (+ "Other")
+
+   At Work.Life:
+     Lead          = filled in a tour form          (Ben Carter, 2 Sep)
+     Opportunity   = tour done, proposal coming     (Ben today)
+     Customer      = signed, has a contract         (Priya, Ravi, Emma...)
+     Evangelist    = refers others                  (Ravi referred Emma!)
+     Former customer → HubSpot doesn't have this by default. You'd add a custom
+                       property like "member_status = left". (Daniel, Sara)
+</pre>
+
+<p>💡 By default lifecycle stage only moves <b>forward</b>. A member who leaves doesn't go "backwards" automatically. If someone builds "number of customers" from lifecycle stage, churned members still count as customers. That's a KPI bug waiting to happen.</p>
+
+<hr/>
+
+<h3>5. Lab 10.1 — Create a Free Account</h3>
+
+<ol>
+    <li>Sign up for the free HubSpot CRM with a personal email.</li>
+    <li>Skip the website tracking code for now. Set currency to <b>GBP</b> and time zone <b>Europe/London</b>.</li>
+    <li>Explore: <b>CRM → Contacts / Companies / Deals</b>. Open <b>Settings → Properties</b> and look at how many built-in properties exist. Each one is a potential warehouse column.</li>
+</ol>
+
+<hr/>
+
+<h3>6. Lab 10.2 — Import Companies, Contacts, Deals</h3>
+
+<ol>
+    <li><b>Companies:</b> import <code>companies.csv</code>. Map <code>company_name → Name</code>. Add a column <code>domain</code> yourself (pixelchai.co.uk, brightlinelegal.co.uk, nomadanalytics.io, greenrootfoods.com, kiteandkey.co.uk) and map it to <b>Company domain name</b>.</li>
+    <li><b>Contacts:</b> import <code>members.csv</code>. Map first/last name, email. HubSpot can <b>auto-associate</b> contacts to companies by email domain. Check that Priya landed under Pixel Chai.</li>
+    <li><b>Deals:</b> from <code>act_opportunities.csv</code>, create the 7 deals. Put new offices in a <b>"New Business"</b> pipeline and renewals in a <b>"Renewals"</b> pipeline. Associate each deal with its company and contact.</li>
+</ol>
+
+<p>📝 <b>Notebook:</b> when you imported, HubSpot asked "what's the unique identifier?" For contacts it's <b>email</b>, for companies usually <b>domain</b>. Remember this. It's how HubSpot avoids duplicates, and why it fails when emails differ.</p>
+
+<hr/>
+
+<h3>7. Lab 10.3 — Custom Properties (The Bridge)</h3>
+
+<p>Create these custom properties:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Object</th><th>Property</th><th>Type</th><th>Why</th></tr>
+<tr><td>Contact</td><td><code>nexudus_customer_id</code></td><td>Single-line text</td><td>The link to Nexudus. <b>The most important field in this lab.</b></td></tr>
+<tr><td>Company</td><td><code>nexudus_team_id</code></td><td>Single-line text</td><td>Link to the Nexudus team</td></tr>
+<tr><td>Company</td><td><code>home_site</code></td><td>Dropdown: SOHO, RDG</td><td>Codes, not free text (Chapter 06 lesson)</td></tr>
+<tr><td>Company</td><td><code>member_status</code></td><td>Dropdown: prospect, active, left</td><td>Fixes the lifecycle "no going back" problem</td></tr>
+<tr><td>Deal</td><td><code>lost_reason</code></td><td>Dropdown: price, location, hybrid/remote, downsizing, other</td><td>Analysable churn reasons (not free text!)</td></tr>
+</table>
+
+<p>Fill <code>nexudus_customer_id</code> with M001…M014 and <code>nexudus_team_id</code> with C001…C005. Now every HubSpot record carries the Nexudus key. Joining HubSpot and Nexudus in the warehouse becomes a simple <code>JOIN ON id</code>, instead of fuzzy matching on names.</p>
+
+<p>And look at <code>lost_reason</code>: in Act! Brightline's reason was free text, "Moving to hybrid; downsizing to home working". Free text is great for humans, terrible for "top 3 churn reasons this year". A dropdown + an optional note gives you both.</p>
+
+<hr/>
+
+<h3>8. Lab 10.4 — Duplicate on Purpose, Then Merge</h3>
+
+<ol>
+    <li>Now import <code>act_contacts.csv</code> as well, as if migrating from Act!.</li>
+    <li>Search "Priya". You'll find <b>two</b> Priyas: <code>priya@pixelchai.co.uk</code> and <code>Priya.Sharma@pixelchai.co.uk</code>. Different emails → HubSpot thinks they're different people.</li>
+    <li>Same for Emma Clarke (<code>emma@</code> vs <code>emma.clarke@</code>) and Daniel Hughes.</li>
+    <li>Use HubSpot's <b>merge</b> on Priya. Keep the record with the Nexudus ID as primary.</li>
+    <li>Note the merged record's ID. The other ID is now gone (HubSpot keeps a list of merged IDs on the surviving record).</li>
+</ol>
+
+<p>Why this matters for the warehouse: if yesterday's load had contact ID 101 and 102 for Priya, and today 102 is merged into 101, your pipeline must handle <b>disappearing IDs</b>. Otherwise "Priya" is counted twice in history, or her old activities point to a contact that no longer exists.</p>
+
+<hr/>
+
+<h3>9. Lab 10.5 — Pipelines and a Renewals View</h3>
+
+<ol>
+    <li>Open <b>Deals</b> in board view. Drag Ortho Robotics from "Tour Done" to "Proposal Sent". Watch the stage history.</li>
+    <li>Create a deal view: <b>Renewals pipeline, close date in next 90 days</b>. You'll see GreenRoot (£2,800, due 30 Nov).</li>
+    <li>Create a simple report: deal amount by stage, by pipeline.</li>
+    <li>Add a <b>note</b> to GreenRoot: "Door data shows attendance dropped to ~23% in late Sep (Chapter 08)". This is the "context pack" idea from Phase 2, done by hand.</li>
+</ol>
+
+<hr/>
+
+<h3>10. The Nexudus ↔ HubSpot Sync</h3>
+
+<p>Nexudus has a native HubSpot integration (listed at £50 per location per month). Per Nexudus's docs:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>HubSpot</th><th>↔</th><th>Nexudus</th><th>Direction</th></tr>
+<tr><td>Contacts</td><td>↔</td><td>Customers</td><td>Two-way</td></tr>
+<tr><td>Companies</td><td>↔</td><td>Teams</td><td>Two-way</td></tr>
+<tr><td>Deals</td><td>→</td><td>Opportunities</td><td>HubSpot → Nexudus (documented direction)</td></tr>
+</table>
+
+<p>You choose <b>which</b> records sync ("only if" rules, e.g. deals in a certain pipeline) and <b>map each property</b>. Unmapped properties don't sync. The docs don't spell out what happens when the same field changes on both sides at once. That's a question to test, not assume.</p>
+
+<pre>
+   Ben's deal → Closed Won in HubSpot
+        │  (sync rule: deals in "New Business" pipeline)
+        ▼
+   Nexudus opportunity / customer + team created
+        │  staff create the contract, access is provisioned (ACT365, Ch 08)
+        ▼
+   Nexudus invoices every month → NetSuite (Ch 09)
+
+   Change Ben's job title in HubSpot → flows to Nexudus "Position"
+   Change Ben's company name in Nexudus → flows back to HubSpot
+</pre>
+
+<hr/>
+
+<h3>11. "Source of Truth": Field by Field</h3>
+
+<p>"HubSpot is the source of truth for member data" sounds simple. In practice, truth is decided <b>per field</b>, not per system:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Data</th><th>Owner (source of truth)</th><th>Why</th></tr>
+<tr><td>Name, email, phone, job title</td><td><b>HubSpot</b></td><td>Sales/marketing maintain it; synced to Nexudus</td></tr>
+<tr><td>Lead source, campaign, referral</td><td><b>HubSpot</b></td><td>Only HubSpot knows it</td></tr>
+<tr><td>Deals, pipeline, lost reasons</td><td><b>HubSpot</b></td><td>Sales process lives here</td></tr>
+<tr><td>Contract, plan, office, price, dates</td><td><b>Nexudus</b></td><td>Billing depends on it; must not be edited elsewhere</td></tr>
+<tr><td>Bookings, check-ins, invoices</td><td><b>Nexudus</b></td><td>Operational events</td></tr>
+<tr><td>Recognised revenue, costs</td><td><b>NetSuite</b></td><td>The books</td></tr>
+<tr><td>Budgets, capacity</td><td><b>Excel</b> (for now)</td><td>Owned by finance/ops</td></tr>
+<tr><td>Member status (active/left)</td><td><b>Derived</b> in the warehouse</td><td>Computed from Nexudus contracts, pushed to HubSpot if needed</td></tr>
+</table>
+
+<p>Now the key architecture idea, and the answer to the brief's <b>"source agnostic"</b> principle:</p>
+
+<pre>
+   SOURCES CHANGE                         THE MODEL DOESN'T
+   ──────────────                         ─────────────────
+   Nexudus customers  ─┐
+                       ├──►  dim_member  (one row per member, our own member_key,
+   HubSpot contacts   ─┘                  with nexudus_id and hubspot_id columns)
+                                   │
+                                   ▼
+                         AI layer, dashboards, KPIs
+                         only ever read dim_member, never raw_nexudus or raw_hubspot
+
+   When HubSpot becomes the source for names/emails, we change ONE dbt model.
+   Everything on top keeps working. That's "swap the feed without rebuilding the AI layer".
+</pre>
+
+<hr/>
+
+<h3>12. How Data Leaves HubSpot</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Way</th><th>Notes</th></tr>
+<tr><td><b>Fivetran HubSpot connector</b></td><td>Standard, managed. Likely what Work.Life would use, since Fivetran is already in the stack.</td></tr>
+<tr><td><b>CRM API (v3)</b></td><td>REST endpoints per object, e.g. <code>/crm/v3/objects/contacts</code>, cursor pagination with <code>after</code>, auth with a private app token</td></tr>
+<tr><td>Exports</td><td>CSV from any view. Manual.</td></tr>
+<tr><td>Webhooks / workflows</td><td>Real-time events (paid tiers for some features)</td></tr>
+</table>
+
+<pre>
+# hubspot_extract.py — pull all companies with our custom properties
+import os, requests
+
+TOKEN = os.environ["HUBSPOT_TOKEN"]          # a private app access token
+URL = "https://api.hubapi.com/crm/v3/objects/companies"
+HEADERS = {"Authorization": f"Bearer {TOKEN}"}
+PROPS = "name,domain,home_site,member_status,nexudus_team_id,hs_lastmodifieddate"
+
+def fetch_all():
+    params = {"limit": 100, "properties": PROPS}
+    while True:
+        r = requests.get(URL, headers=HEADERS, params=params, timeout=30)
+        r.raise_for_status()
+        body = r.json()
+        yield from body["results"]
+        nxt = body.get("paging", {}).get("next", {}).get("after")
+        if not nxt:
+            break
+        params["after"] = nxt                 # cursor pagination, not page numbers
+
+for c in fetch_all():
+    p = c["properties"]
+    print(c["id"], p.get("name"), p.get("home_site"), p.get("nexudus_team_id"))
+</pre>
+
+<p>Compare with the Nexudus extractor in Chapter 07: same idea (auth header, loop over pages, yield records), different pagination style (<b>cursor</b> <code>after</code> vs <b>page numbers</b>). Every API is a little different; the pattern is the same.</p>
+
+<hr/>
+
+<h3>13. HubSpot Data Gotchas</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Gotcha</th><th>What happens</th><th>Fix</th></tr>
+<tr><td>Merged records</td><td>IDs disappear; history points to a dead ID</td><td>Use the merged-IDs list to remap; build member_key in the warehouse</td></tr>
+<tr><td>Lifecycle only goes forward</td><td>Churned members still "Customer"</td><td>Use member_status derived from Nexudus contracts</td></tr>
+<tr><td>Dropdown value vs label</td><td>API returns internal value (<code>hybrid_remote</code>), UI shows label ("Hybrid / remote")</td><td>Load the property definitions too, map in staging</td></tr>
+<tr><td>Many-to-many associations</td><td>A contact can link to 2 companies; a deal to 3 contacts</td><td>Pick a "primary" association rule; don't double count deal amounts</td></tr>
+<tr><td>Deal amount meaning</td><td>Is £4,200 monthly or contract total?</td><td>Define it! (Ours = monthly.) Put it in the KPI dictionary.</td></tr>
+<tr><td>Timestamps</td><td>Often UTC / epoch milliseconds</td><td>Convert once in staging</td></tr>
+<tr><td>Two-way sync loops</td><td>A change bounces between HubSpot and Nexudus</td><td>Field-level ownership (section 11)</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: The client says a new CRM will become the source of truth for members. How does that affect your design?</b></p>
+<p><i>"I'd decide ownership per field: identity and sales data from the CRM, contracts and billing from the membership system. In the warehouse I'd build a conformed member dimension with our own key and both source IDs. Reports and the AI read only that model, so switching the source means changing one model, not the layer on top."</i></p>
+
+<p><b>Q: How do you avoid duplicate contacts when syncing systems?</b></p>
+<p><i>"Store each system's ID on the other side, like a Nexudus ID property in HubSpot, and match on IDs rather than names or emails. For legacy data without IDs, run a one-off matching exercise on normalised email, name and company domain, review uncertain matches by hand, then merge."</i></p>
+
+<p><b>Q: What's the difference between lifecycle stage and member status?</b></p>
+<p><i>"Lifecycle stage is a marketing and sales funnel field that normally only moves forward. Member status, whether they're active or have left, comes from contracts. Using lifecycle stage to count current members over-counts churned members."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>HubSpot</b></td><td>CRM platform: contacts, companies, deals, tickets, activities.</td></tr>
+<tr><td><b>Unique keys</b></td><td>Contacts by email, companies by domain. Fragile.</td></tr>
+<tr><td><b>Custom ID property</b></td><td><code>nexudus_customer_id</code> makes joins exact.</td></tr>
+<tr><td><b>Merges</b></td><td>IDs disappear. Handle them in the warehouse.</td></tr>
+<tr><td><b>Nexudus sync</b></td><td>Contacts↔customers, companies↔teams, deals→opportunities.</td></tr>
+<tr><td><b>Source of truth</b></td><td>Decided per field, not per system.</td></tr>
+<tr><td><b>Source agnostic</b></td><td>AI reads <code>dim_member</code>, never raw sources.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Chapter 11 is the Season 1 finale. We take Priya, Emma and Fatima and follow each one through <b>all five systems</b>, build a matching table by hand, and then answer the 10 "final exam" questions from Chapter 05. After this, you'll understand Work.Life's data better than most people who work there. 😉</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

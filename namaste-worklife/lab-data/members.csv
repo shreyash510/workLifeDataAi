@@ -1,0 +1,15 @@
+member_id,first_name,last_name,email,company_id,role,joined_on,status
+M001,Priya,Sharma,priya@pixelchai.co.uk,C001,Founder,2025-10-01,active
+M002,Arjun,Mehta,arjun@pixelchai.co.uk,C001,Designer,2026-04-01,active
+M003,Leah,Brooks,leah@pixelchai.co.uk,C001,Designer,2026-04-01,active
+M004,Tom,Okafor,tom@pixelchai.co.uk,C001,Developer,2026-04-01,active
+M005,Daniel,Hughes,daniel@brightlinelegal.co.uk,C002,Partner,2025-07-01,left
+M006,Sara,Kim,sara@brightlinelegal.co.uk,C002,Solicitor,2025-07-01,left
+M007,Ravi,Patel,ravi@nomadanalytics.io,C003,Founder,2025-01-15,active
+M008,Emma,Clarke,emma@greenrootfoods.com,C004,CEO,2026-01-01,active
+M009,Olu,Adeyemi,olu@greenrootfoods.com,C004,Operations,2026-01-01,active
+M010,Jack,Turner,jack@greenrootfoods.com,C004,Sales,2026-01-01,active
+M011,Mei,Lin,mei@greenrootfoods.com,C004,Product,2026-01-01,active
+M012,Hannah,Wood,hannah@greenrootfoods.com,C004,Marketing,2026-01-01,active
+M013,Sam,Ellis,sam@greenrootfoods.com,C004,Finance,2026-01-01,active
+M014,Fatima,Ali,fatima@kiteandkey.co.uk,C005,Founder,2026-02-01,active

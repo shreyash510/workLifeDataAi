@@ -1,0 +1,394 @@
+<h2>Chapter 07 — Nexudus: The Heart of the Business (Hands-On Lab)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>If Work.Life were a body, <b>Nexudus is the heart</b>. ❤️ Every member, every office, every meeting room booking, every monthly invoice and every key-card tap goes through it. The brief says it plainly: <i>"Nexudus is the largest source."</i> So this is the biggest chapter of Season 1. We'll start the free trial and run Mini Work.Life inside the real tool, then look at every way data gets out of it.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What Nexudus is and who uses it at Work.Life</li>
+    <li>Admin portal vs member portal</li>
+    <li>The Nexudus data model (and its secret old names)</li>
+    <li>Lab 7.1: Start the trial and set up a location</li>
+    <li>Lab 7.2: Create plans</li>
+    <li>Lab 7.3: Create resources (meeting rooms, offices)</li>
+    <li>Lab 7.4: Add teams and customers</li>
+    <li>Lab 7.5: Contracts: sign, upgrade, transfer, give notice</li>
+    <li>Lab 7.6: Bookings and credits</li>
+    <li>Lab 7.7: Invoicing, credit notes and financial accounts</li>
+    <li>Lab 7.8: Check-ins (physical occupancy)</li>
+    <li>Lab 7.9: Reports and exports</li>
+    <li>4 ways data leaves Nexudus (export, API, BigQuery, webhooks)</li>
+    <li>Python: pull customers from the Nexudus API</li>
+    <li>The data gotchas that will bite you</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>It's 9am at Work.Life Soho. Here's what happens in Nexudus before lunch:</p>
+
+<ul>
+    <li>A new member signs up online. Nexudus creates a <b>customer</b>, a <b>contract</b>, takes the first <b>payment</b> and emails a welcome pack.</li>
+    <li>Priya books Brick Lane for 2 hours on the member app. Nexudus creates a <b>booking</b> and a <b>charge</b>.</li>
+    <li>Ravi taps his key card at the door. Nexudus logs a <b>check-in</b>.</li>
+    <li>The community manager moves a team from Office 103 to 101. That ends one <b>contract</b> and starts another.</li>
+    <li>On the 1st of the month, Nexudus runs billing and creates ~8,000 <b>invoices</b>.</li>
+</ul>
+
+<p>Nexudus is not a reporting tool. It's an <b>operational system</b>: it <i>runs</i> the building. The data it leaves behind is what we analyse.</p>
+
+<hr/>
+
+<h3>2. What Is Nexudus?</h3>
+
+<p>Nexudus is a <b>coworking and flexible workspace management platform</b> (SaaS). One login runs all 14 Work.Life sites. It covers:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Area</th><th>What it does</th><th>Who uses it at Work.Life</th></tr>
+<tr><td>Members &amp; CRM-lite</td><td>Customers, teams, notes, proposals</td><td>Community/site managers</td></tr>
+<tr><td>Inventory</td><td>Offices, desks, meeting rooms, floor plans</td><td>Ops</td></tr>
+<tr><td>Contracts &amp; plans</td><td>Who pays what, for what, until when</td><td>Sales, ops</td></tr>
+<tr><td>Bookings</td><td>Meeting rooms, desks, day passes</td><td>Members (self-serve), front desk</td></tr>
+<tr><td>Billing</td><td>Invoices, credit notes, payments, deposits</td><td>Finance</td></tr>
+<tr><td>Access control</td><td>Key cards, door integrations, Wi-Fi check-ins</td><td>Ops, IT</td></tr>
+<tr><td>Community</td><td>Events, member directory, messages</td><td>Community team</td></tr>
+<tr><td>Member portal &amp; app</td><td>Book, pay invoices, see plan, invite guests</td><td>All ~8,000 members</td></tr>
+</table>
+
+<hr/>
+
+<h3>3. Admin Portal vs Member Portal</h3>
+
+<pre>
+   ADMIN PORTAL (staff)                     MEMBER PORTAL / APP (customers)
+   ────────────────────                     ───────────────────────────────
+   Settings, locations, plans               Sign up, buy a plan
+   Customers, teams, contracts              Book rooms, desks
+   Billing runs, invoices                   See &amp; pay invoices
+   Reports, integrations                    See credits left
+   Access control                           Invite visitors, RSVP to events
+
+   ── Both write into the SAME database ── which we later copy to BigQuery
+</pre>
+
+<p>Important for data: rows created by <b>members</b> (self-serve bookings) are clean and consistent. Rows created by <b>staff</b> (manual contracts, discounts, notes) are where typos and odd cases live.</p>
+
+<hr/>
+
+<h3>4. The Data Model (and Its Secret Old Names)</h3>
+
+<pre>
+   LOCATION (Business)
+     ├── PLANS (Tariffs) ─────────────┐
+     ├── RESOURCES (rooms, desks)     │
+     └── PRODUCTS (lockers, printing) │
+                                      │
+   TEAM (company) ◄── belongs ── CUSTOMER (Coworker)
+                                      │
+                                      ├── CONTRACT (CoworkerContract) ── on a PLAN
+                                      │         └── dedicated resource (Office 101)
+                                      ├── BOOKING ── of a RESOURCE
+                                      ├── CHECK-IN (door / wifi)
+                                      └── INVOICE (CoworkerInvoice)
+                                                └── INVOICE LINES ◄── CHARGES
+                                                       (plan fee, booking, product)
+</pre>
+
+<p>Here's a trap that confuses everyone the first time: <b>the screens use new names, the API and database use old names.</b> When you open the BigQuery tables or the API, you'll see the old ones.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>You see on screen</th><th>API / data name</th><th>What it is</th></tr>
+<tr><td>Location</td><td><code>Business</code></td><td>A site, e.g. Soho</td></tr>
+<tr><td>Customer</td><td><code>Coworker</code></td><td>A person (or a company account)</td></tr>
+<tr><td>Team</td><td><code>Team</code></td><td>A company that groups customers</td></tr>
+<tr><td>Plan</td><td><code>Tariff</code></td><td>Membership type and price</td></tr>
+<tr><td>Contract</td><td><code>CoworkerContract</code></td><td>Customer + plan + term + price</td></tr>
+<tr><td>Resource</td><td><code>Resource</code> / <code>ResourceType</code></td><td>Meeting room, desk, office</td></tr>
+<tr><td>Booking</td><td><code>Booking</code> (+ <code>CancelledBookings</code>)</td><td>Reservation of a resource</td></tr>
+<tr><td>Invoice</td><td><code>CoworkerInvoice</code> + <code>CoworkerInvoiceLines</code></td><td>The bill and its lines</td></tr>
+<tr><td>Booking credits</td><td><code>TariffBookingCredits</code>, <code>CoworkerBookingCredits</code></td><td>Free hours included in a plan</td></tr>
+<tr><td>Plan history</td><td><code>CoworkerPricePlanHistories</code></td><td>Which plan a customer had when</td></tr>
+<tr><td>Proposal</td><td><code>Proposals</code>, <code>ProposalContracts</code></td><td>A quote sent before signing</td></tr>
+<tr><td>Financial account</td><td><code>FinancialAccounts</code></td><td>GL code mapping for accounting</td></tr>
+<tr><td>Check-in</td><td><code>Checkins</code></td><td>Someone entered the building</td></tr>
+</table>
+
+<p>💡 Write this table in your lab notebook. When you see <code>Coworker.TariffId</code> in BigQuery, you'll instantly know: "the customer's plan".</p>
+
+<hr/>
+
+<h3>5. Lab 7.1 — Start the Trial and Set Up a Location</h3>
+
+<ol>
+    <li>Go to nexudus.com and start the free trial (21 days, no card, one location, at the time of writing).</li>
+    <li>Configure your location: name it <b>Work.Life Soho (lab)</b>, currency <b>GBP</b>, time zone <b>Europe/London</b>, address anywhere in Soho.</li>
+    <li>Set <b>opening hours</b>: Mon–Fri 08:00–18:00. (Meeting room availability comes from this.)</li>
+    <li>Open the <b>member portal</b> in another browser (or incognito). That's what members see. Keep both windows open throughout the lab.</li>
+</ol>
+
+<p>📝 <b>Notebook:</b> write down every field on the location settings page: currency, tax rate (UK VAT 20%), time zone, invoice numbering. Each one shapes the data. For example, time zone decides whether a 23:30 booking lands on today or tomorrow in your reports.</p>
+
+<p>🤔 The trial gives one location. For Reading, either do a second pass later or just note that in real life each site is a separate <code>Business</code> and many tables carry a <code>BusinessId</code>.</p>
+
+<hr/>
+
+<h3>6. Lab 7.2 — Create Plans</h3>
+
+<p>Create the three plans from <code>plans.csv</code>:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Plan</th><th>Price</th><th>Billing</th><th>Notice</th></tr>
+<tr><td>Unlimited Coworking</td><td>£320</td><td>Monthly, in advance</td><td>1 month</td></tr>
+<tr><td>Flex 10 Days</td><td>£180</td><td>Monthly</td><td>1 month</td></tr>
+<tr><td>Private Office</td><td>£0 base (price set per contract)</td><td>Monthly, in advance</td><td>3 months min term</td></tr>
+</table>
+
+<p>Look at all the options on the plan form: <b>booking credits</b>, <b>time passes</b>, <b>access rules</b>, <b>sign-up fee</b>, <b>deposit</b>, <b>which locations</b>. Every option is a column (or a whole table) in the data.</p>
+
+<p><b>Exercise:</b> give Private Office <b>4 free meeting room hours per month</b> (booking credits). Later, in Lab 7.6, watch how a booking's price drops to £0 when credits are used. Then ask yourself: if the AI reports "meeting room revenue", should free hours count? (Answer: no, but "meeting room <i>usage</i>" should. Two different KPIs!)</p>
+
+<hr/>
+
+<h3>7. Lab 7.3 — Create Resources</h3>
+
+<p>From <code>resources.csv</code> (Soho rows):</p>
+<ul>
+    <li><b>Meeting rooms:</b> Brick Lane (8 people, £45/hour), Carnaby (4 people, £30/hour). Set them bookable by members.</li>
+    <li><b>Private offices:</b> Office 101 (4 desks), 102 (8 desks), 103 (2 desks). In Nexudus, offices are usually set up as resources/floor plan units and then <b>assigned to a contract</b> as a dedicated resource.</li>
+    <li><b>Hot desk area:</b> a desk resource type for the coworking floor.</li>
+</ul>
+
+<p>📝 <b>Notebook:</b> where do you enter capacity (desks per office)? Is it a required field? If staff can leave it blank, our occupancy maths breaks. That's exactly why Work.Life probably keeps a capacity <b>Excel sheet</b> (Chapter 06).</p>
+
+<hr/>
+
+<h3>8. Lab 7.4 — Teams and Customers</h3>
+
+<ol>
+    <li>Create the 5 <b>teams</b> from <code>companies.csv</code>.</li>
+    <li>Add the <b>customers</b> from <code>members.csv</code> and put each one in their team. (Look for an import option; if your trial doesn't have one, add at least Priya, Arjun, Daniel, Sara, Ravi, Emma and Fatima by hand.)</li>
+    <li>Make Priya the <b>team admin / billing contact</b> for Pixel Chai.</li>
+</ol>
+
+<p>Notice: one team, one bill payer, many people. In the API, a customer has a <code>CoworkerType</code> (individual or company) and a <code>CompanyName</code> text field <i>as well as</i> team membership. So "which company is this person in?" can have two different answers. Classic data gotcha. Note it.</p>
+
+<hr/>
+
+<h3>9. Lab 7.5 — Contracts: The Most Important Table</h3>
+
+<p>A contract = <b>customer + plan + (office) + start date + price + term</b>. Create these and watch what each action does:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Do this</th><th>Lab contract</th><th>What to observe</th></tr>
+<tr><td>Ravi on Unlimited Coworking from 15 Jan 2025, no end date</td><td>K004</td><td>Rolling contract: end date is empty</td></tr>
+<tr><td>Brightline on Private Office, Office 103, £1,400, 1 Jul 2025 – 30 Jun 2026</td><td>K003</td><td>Fixed term, dedicated resource</td></tr>
+<tr><td>Brightline <b>gives notice</b> on 30 Apr 2026</td><td>K003</td><td>Where is the notice date stored? Is there a "reason" field?</td></tr>
+<tr><td>Priya on Unlimited Coworking from 1 Oct 2025</td><td>K001</td><td></td></tr>
+<tr><td>Priya <b>upgrades</b>: end K001 on 31 Mar 2026, new Private Office contract Office 101 from 1 Apr 2026 at <b>£2,400</b> (list £2,600)</td><td>K001 → K002</td><td>How is the discount stored? As a lower price, or list price + discount? Does plan history update?</td></tr>
+<tr><td>GreenRoot on Private Office (Reading 201) 1 Jan – 31 Dec 2026</td><td>K005</td><td>(note only, if you have one location)</td></tr>
+</table>
+
+<p>Now the big insight. Look at Priya's two contracts. To Nexudus they're just "one ended, one started". To the business it's an <b>upgrade</b>, the best thing a member can do! Nexudus doesn't label it. <b>We</b> have to, in the model:</p>
+
+<pre>
+   For each contract that ENDS:
+     Does the same team have another contract starting within ~30 days?
+       YES, same site, higher price  →  UPGRADE
+       YES, same site, lower price   →  DOWNGRADE
+       YES, different site           →  TRANSFER
+       NO                            →  CHURN  (go find the reason in the CRM)
+</pre>
+
+<p>This one rule fixes the Chapter 05 exam question "how many members churned in 2026?" Three contracts ended (K001, K003, K006), but only <b>one company churned</b> (Brightline, 2 people, £1,400 MRR).</p>
+
+<hr/>
+
+<h3>10. Lab 7.6 — Bookings and Credits</h3>
+
+<ol>
+    <li>Log in to the <b>member portal as Priya</b> and book Brick Lane on 3 Sep 2026, 10:00–12:00.</li>
+    <li>As admin, add the other September bookings from <code>bookings_sep2026.csv</code>.</li>
+    <li><b>Cancel</b> one booking. Find where it went. (In the API there's a separate <code>CancelledBookings</code> entity. If your pipeline only reads <code>Bookings</code>, cancellations silently vanish.)</li>
+    <li>With the 4 free credits from Lab 7.2, book as Priya again. Check the price.</li>
+</ol>
+
+<p><b>Utilisation exercise:</b> Brick Lane had 5 bookings in September totalling <b>9 hours</b>. September 2026 has 22 working days × 10 open hours = 220 hours. Utilisation = 9 / 220 = <b>4.1%</b>. (Real rooms are much busier. Ours is a sleepy lab. 😄)</p>
+
+<hr/>
+
+<h3>11. Lab 7.7 — Invoicing, Credit Notes, Financial Accounts</h3>
+
+<ol>
+    <li>Run (or preview) the <b>billing</b> for September. Find Pixel Chai's invoice.</li>
+    <li>Open the invoice: see the <b>lines</b>, one for the office fee and one per booking (or grouped), with VAT.</li>
+    <li>Issue a <b>£90 credit note</b> to Pixel Chai for "AV failure 24 Sep".</li>
+    <li>Find <b>Financial accounts</b> in settings. This is where each plan/product/booking is mapped to an <b>accounting code</b>, like 4000 Office Revenue, 4010 Coworking, 4100 Meeting Rooms.</li>
+</ol>
+
+<pre>
+   WHY FINANCIAL ACCOUNTS MATTER
+
+   Nexudus invoice line          Financial account     NetSuite GL account
+   ─────────────────────         ─────────────────     ───────────────────
+   "Office 101 September"   ──►  4000            ──►   4000 Office Revenue
+   "Brick Lane 2h"          ──►  4100            ──►   4100 Meeting Room Revenue
+
+   This mapping is the BRIDGE between operations (Nexudus) and finance (NetSuite).
+   If someone maps a new product to the wrong code, revenue lands in the wrong
+   P&amp;L line, and the AI will explain the "wrong" story with full confidence.
+</pre>
+
+<p>Nexudus's own docs list accounting integrations with Xero and QuickBooks. Work.Life used Xero and moved to NetSuite last year (from the 173tech deck). <b>How Nexudus invoices reach NetSuite today is a question to ask the client.</b> It could be a connector, middleware or a scheduled import. Good engineers write down what they <i>don't</i> know.</p>
+
+<hr/>
+
+<h3>12. Lab 7.8 — Check-ins (Physical Occupancy)</h3>
+
+<p>If your trial allows it, check Priya in and out through the admin portal or a check-in app. In real life check-ins come from door access systems, Wi-Fi logins or tablet apps.</p>
+
+<p>Why care? Remember Chapter 02: <b>contracted</b> occupancy says who pays. <b>Physical</b> occupancy says who comes. A team paying for 10 desks whose check-ins have dropped from 40 a week to 5 is a <b>churn warning</b>, months before they give notice. That's "foresight" from the brief, and it's sitting in the <code>Checkins</code> table.</p>
+
+<hr/>
+
+<h3>13. Lab 7.9 — Reports and Exports</h3>
+
+<ol>
+    <li>Open the built-in reports/analytics. Look at occupancy, revenue and member reports.</li>
+    <li>Export <b>customers, contracts, bookings and invoices</b> to CSV.</li>
+    <li>Open your exports next to the lab CSVs. Compare the columns. Which extra columns does Nexudus have? Which of ours are missing (e.g. <code>end_reason</code>)?</li>
+    <li>Save the exports in <code>lab-data/my-exports/nexudus/</code>. You'll load them into BigQuery in Season 2.</li>
+</ol>
+
+<p>The built-in reports are fine for one site's manager. They can't join with NetSuite costs, Excel budgets or HubSpot deals. That's why the warehouse exists.</p>
+
+<hr/>
+
+<h3>14. Four Ways Data Leaves Nexudus</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Way</th><th>How</th><th>Good for</th><th>Watch out</th></tr>
+<tr><td><b>1. Manual export</b></td><td>CSV/Excel from admin screens</td><td>One-offs, this lab</td><td>Manual, not repeatable. That's the "rebuilt by hand" problem.</td></tr>
+<tr><td><b>2. REST API</b></td><td><code>GET https://spaces.nexudus.com/api/{module}/{entities}</code> with a bearer token</td><td>Scheduled extract by a Python job</td><td>Pagination, rate limits, summary vs full records</td></tr>
+<tr><td><b>3. Native BigQuery integration</b></td><td>Settings → Integrations → Google BigQuery. Sends customers, teams, invoices &amp; credit notes, ledgers, bookings, contracts, check-ins. Changes sent as they happen.</td><td>Near real-time warehouse with no code</td><td>Listed at <b>£100 per location per month</b>. For 14 sites that's ~£16,800/year. Is it worth it vs a Python job?</td></tr>
+<tr><td><b>4. Webhooks / Zapier</b></td><td>Nexudus calls your URL when something happens</td><td>Real-time alerts ("new member signed")</td><td>Not a full history. Missed events = gaps.</td></tr>
+</table>
+
+<p>Work.Life's brief says their extract layer is <b>"Fivetran, Python"</b>. A sensible guess: Fivetran handles systems with standard connectors (NetSuite, HubSpot), and <b>Python handles Nexudus via the API</b>. Confirm it with 173tech before designing anything. Never assume.</p>
+
+<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~£16.8k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (which is exactly what 173tech is paid to do today). That trade-off belongs in the supplier response.</p>
+
+<hr/>
+
+<h3>15. Python: Pull Customers From the API</h3>
+
+<p>Here's what a simple extractor looks like. It follows Nexudus's documented pattern: bearer token, <code>page</code>/<code>size</code> parameters, and a <code>Records</code> + <code>HasNextPage</code> response.</p>
+
+<pre>
+# nexudus_extract.py — pull all customers (Coworkers) changed since a date
+import os, json, requests
+
+BASE = "https://spaces.nexudus.com/api"
+TOKEN = os.environ["NEXUDUS_TOKEN"]          # never hard-code secrets
+HEADERS = {"Authorization": f"Bearer {TOKEN}"}
+
+def fetch_all(path, params=None):
+    params = dict(params or {})
+    params.update({"page": 1, "size": 100, "orderBy": "UpdatedOn", "dir": 0})
+    while True:
+        r = requests.get(f"{BASE}/{path}", headers=HEADERS, params=params, timeout=30)
+        r.raise_for_status()
+        body = r.json()
+        yield from body["Records"]
+        if not body["HasNextPage"]:
+            break
+        params["page"] += 1
+
+# Incremental load: only what changed since the last run
+since = "2026-09-01T00:00"
+rows = list(fetch_all("spaces/coworkers", {"from_Coworker_UpdatedOn": since}))
+
+print(len(rows), "customers changed since", since)
+for c in rows[:3]:
+    print(c["Id"], c["FullName"], c["Email"], c["Active"], c["TariffId"])
+
+# Write newline-delimited JSON: the format BigQuery loads most easily
+with open("coworkers.jsonl", "w") as f:
+    for c in rows:
+        f.write(json.dumps(c) + "\n")
+</pre>
+
+<p>Key ideas in those 30 lines:</p>
+<ul>
+    <li><b>Pagination</b>: the API returns pages, so we loop until <code>HasNextPage</code> is false.</li>
+    <li><b>Incremental</b>: <code>from_Coworker_UpdatedOn</code> means "only changes since the last run". Fast and cheap. But: <b>deleted</b> records don't show up as "changed". You need a periodic full reload or a deletes check.</li>
+    <li><b>JSONL</b>: one JSON object per line. BigQuery loads it directly into a <code>raw_nexudus.coworkers</code> table.</li>
+    <li><b>Secrets in env vars</b>: the token is the key to 8,000 members' data. Treat it like a password.</li>
+</ul>
+
+<p>We'll run a full version of this (with contracts, bookings and invoices) against BigQuery in Season 2.</p>
+
+<hr/>
+
+<h3>16. The Data Gotchas That Will Bite You</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Gotcha</th><th>Why it happens</th><th>Fix in the model</th></tr>
+<tr><td>List endpoint returns a <b>summary</b> of each customer</td><td>Nexudus docs: many fields aren't filled in list results</td><td>Fetch full records for fields you need, or use the BigQuery integration</td></tr>
+<tr><td>Old names (Coworker, Tariff, Business)</td><td>API predates UI rename</td><td>Rename in dbt staging: <code>coworker → customer</code></td></tr>
+<tr><td>Upgrades/transfers look like churn</td><td>Contract ends + new contract</td><td>Classify contract ends (Lab 7.5 rule)</td></tr>
+<tr><td>Cancelled bookings vanish</td><td>Separate <code>CancelledBookings</code> entity</td><td>Load both; union with a status</td></tr>
+<tr><td>Deleted / archived customers</td><td>Incremental loads miss deletes; <code>Archived</code> flag</td><td>Periodic full refresh; filter archived explicitly</td></tr>
+<tr><td>Test / staff accounts</td><td>Staff create fake members to test things</td><td>An exclusion list (owned by ops, written down)</td></tr>
+<tr><td>Team vs CompanyName</td><td>Two ways to say "company"</td><td>Pick team as truth; document it</td></tr>
+<tr><td>Time zones</td><td>API times may be UTC; the site is Europe/London</td><td>Convert once in staging</td></tr>
+<tr><td>Invoiced ≠ recognised revenue</td><td>Credit notes, deferrals, finance adjustments</td><td>Use NetSuite for P&amp;L, Nexudus for operations</td></tr>
+<tr><td>Price stored per contract, discount implicit</td><td>Staff type £2,400 instead of £2,600</td><td>Compare to list price from resource/plan to compute discount</td></tr>
+</table>
+
+<hr/>
+
+<h3>17. One More Thing: Nexudus ↔ HubSpot</h3>
+
+<p>Nexudus has a native HubSpot integration (listed at £50 per location per month). It maps HubSpot <b>contacts → customers</b>, <b>companies → teams</b> and <b>deals → opportunities</b>, with two-way sync for customers and teams. This matters because the brief says <i>"HubSpot is being integrated and is expected to become the source of truth for member data."</i> We'll dig into what "source of truth" means when two systems sync both ways in Chapters 10 and 11.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What is Nexudus and what data does it hold for a coworking business?</b></p>
+<p><i>"It's the operational platform that runs the spaces: locations, resources, plans, customers and teams, contracts, bookings, invoicing and access control, plus a member portal. It holds who the members are, what they're contracted for, what they booked, what they were invoiced and when they came in."</i></p>
+
+<p><b>Q: How would you extract Nexudus data into BigQuery?</b></p>
+<p><i>"Either the native BigQuery integration, which streams changes but costs per location, or a scheduled Python extractor on the REST API using bearer auth, pagination and incremental filters on UpdatedOn, loading JSONL into raw tables, with a periodic full refresh to catch deletes. I'd pick based on cost and who maintains it."</i></p>
+
+<p><b>Q: Three contracts ended this year but the business says only one member churned. Who's right?</b></p>
+<p><i>"Probably the business. Contract ends include upgrades, downgrades and site transfers. I'd classify each end by checking whether the same team started another contract within a short window, and at which site and price. Only ends with no follow-on contract are churn."</i></p>
+
+<p><b>Q: Why might Nexudus revenue not match the finance system?</b></p>
+<p><i>"Nexudus shows what was invoiced. Finance recognises revenue with credit notes, deferrals for prepaid terms, manual journals and corrections. Product-to-GL mapping errors also move revenue between lines. For profitability I'd use finance; for members and usage, Nexudus."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Nexudus</b></td><td>The operational heart: members, contracts, bookings, billing, access.</td></tr>
+<tr><td><b>Old names</b></td><td>Business = location, Coworker = customer, Tariff = plan.</td></tr>
+<tr><td><b>Contracts</b></td><td>The most important table. Classify ends: upgrade, transfer, churn.</td></tr>
+<tr><td><b>Financial accounts</b></td><td>The bridge from Nexudus lines to NetSuite GL codes.</td></tr>
+<tr><td><b>Check-ins</b></td><td>Physical usage, the best early churn signal.</td></tr>
+<tr><td><b>Getting data out</b></td><td>Export, REST API, native BigQuery (£/location), webhooks.</td></tr>
+<tr><td><b>Ask, don't assume</b></td><td>How does Nexudus feed NetSuite today? How is the extract built?</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>In Chapter 08 we start the <b>Act!</b> trial: the CRM where Work.Life's sales story lives. Leads, tours, proposals, won and lost deals, and the one thing Nexudus never knows: <b>why</b> a member left.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

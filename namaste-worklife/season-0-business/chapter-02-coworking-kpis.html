@@ -1,0 +1,266 @@
+<h2>Chapter 02 — The Numbers That Run a Coworking Business (KPIs)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 01 we learned how Work.Life makes money. Now we learn the <b>language the leadership team speaks</b>. When the CEO asks the AI <i>"how's the business right now?"</i>, she means a handful of numbers. If we don't know exactly how each one is calculated, our dashboards and our AI will give wrong answers with a straight face. That is the #1 risk in this whole project.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Why definitions matter more than dashboards</li>
+    <li>Capacity: desks, offices, workstations</li>
+    <li>Occupancy (and the 3 different ways to calculate it)</li>
+    <li>Revenue KPIs: MRR, revenue per desk, average price</li>
+    <li>Member KPIs: new, churned, net member movements, churn rate</li>
+    <li>Meeting room utilisation</li>
+    <li>Site profitability: contribution and EBITDA</li>
+    <li>Pipeline KPIs from sales</li>
+    <li>Leading vs lagging indicators</li>
+    <li>A KPI dictionary you'll reuse in every lab</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Monday leadership meeting. The Ops Director says <i>"Soho is 92% occupied."</i> The Finance Director says <i>"Soho is 78% occupied."</i> Both are looking at "occupancy". Both are right. 😅</p>
+
+<ul>
+    <li>Ops counted <b>offices</b>: 23 of 25 offices have someone in them = 92%.</li>
+    <li>Finance counted <b>desks</b>: 2 big offices are sold at a discount to small teams, so of 300 desks only 234 are paid for = 78%.</li>
+</ul>
+
+<p>The meeting turns into an argument about numbers instead of a decision about the business. This is exactly the problem in the brief: <i>"it should understand our board pack, our KPIs, why those KPIs matter."</i> An AI that picks the wrong definition is worse than no AI.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE #1 OF THIS PROJECT                                   │
+│                                                             │
+│   Every KPI needs ONE written definition:                   │
+│     • the formula                                           │
+│     • the source system and table                           │
+│     • what's included and excluded                          │
+│     • the time grain (day / month / snapshot)               │
+│                                                             │
+│   No definition = no trust = project fails.                 │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Capacity: What Can We Sell?</h3>
+
+<p>Before you measure how full a building is, you need to know how big it is.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Example (Soho, made up)</th></tr>
+<tr><td><b>Workstation / desk</b></td><td>One seat. The basic unit of capacity.</td><td>300 desks total</td></tr>
+<tr><td><b>Private office</b></td><td>A room with N desks inside it</td><td>25 offices, sizes 2 to 20</td></tr>
+<tr><td><b>Coworking capacity</b></td><td>Hot desks in the open area</td><td>60 hot desks</td></tr>
+<tr><td><b>Overselling ratio</b></td><td>Hot desks can be sold to more members than seats, because not everyone comes in daily</td><td>60 seats sold to 90 members = 1.5×</td></tr>
+<tr><td><b>Sellable area</b></td><td>Square feet you can actually rent out</td><td>12,000 sq ft</td></tr>
+</table>
+
+<p>Capacity usually lives in <b>Nexudus</b> (resources and offices), but very often the "true" capacity sits in an <b>Excel sheet</b> the ops team maintains. You'll see this in the Excel lab.</p>
+
+<hr/>
+
+<h3>3. Occupancy: The King KPI</h3>
+
+<p>There are three common ways to calculate it. Know all three.</p>
+
+<pre>
+   1) OFFICE OCCUPANCY (by count)
+      occupied offices / total offices
+      23 / 25 = 92%
+
+   2) DESK OCCUPANCY (by workstation)  ← most common in flex industry
+      desks under contract / total desks
+      234 / 300 = 78%
+
+   3) AREA OCCUPANCY (by sq ft)
+      sq ft under contract / sellable sq ft
+      9,800 / 12,000 = 82%
+</pre>
+
+<p>And then there's <b>physical occupancy</b>: how many people actually came in (from key card / access logs). A site can be 95% <i>contracted</i> but only 40% <i>physically</i> used on a Friday. That second number predicts churn: teams who never come in tend to leave at renewal. 🔮</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Type</th><th>Answers</th><th>Source</th></tr>
+<tr><td>Contracted occupancy</td><td>How much are we selling?</td><td>Nexudus contracts</td></tr>
+<tr><td>Physical occupancy</td><td>How much is it actually used?</td><td>Nexudus access logs / check-ins</td></tr>
+</table>
+
+<hr/>
+
+<h3>4. Revenue KPIs</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>KPI</th><th>Formula</th><th>Why leaders care</th></tr>
+<tr><td><b>MRR</b> (Monthly Recurring Revenue)</td><td>Sum of monthly contract values active this month</td><td>The "salary" of the business. Predictable.</td></tr>
+<tr><td><b>Total revenue</b></td><td>MRR + bookings + events + one-offs</td><td>What actually came in</td></tr>
+<tr><td><b>Revenue per desk</b></td><td>Office revenue / desks occupied</td><td>Are we pricing well?</td></tr>
+<tr><td><b>Revenue per sq ft</b></td><td>Site revenue / sellable sq ft</td><td>Compare sites of different sizes fairly</td></tr>
+<tr><td><b>Average discount</b></td><td>(List price − actual price) / list price</td><td>Is sales giving away too much?</td></tr>
+<tr><td><b>Ancillary revenue %</b></td><td>Non-membership revenue / total</td><td>How much comes from meeting rooms, events, extras</td></tr>
+</table>
+
+<p><b>⚠️ Trap:</b> MRR in Nexudus (what we <i>invoiced</i>) ≠ revenue in NetSuite (what accountants <i>recognised</i>). Credit notes, prepayments, deposits and month-end adjustments make them differ. For "is the site profitable", finance's number wins. For "how many members on which plan", Nexudus wins. We'll come back to this in the NetSuite lab.</p>
+
+<hr/>
+
+<h3>5. Member KPIs</h3>
+
+<pre>
+   MEMBERS AT START OF MONTH      1,000
+ + NEW MEMBERS JOINED              + 60
+ − MEMBERS LEFT (churned)          − 45
+                                  ──────
+   MEMBERS AT END OF MONTH        1,015
+
+   NET MEMBER MOVEMENT = 60 − 45 = +15
+   MONTHLY CHURN RATE  = 45 / 1,000 = 4.5%
+</pre>
+
+<p>"Net Member Movements" is literally named in the 173tech deck as something Work.Life wanted. Now you know what it is.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>KPI</th><th>Formula</th><th>Watch out for</th></tr>
+<tr><td><b>Logo churn</b></td><td>Companies lost / companies at start</td><td>A 20-person team leaving = 1 logo</td></tr>
+<tr><td><b>Desk churn</b></td><td>Desks lost / desks at start</td><td>Better reflects revenue impact</td></tr>
+<tr><td><b>Revenue churn</b></td><td>MRR lost / MRR at start</td><td>The most honest one</td></tr>
+<tr><td><b>Net revenue retention</b></td><td>(Start MRR − churn − downgrades + upgrades) / start MRR</td><td>&gt;100% means existing members grow</td></tr>
+<tr><td><b>Renewal rate</b></td><td>Contracts renewed / contracts that reached end date</td><td>Only counts contracts that could renew</td></tr>
+<tr><td><b>Average tenure</b></td><td>Average months a member stays</td><td>Long tenure = loyal base</td></tr>
+</table>
+
+<p><b>Moves inside the business are not churn.</b> If Priya moves from a hot desk to a private office, that's an <b>upgrade</b>. If a team moves from Soho to Fitzrovia, that's a <b>transfer</b>. A naive query counts both as "1 left + 1 joined". Defining these properly is a big part of the job.</p>
+
+<hr/>
+
+<h3>6. Meeting Room Utilisation</h3>
+
+<pre>
+   UTILISATION = hours booked / hours available
+
+   Room "Brick Lane" (8 people)
+   Available: 10 hours/day × 22 working days = 220 hours
+   Booked:    132 hours
+   Utilisation = 132 / 220 = 60%
+</pre>
+
+<p>Split it two ways: <b>paid vs free</b> (members often get free credits on their plan) and <b>by hour of day</b> (10am–3pm are full, 5pm is empty). This is the "meeting room demand" forecasting from Phase 2.</p>
+
+<hr/>
+
+<h3>7. Site Profitability</h3>
+
+<pre>
+   SITE P&amp;L (Soho, one month, made up)
+
+   Revenue                         £100,950
+ − Direct costs (rent, rates,
+   service charge, utilities,
+   site staff, cleaning)          −£ 78,000
+                                  ─────────
+   SITE CONTRIBUTION                £22,950   ← "is the site profitable?"
+   Contribution margin              22.7%
+
+ − Share of central costs
+   (HQ team, sales, marketing,
+   IT) allocated to this site     −£ 12,000
+                                  ─────────
+   SITE EBITDA (after allocation)   £10,950
+</pre>
+
+<p>When someone asks "is Soho profitable?", ask back (or make the AI ask back): <b>before or after central costs?</b> The answer can flip from yes to no. That's why "business context" in the brief is so important.</p>
+
+<p>Sites usually appear in NetSuite as a <b>Location</b>, <b>Department</b> or <b>Class</b> segment on each transaction. You'll see this in the NetSuite lab.</p>
+
+<hr/>
+
+<h3>8. Sales Pipeline KPIs</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>KPI</th><th>Meaning</th><th>Source</th></tr>
+<tr><td>Leads</td><td>New enquiries</td><td>ACT / HubSpot</td></tr>
+<tr><td>Tours booked / done</td><td>Site visits</td><td>ACT / HubSpot activities</td></tr>
+<tr><td>Conversion rate</td><td>Deals won / leads (or tours)</td><td>CRM</td></tr>
+<tr><td>Pipeline value</td><td>Sum of open deal values</td><td>CRM</td></tr>
+<tr><td>Time to close</td><td>Days from enquiry to signed</td><td>CRM</td></tr>
+<tr><td>Lead source mix</td><td>Website, broker, referral, walk-in</td><td>CRM</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. Leading vs Lagging Indicators</h3>
+
+<pre>
+   LEADING (early warning)            LAGGING (already happened)
+   ───────────────────────            ──────────────────────────
+   Tours booked this week             Revenue this month
+   Notices given                      Churn last month
+   Physical usage dropping            Site profit last quarter
+   Pipeline value                     Occupancy at month end
+   Meeting room demand
+
+   "Foresight over time" in the brief = watching the LEADING ones.
+</pre>
+
+<hr/>
+
+<h3>10. The KPI Dictionary (You'll Reuse This)</h3>
+
+<p>This is the kind of table the AI layer will be given as "business context". Start building your own version now. Every lab ends with you filling in the "Source" column for real.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>KPI</th><th>Definition</th><th>Grain</th><th>Source of truth</th></tr>
+<tr><td>Desk occupancy</td><td>Desks under active contract on last day of month / total sellable desks</td><td>Site × month snapshot</td><td>Nexudus contracts + capacity sheet</td></tr>
+<tr><td>MRR</td><td>Sum of monthly price of active contracts, excluding one-off charges</td><td>Site × month</td><td>Nexudus</td></tr>
+<tr><td>Recognised revenue</td><td>Revenue posted to income accounts in the GL</td><td>Site × month</td><td>NetSuite</td></tr>
+<tr><td>Net member movement</td><td>New members − churned members (excluding internal moves)</td><td>Site × month</td><td>Nexudus (→ HubSpot later)</td></tr>
+<tr><td>Revenue churn</td><td>MRR from contracts ended in month / MRR at start of month</td><td>Site × month</td><td>Nexudus</td></tr>
+<tr><td>Room utilisation</td><td>Hours booked / hours available</td><td>Room × day</td><td>Nexudus bookings</td></tr>
+<tr><td>Site contribution</td><td>Site revenue − site direct costs</td><td>Site × month</td><td>NetSuite</td></tr>
+<tr><td>Pipeline value</td><td>Sum of open deal amounts</td><td>Snapshot</td><td>ACT → HubSpot</td></tr>
+<tr><td>Budget / target</td><td>Planned value of each KPI</td><td>Site × month</td><td>Excel</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Two people report different occupancy for the same site. How do you fix it?</b></p>
+<p><i>"Usually they're using different definitions: offices vs desks vs area, or a snapshot date vs a monthly average. I'd agree one official definition with the business, write it down with formula, source and grain, implement it once in the modelling layer, and have every dashboard and the AI use that single model."</i></p>
+
+<p><b>Q: What's the difference between MRR in the membership system and revenue in the finance system?</b></p>
+<p><i>"MRR is the contracted monthly value from active contracts. Recognised revenue is what accounting posts to the ledger, which includes credit notes, deferrals, adjustments and one-off income. They should be close, but finance is the source of truth for profitability and the membership system is the source of truth for member counts and contracts."</i></p>
+
+<p><b>Q: How would you calculate churn so upgrades and site transfers aren't counted as churn?</b></p>
+<p><i>"Measure at the member or company level, not the contract level. If a company's contract ends but they have another active contract starting within a short window, at any site, it's a move, not churn. I'd classify each contract end as churn, upgrade, downgrade or transfer in a dbt model."</i></p>
+
+<p><b>Q: Give an example of a leading indicator for churn.</b></p>
+<p><i>"Falling physical usage from access logs, fewer meeting room bookings, support complaints, or a contract approaching its end date with no renewal conversation logged in the CRM."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Definitions first</b></td><td>One written formula per KPI, or the AI will be confidently wrong.</td></tr>
+<tr><td><b>Occupancy</b></td><td>By office, desk or area. Contracted vs physical.</td></tr>
+<tr><td><b>MRR vs revenue</b></td><td>Nexudus invoiced ≠ NetSuite recognised.</td></tr>
+<tr><td><b>Net member movement</b></td><td>Joined − left, excluding internal moves.</td></tr>
+<tr><td><b>Churn</b></td><td>Logo, desk or revenue. Revenue churn is the most honest.</td></tr>
+<tr><td><b>Profitability</b></td><td>Before or after central costs? Always ask.</td></tr>
+<tr><td><b>Leading indicators</b></td><td>Tours, notices, usage. These give "foresight".</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Enough theory. In Chapter 05 we set up our <b>hands-on lab</b>: a "Mini Work.Life" with 2 sites, 6 companies and 14 members that we'll load into Excel, Nexudus, ACT, HubSpot and a finance system ourselves, so you can feel how the real business is managed.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

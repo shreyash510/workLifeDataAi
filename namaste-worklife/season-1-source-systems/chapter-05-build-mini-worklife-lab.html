@@ -1,0 +1,204 @@
+<h2>Chapter 05 — Build Your Own Mini Work.Life (The Hands-On Lab)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Reading about Nexudus or NetSuite is like reading about swimming. You only understand it when you get in the water. 🏊 So in Season 1 we do it properly: <b>we run a tiny version of Work.Life ourselves</b>, in the same tools they use. You'll sign a member in Nexudus, log a deal in ACT, post an invoice in a finance system, build the budget in Excel, and then see how messy it gets when the same person lives in five systems.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Why we build a mini company instead of just reading docs</li>
+    <li>Meet "Mini Work.Life": 2 sites, 5 companies, 14 members</li>
+    <li>The story hidden inside the data (what happened this year)</li>
+    <li>The lab files and what each one is for</li>
+    <li>Getting access to each tool (free trials and plan B's)</li>
+    <li>The right order to do the labs (trials expire!)</li>
+    <li>The questions you must be able to answer at the end</li>
+    <li>Lab rules: how to work like a real data engineer</li>
+</ul>
+
+<hr/>
+
+<h3>1. Why Build a Mini Company?</h3>
+
+<p>In the real project you won't own these systems. Work.Life's staff use them every day, and you'll only see the <b>data they leave behind</b> in BigQuery. If you've never used Nexudus, a table called <code>coworker_contracts</code> is just columns. If you've <i>created</i> a contract yourself, you know exactly what every column means, why some are empty, and what can go wrong.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   THE GOAL OF SEASON 1                                      │
+│                                                             │
+│   For every system, you should be able to say:              │
+│                                                             │
+│   1. WHO uses it at Work.Life (which team)                  │
+│   2. WHAT business process happens in it                    │
+│   3. WHICH records it creates (the data model)              │
+│   4. HOW data gets out of it (export / API / connector)     │
+│   5. WHAT goes wrong (duplicates, gaps, manual fixes)       │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Meet Mini Work.Life</h3>
+
+<p>Everything is <b>made up</b> (names, companies, prices), but shaped like the real business.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Site</th><th>Private offices</th><th>Hot desks</th><th>Meeting rooms</th></tr>
+<tr><td><b>SOHO</b> (London)</td><td>101 (4 desks, £2,600), 102 (8 desks, £5,000), 103 (2 desks, £1,400)</td><td>20</td><td>Brick Lane (8p, £45/h), Carnaby (4p, £30/h)</td></tr>
+<tr><td><b>RDG</b> (Reading)</td><td>201 (6 desks, £2,700), 202 (10 desks, £4,200)</td><td>15</td><td>Thames (10p, £40/h)</td></tr>
+</table>
+
+<table border="1" cellpadding="10">
+<tr><th>Plan</th><th>Price</th><th>What you get</th></tr>
+<tr><td>P-HOT · Unlimited Coworking</td><td>£320 / month</td><td>Any hot desk</td></tr>
+<tr><td>P-FLEX10 · Flex 10 Days</td><td>£180 / month</td><td>10 day passes, any site</td></tr>
+<tr><td>P-OFFICE · Private Office</td><td>Per office</td><td>Your own lockable office</td></tr>
+</table>
+<p>In all plans, meeting rooms are charged per hour on top. (Real plans often include free credits. You'll try that in the Nexudus lab.)</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Company</th><th>People</th><th>Where</th></tr>
+<tr><td>C001 Pixel Chai Studio</td><td>Priya Sharma (founder), Arjun, Leah, Tom</td><td>Soho Office 101</td></tr>
+<tr><td>C002 Brightline Legal</td><td>Daniel Hughes, Sara Kim</td><td>Soho Office 103 (left!)</td></tr>
+<tr><td>C003 Nomad Analytics</td><td>Ravi Patel</td><td>Soho hot desk</td></tr>
+<tr><td>C004 GreenRoot Foods</td><td>Emma Clarke (CEO) + 5 team</td><td>Reading Office 201</td></tr>
+<tr><td>C005 Kite &amp; Key Recruitment</td><td>Fatima Ali</td><td>Reading flex → Soho hot desk</td></tr>
+<tr><td><i>Ortho Robotics</i></td><td><i>Ben Carter</i></td><td><i>Not a member yet: open deal for Reading Office 202</i></td></tr>
+</table>
+
+<hr/>
+
+<h3>3. The Story Hidden in the Data</h3>
+
+<p>Every row in the lab files tells part of this story. Read it once; you'll "discover" each part again in the labs.</p>
+
+<pre>
+   2025-01  Ravi walks in, takes a hot desk at Soho.          (contract K004)
+   2025-07  Brightline Legal moves into Soho Office 103.      (K003)
+   2025-10  Priya starts on a Soho hot desk.                  (K001)
+   2026-01  GreenRoot Foods (6 people) takes Reading 201.     (K005)
+            Emma was referred by... Ravi! (see ACT)
+   2026-02  Fatima joins Reading on Flex 10.                  (K006)
+   2026-04  Priya's studio grows: she UPGRADES to Office 101  (K001 ends, K002 starts)
+            with 3 new team members, at a 7.7% discount.
+   2026-04  Brightline gives NOTICE. Renewal deal is LOST.    (ACT: "moving to hybrid")
+   2026-06  Brightline leaves. Office 103 sits EMPTY.
+   2026-08  Fatima TRANSFERS from Reading to Soho.            (K006 ends, K007 starts)
+   2026-09  Ben Carter (Ortho Robotics) tours Reading 202.    (open deal)
+            Priya gets a £90 goodwill CREDIT (AV failure).    (NetSuite only!)
+   2026-12  GreenRoot's contract ends. Renewal proposal sent. (risk!)
+</pre>
+
+<p>Hidden in there are all the hard problems of the real project:</p>
+<ul>
+    <li><b>Upgrade</b> (Priya) and <b>transfer</b> (Fatima) look like churn if you're careless.</li>
+    <li><b>Real churn</b> (Brightline) has its <i>reason</i> only in the CRM, not in Nexudus.</li>
+    <li>The <b>credit note</b> exists only in finance, so Nexudus and NetSuite revenue won't match.</li>
+    <li>The <b>same person</b> is spelled differently: <code>priya@pixelchai.co.uk</code> in Nexudus, <code>Priya.Sharma@pixelchai.co.uk</code> in ACT. "GreenRoot Foods" vs "Green Root Foods Ltd" in NetSuite.</li>
+    <li>Soho's budget assumes 85% occupancy. Reality is very different. <b>Why is Soho losing money?</b> You'll answer that.</li>
+</ul>
+
+<hr/>
+
+<h3>4. The Lab Files</h3>
+
+<p>All files are in the <code>lab-data/</code> folder next to this series.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>File</th><th>Pretends to come from</th><th>Used in lab</th></tr>
+<tr><td><code>sites.csv</code></td><td>Nexudus locations</td><td>Nexudus, Excel</td></tr>
+<tr><td><code>plans.csv</code></td><td>Nexudus plans</td><td>Nexudus</td></tr>
+<tr><td><code>resources.csv</code></td><td>Nexudus resources (offices, rooms)</td><td>Nexudus</td></tr>
+<tr><td><code>companies.csv</code></td><td>Nexudus teams</td><td>Nexudus, HubSpot</td></tr>
+<tr><td><code>members.csv</code></td><td>Nexudus customers</td><td>Nexudus, HubSpot</td></tr>
+<tr><td><code>contracts.csv</code></td><td>Nexudus contracts</td><td>Nexudus, Excel</td></tr>
+<tr><td><code>bookings_sep2026.csv</code></td><td>Nexudus bookings</td><td>Nexudus, Excel</td></tr>
+<tr><td><code>netsuite_gl_sep2026.csv</code></td><td>NetSuite transactions (GL)</td><td>NetSuite, Excel</td></tr>
+<tr><td><code>act_contacts.csv</code></td><td>ACT contacts</td><td>ACT</td></tr>
+<tr><td><code>act_opportunities.csv</code></td><td>ACT opportunities</td><td>ACT, HubSpot</td></tr>
+<tr><td><code>excel_capacity_budget_2026.csv</code></td><td>Ops/finance spreadsheet</td><td>Excel</td></tr>
+</table>
+
+<hr/>
+
+<h3>5. Getting Access to Each Tool</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Tool</th><th>Free access</th><th>Notes</th></tr>
+<tr><td><b>Excel</b></td><td>Free (Excel for the web with a Microsoft account), or desktop Excel</td><td>Google Sheets works too, but Work.Life uses Excel</td></tr>
+<tr><td><b>Nexudus</b></td><td>21-day free trial, no credit card, one location (per their pricing page)</td><td>Use a real email. Our 2 sites → you may need to model RDG as a second "floor" or do it in a second pass</td></tr>
+<tr><td><b>Act!</b></td><td>14-day free trial of Act! Premium Cloud, no card</td><td>Browser based, nothing to install</td></tr>
+<tr><td><b>HubSpot</b></td><td>Free CRM, no time limit</td><td>Plus a free developer test account later for API work</td></tr>
+<tr><td><b>NetSuite</b></td><td>No easy self-service trial for individuals. Oracle gives trials to prospects via sales, and developer accounts mostly to partners.</td><td>Plan B in the NetSuite lab: use public NetSuite docs for the data model + practise the same accounting concepts in a free accounting tool (e.g. Xero's demo company — Work.Life used Xero before moving to NetSuite!)</td></tr>
+</table>
+
+<p><i>Trial terms change. Check each vendor's site when you sign up. Use the trial honestly for learning; don't pretend to be Work.Life.</i></p>
+
+<hr/>
+
+<h3>6. The Right Order (Trials Expire!)</h3>
+
+<pre>
+   WEEK 1   Chapter 06  EXCEL      no clock. Learn the data and KPIs first.
+            Chapter 07  NEXUDUS    start the 21-day trial on the day you begin.
+   WEEK 2   Chapter 08  ACT        start the 14-day trial.
+            Chapter 09  NETSUITE   docs + plan B accounting tool.
+   WEEK 3   Chapter 10  HUBSPOT    free forever, so it goes last.
+            Chapter 11  ONE MEMBER, FIVE SYSTEMS  put it all together.
+</pre>
+
+<p>💡 <b>Tip:</b> before each trial expires, <b>export everything</b> to CSV (members, contracts, bookings, invoices, contacts, deals). Keep those exports. In Season 2 you'll load your own exports into BigQuery and model them with dbt. So the lab data travels with you through the whole series.</p>
+
+<hr/>
+
+<h3>7. The Final Exam (Answer These by Chapter 11)</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Question</th><th>Needs which systems?</th></tr>
+<tr><td>1</td><td>How many active members and companies do we have at each site on 30 Sep 2026?</td><td>Nexudus</td></tr>
+<tr><td>2</td><td>What is Soho's desk occupancy on 30 Sep 2026? Office occupancy?</td><td>Nexudus + Excel capacity</td></tr>
+<tr><td>3</td><td>What was MRR at each site in September?</td><td>Nexudus</td></tr>
+<tr><td>4</td><td>What was recognised revenue at Soho in September, and why is it different from Nexudus?</td><td>NetSuite vs Nexudus</td></tr>
+<tr><td>5</td><td>Is Soho profitable? Before and after central costs? Why not?</td><td>NetSuite + Nexudus + Excel</td></tr>
+<tr><td>6</td><td>How did Soho perform vs budget in September?</td><td>NetSuite + Excel</td></tr>
+<tr><td>7</td><td>How many members churned in 2026? (Hint: not 3.)</td><td>Nexudus + ACT</td></tr>
+<tr><td>8</td><td>Why did Brightline leave?</td><td>ACT</td></tr>
+<tr><td>9</td><td>What is the open pipeline value, and which renewal is at risk?</td><td>ACT / HubSpot</td></tr>
+<tr><td>10</td><td>What was Brick Lane's utilisation in September?</td><td>Nexudus bookings</td></tr>
+</table>
+
+<p>These 10 questions are a miniature version of what the Work.Life leadership team will ask the AI. If <i>you</i> can answer them correctly by hand, you'll know exactly what the AI needs to do, and how to test it. That's the "accuracy launch gate" from the brief, in practice.</p>
+
+<hr/>
+
+<h3>8. Lab Rules</h3>
+
+<ul>
+    <li><b>Keep a lab notebook</b> (a simple doc). For every system write: what you clicked, what record it created, and anything surprising.</li>
+    <li><b>Screenshot the data model.</b> When you create a contract, note every field on the form. Those are tomorrow's columns.</li>
+    <li><b>Break things on purpose.</b> Create a duplicate member. Cancel a booking. Backdate a contract. See what the data looks like after.</li>
+    <li><b>Never use real people's data.</b> Only the fake lab data.</li>
+    <li><b>Export before the trial ends.</b></li>
+</ul>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Why a lab</b></td><td>You understand data only after creating it yourself.</td></tr>
+<tr><td><b>Mini Work.Life</b></td><td>2 sites, 5 companies, 14 members, 1 prospect, one story.</td></tr>
+<tr><td><b>Hidden problems</b></td><td>Upgrades, transfers, churn reasons, credit notes, name mismatches.</td></tr>
+<tr><td><b>Order</b></td><td>Excel → Nexudus → ACT → NetSuite → HubSpot → matching.</td></tr>
+<tr><td><b>Export everything</b></td><td>Your exports become Season 2's warehouse.</td></tr>
+<tr><td><b>Final exam</b></td><td>10 questions = a mini accuracy test set.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>In Chapter 06 we open <b>Excel</b>, the tool nobody puts on an architecture diagram but every business runs on. We'll load the lab files, build a capacity and budget sheet like an ops team would, and calculate our first KPIs by hand.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

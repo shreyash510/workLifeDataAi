@@ -1,0 +1,286 @@
+<h2>Chapter 01 — What Is Work.Life? How a Coworking Business Makes Money</h2>
+
+<p>Hey everyone! Welcome to <b>Namaste Work.Life: Zero to Hero</b>! 🙏</p>
+
+<p>In this series we take one real client project and understand <b>every single piece of it</b>: the business, every system the data lives in, how the data moves, and the AI layer the client wants on top. Before we touch a single tool, we need to understand the business. Because every table, every dashboard and every AI answer in this project exists to answer a <b>business</b> question.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>A small story: a day at a coworking space</li>
+    <li>Who Work.Life is (the real facts)</li>
+    <li>The 5 products they sell</li>
+    <li>How the money actually comes in (recurring vs one-off)</li>
+    <li>The cost side: why a site can lose money</li>
+    <li>The life of a member: from enquiry to leaving</li>
+    <li>Why this business creates so much data</li>
+    <li>B Corp: what it means and why it matters for us</li>
+    <li>Mapping the business to the systems (preview of Season 1)</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Meet Priya. She's a freelance designer in London. Working from home is lonely, and cafés are noisy. ☕</p>
+
+<ul>
+    <li><b>Monday:</b> she books a <b>day pass</b> online at a Work.Life site in Farringdon. She pays £35, walks in, grabs any free desk.</li>
+    <li><b>Two weeks later:</b> she likes it. She buys a <b>coworking membership</b>, a monthly plan, so she can come in any day.</li>
+    <li><b>Every Thursday:</b> she books a <b>meeting room</b> for 2 hours to meet clients. That's charged on top.</li>
+    <li><b>Six months later:</b> her business grows. She hires 3 people and moves into a <b>private office</b> for 4 on a 12-month term.</li>
+    <li><b>One day:</b> she hosts a launch party in the building's <b>event space</b>.</li>
+</ul>
+
+<p>One customer, five different products, five different ways of paying. Now multiply Priya by <b>about 8,000 members</b> across <b>14 sites</b>. That is Work.Life. And every one of those actions creates a row of data somewhere.</p>
+
+<hr/>
+
+<h3>2. Who Is Work.Life?</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Fact</th><th>Detail</th></tr>
+<tr><td>What they do</td><td>Flexible workspace provider: coworking, private offices, meeting rooms, event space</td></tr>
+<tr><td>Where</td><td>14 locations across London, Manchester &amp; Reading</td></tr>
+<tr><td>London sites (public list)</td><td>London Bridge, Bermondsey, Borough, Camden, Farringdon (several buildings), Fitzrovia, Hammersmith, Holborn, Liverpool Street, Old Street, Soho</td></tr>
+<tr><td>Members</td><td>Around 8,000</td></tr>
+<tr><td>Staff</td><td>Around 70</td></tr>
+<tr><td>Certification</td><td>B Corp certified (since 2022)</td></tr>
+<tr><td>Customers</td><td>Freelancers, startups, SMEs, growing teams (1–40 people)</td></tr>
+<tr><td>What they are NOT</td><td>"We are not a data business, and we do not want to become one." (from their brief)</td></tr>
+</table>
+
+<p>That last line is the most important sentence for us. Remember it. It shapes every decision in this project: <b>keep it simple, keep it cheap to run, don't make them hire a data team.</b></p>
+
+<hr/>
+
+<h3>3. The 5 Products They Sell</h3>
+
+<pre>
+┌─────────────────────────────────────────────────────────────────────┐
+│   WORK.LIFE PRODUCT SHELF                                           │
+│                                                                     │
+│   1. COWORKING MEMBERSHIP   hot desk, any free seat, monthly        │
+│   2. PRIVATE OFFICE         lockable room for 1–40 people, 3m+ term │
+│   3. MEETING ROOMS          booked by the hour or day               │
+│   4. EVENT SPACE            venues for launches, talks, parties     │
+│   5. ON-DEMAND              day passes, day offices, booked online  │
+└─────────────────────────────────────────────────────────────────────┘
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Product</th><th>How it's sold</th><th>Commitment</th><th>Public price hint</th><th>Revenue type</th></tr>
+<tr><td>Coworking (hot desk)</td><td>Monthly membership</td><td>From 1 month</td><td>Unlimited from ~£300/month; Flex day-pass bundles from ~£24/month</td><td>Recurring</td></tr>
+<tr><td>Private office</td><td>Contract per office</td><td>From 3 months</td><td>Quoted per office</td><td>Recurring (the big one)</td></tr>
+<tr><td>Meeting rooms</td><td>Per hour / per day booking</td><td>None</td><td>Varies by room</td><td>Usage / one-off</td></tr>
+<tr><td>Event space</td><td>Per event</td><td>None</td><td>Quoted</td><td>One-off</td></tr>
+<tr><td>Day pass / day office</td><td>Book online instantly</td><td>None</td><td>Day pass from ~£35</td><td>One-off</td></tr>
+</table>
+
+<p><i>Prices are from Work.Life's public website and change over time and by site. Treat them as "shape of the business", not exact figures.</i></p>
+
+<p><b>Analogy:</b> think of a gym. 🏋️ Monthly members are the backbone. Personal training sessions (meeting rooms) and one-off classes (events, day passes) are extra income on top. A gym with full classes but no members is in trouble. Same here.</p>
+
+<hr/>
+
+<h3>4. How the Money Comes In</h3>
+
+<p>There are two kinds of money in this business, and the difference matters for <b>everything</b> we build later (forecasting, churn, profitability).</p>
+
+<pre>
+   RECURRING REVENUE                         NON-RECURRING REVENUE
+   ─────────────────                         ─────────────────────
+   Comes every month, contracted             Comes when someone books/buys
+
+   • Private office fees                     • Meeting room bookings
+   • Coworking memberships                   • Event hire
+   • Add-ons on contract (locker,            • Day passes / day offices
+     parking, mail handling)                 • Printing, extra guests
+
+   Predictable. You can forecast it          Unpredictable. Depends on season,
+   from contracts.                           demand, weather, holidays.
+</pre>
+
+<p>Let's do a tiny example for one site, one month:</p>
+
+<pre>
+   SOHO SITE — MARCH (made-up numbers for learning)
+
+   Private offices      20 offices × avg £2,400  = £48,000
+   Coworking members    90 members × avg £320    = £28,800
+   Meeting rooms        310 hours × avg £45      = £13,950
+   Events               4 events  × avg £1,500   =  £6,000
+   Day passes           120 passes × £35         =  £4,200
+                                                   ───────
+   TOTAL REVENUE                                   £100,950
+
+   Recurring share = (48,000 + 28,800) / 100,950 = 76%
+</pre>
+
+<p>This is why the brief talks about <b>"resident revenue projection (Contracted, Contracted + Renewals)"</b>. "Residents" are the people with ongoing contracts (private offices and memberships). If you know every contract's start date, end date and monthly price, you can project most of next year's revenue already. That's Phase 2 work, but the data for it lives in Phase 1.</p>
+
+<hr/>
+
+<h3>5. The Cost Side: Why a Site Can Lose Money</h3>
+
+<p>The brief's example question is <i>"is a given site profitable, if not why not?"</i>. To answer that, you need to know what a site costs.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Cost</th><th>What it is</th><th>Fixed or variable?</th></tr>
+<tr><td><b>Rent / lease</b></td><td>Paid to the landlord for the building. Usually the biggest cost by far.</td><td>Fixed</td></tr>
+<tr><td>Business rates</td><td>UK property tax on commercial buildings</td><td>Fixed</td></tr>
+<tr><td>Service charge</td><td>Building maintenance paid to the landlord</td><td>Fixed</td></tr>
+<tr><td>Utilities</td><td>Electricity, heating, water, internet</td><td>Semi-variable</td></tr>
+<tr><td>Staff</td><td>Community/site team, cleaners</td><td>Mostly fixed</td></tr>
+<tr><td>Consumables</td><td>Coffee, snacks, printing paper</td><td>Variable (more members = more coffee)</td></tr>
+<tr><td>Fit-out</td><td>Furniture, refurb, depreciated over years</td><td>Fixed (capital)</td></tr>
+</table>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   THE CORE TRUTH OF COWORKING                               │
+│                                                             │
+│   Costs are mostly FIXED (you pay rent whether the          │
+│   building is full or empty).                               │
+│                                                             │
+│   Revenue depends on how FULL the building is.              │
+│                                                             │
+│   So: profit ≈ occupancy.                                   │
+│   An 85% full site makes money. A 55% full site bleeds.     │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>So when a leader asks <i>"why is Hammersmith not profitable?"</i>, the honest answer is almost always one of these:</p>
+<ul>
+    <li><b>Occupancy is low</b>: too many empty offices or desks.</li>
+    <li><b>Price is low</b>: offices are full, but sold at a discount.</li>
+    <li><b>Costs are high</b>: the lease is expensive for that area, or a big one-off repair.</li>
+    <li><b>Churn is high</b>: members leave as fast as new ones join.</li>
+    <li><b>Mix is wrong</b>: lots of cheap hot desks, few high-value private offices.</li>
+</ul>
+
+<p>Notice that answering this needs data from <b>two different worlds</b>: occupancy and members (from <b>Nexudus</b>) and costs (from <b>NetSuite</b>, the finance system). Joining these two worlds correctly is the whole job of the data pipeline. Keep that in your head.</p>
+
+<hr/>
+
+<h3>6. The Life of a Member</h3>
+
+<pre>
+   ENQUIRY ──► TOUR ──► PROPOSAL ──► SIGN ──► ONBOARD ──► ACTIVE ──► RENEW or LEAVE
+     │          │          │          │          │           │            │
+   website    site visit  price &    contract   key card,   bookings,    notice
+   form,      booked      terms      signed     wifi,       invoices,    given,
+   broker                 sent                  welcome     events       move-out
+
+   ◄──────── SALES (CRM: ACT → HubSpot) ───────►◄──── OPERATIONS (Nexudus) ────►
+                                                ◄──── MONEY (NetSuite) ─────────►
+</pre>
+
+<p>A few words you'll hear a lot:</p>
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>Meaning</th></tr>
+<tr><td><b>Lead</b></td><td>Someone who showed interest but hasn't signed</td></tr>
+<tr><td><b>Broker</b></td><td>An agent who brings in office customers for a commission. Common in the UK flex market.</td></tr>
+<tr><td><b>Resident</b></td><td>A member with an ongoing contract (private office or membership)</td></tr>
+<tr><td><b>Notice</b></td><td>When a member says "we're leaving at the end of the term"</td></tr>
+<tr><td><b>Churn</b></td><td>Members leaving. The opposite of retention.</td></tr>
+<tr><td><b>Renewal</b></td><td>A member re-signs when their term ends</td></tr>
+<tr><td><b>Net member movement</b></td><td>New members joined minus members left, in a period</td></tr>
+</table>
+
+<hr/>
+
+<h3>7. Why This Business Creates So Much Data</h3>
+
+<p>Every step above writes data somewhere:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Event</th><th>Data it creates</th><th>Rough volume</th></tr>
+<tr><td>A member signs</td><td>Customer, team (company), contract, plan</td><td>Hundreds per month</td></tr>
+<tr><td>A meeting room booking</td><td>Booking row, charge row</td><td>Thousands per month</td></tr>
+<tr><td>Monthly billing run</td><td>Invoice + many line items per member</td><td>~8,000 invoices per month</td></tr>
+<tr><td>Someone taps a key card</td><td>Access log row</td><td>Tens of thousands per month</td></tr>
+<tr><td>A finance journal</td><td>NetSuite transactions per site</td><td>Thousands per month</td></tr>
+<tr><td>A sales enquiry</td><td>Lead, deal, activities in the CRM</td><td>Hundreds per month</td></tr>
+</table>
+
+<p>None of this is "big data" in the Google sense. It's <b>medium, messy, business data</b> spread across different systems. That is actually the most common kind of data project in the real world, and the most useful one to learn.</p>
+
+<hr/>
+
+<h3>8. B Corp: What It Means for Us</h3>
+
+<p><b>B Corp</b> is a certification for companies that meet standards for social and environmental impact, transparency and accountability. Work.Life has been certified since 2022.</p>
+
+<p>Why should a data engineer care?</p>
+<ul>
+    <li><b>Responsible data use is part of their identity.</b> That's why the brief is strict: "People data excluded", "Safe data only". They won't accept "just connect everything to the AI".</li>
+    <li><b>They may report impact metrics</b> (energy use, community events, local hiring). These can become KPIs too.</li>
+    <li><b>Trust and honesty matter.</b> The brief literally says: <i>"honest feedback on what is and is not realistic is more useful to us than an optimistic pitch."</i></li>
+</ul>
+
+<hr/>
+
+<h3>9. Mapping the Business to the Systems</h3>
+
+<p>Here's the preview of Season 1. Every part of the business has a "home" system:</p>
+
+<pre>
+   BUSINESS AREA              SYSTEM           WHAT IT KNOWS
+   ─────────────              ──────           ─────────────
+   Members, desks, offices,   NEXUDUS          who is a member, on what plan,
+   bookings, billing                           which office, what they booked,
+                                               what they were invoiced
+
+   Finance, P&amp;L, costs        NETSUITE         revenue recognised, costs per
+                                               site, the general ledger
+
+   Sales pipeline (old)       ACT              leads, prospects, deals, notes
+
+   Sales &amp; members (new)      HUBSPOT          contacts, companies, deals,
+                                               becoming "source of truth"
+
+   Everything else            EXCEL            targets, budgets, capacity,
+                                               manual adjustments
+</pre>
+
+<p>In the next chapters we'll open each of these one by one, in depth.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Explain the Work.Life business model in one minute.</b></p>
+<p><i>"Work.Life leases buildings and sells flexible space inside them: private offices on terms from three months, monthly coworking memberships, plus meeting rooms, events and day passes on demand. Most revenue is recurring from residents. Costs are mostly fixed, mainly rent, so profitability per site is driven by occupancy, pricing and churn."</i></p>
+
+<p><b>Q: Why is occupancy the most important number in coworking?</b></p>
+<p><i>"Because the cost base is mostly fixed. Rent, rates and staff don't change much if the building is half empty, but revenue does. Each extra occupied desk or office is almost pure margin once you've covered fixed costs."</i></p>
+
+<p><b>Q: What's the difference between recurring and non-recurring revenue here?</b></p>
+<p><i>"Recurring revenue comes from contracts: private offices and memberships billed every month. It's predictable and you can project it from contract dates. Non-recurring revenue comes from bookings and one-off purchases like meeting rooms, events and day passes. It depends on demand and seasonality."</i></p>
+
+<p><b>Q: To answer 'is this site profitable', what data do you need?</b></p>
+<p><i>"Revenue per site and costs per site, ideally from the finance system so it matches the accounts, plus operational drivers from the membership system: occupancy, average price, churn and product mix. That lets you explain why, not just what."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Work.Life</b></td><td>UK coworking: 14 sites, ~8,000 members, ~70 staff, B Corp.</td></tr>
+<tr><td><b>Products</b></td><td>Coworking, private offices, meeting rooms, events, day passes.</td></tr>
+<tr><td><b>Revenue</b></td><td>Mostly recurring (residents) + on-demand bookings.</td></tr>
+<tr><td><b>Costs</b></td><td>Mostly fixed. Rent is the biggest.</td></tr>
+<tr><td><b>Profit driver</b></td><td>Occupancy, price, churn and product mix.</td></tr>
+<tr><td><b>Member journey</b></td><td>Enquiry → tour → sign → active → renew or leave.</td></tr>
+<tr><td><b>The client's mindset</b></td><td>"Not a data business." Keep it simple, cheap and trusted.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>We now know how the business makes money. In Chapter 02 we learn the <b>language of the leadership team</b>: occupancy, MRR, churn, net member movements, revenue per desk, and how each one is calculated. These are the exact KPIs the AI must understand.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

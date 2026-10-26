@@ -1,0 +1,281 @@
+<h2>Chapter 08 — ACT: The Mystery Source (Door Access or CRM?) (Hands-On Lab)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Here's a real-life lesson before we even open a tool. The brief lists the source systems as <i>"Nexudus, NetSuite, ACT, Excel"</i>. Just "ACT". No explanation. 🤔 In the UK workspace world, "ACT" can mean two completely different things:</p>
+
+<ul>
+    <li><b>ACT365</b>: a cloud <b>door access-control</b> system (key cards, fobs, doors). Nexudus has a native integration with it.</li>
+    <li><b>Act!</b>: a long-running <b>sales CRM</b> (contacts, deals, follow-ups).</li>
+</ul>
+
+<p>One is about <b>who walked through a door</b>. The other is about <b>who we're trying to sell to</b>. Very different data, very different privacy rules, very different pipelines. A good engineer doesn't guess. They write it on the "questions for the client" list. Meanwhile, we'll learn <b>both</b>, so you're ready either way.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>How to find out which "ACT" it is (without embarrassing yourself)</li>
+    <li><b>Part A: ACT365 door access</b></li>
+    <li>&nbsp;&nbsp;How access control works in a coworking building</li>
+    <li>&nbsp;&nbsp;How Nexudus and ACT365 talk to each other</li>
+    <li>&nbsp;&nbsp;Lab 8.1: Analyse a month of door events</li>
+    <li>&nbsp;&nbsp;Lab 8.2: Find the churn warning hiding in the data</li>
+    <li>&nbsp;&nbsp;Privacy: door logs are personal data</li>
+    <li><b>Part B: Act! CRM</b></li>
+    <li>&nbsp;&nbsp;What a CRM holds and who uses it</li>
+    <li>&nbsp;&nbsp;Lab 8.3: Start the trial, import contacts and opportunities</li>
+    <li>&nbsp;&nbsp;Lab 8.4: Pipeline, win/loss reasons, renewals</li>
+    <li>Putting A and B together: the GreenRoot renewal</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. How to Find Out Which "ACT"</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Clue</th><th>Points to ACT365 (doors)</th><th>Points to Act! (CRM)</th></tr>
+<tr><td>Dataset names in BigQuery</td><td><code>raw_act365</code>, tables like <code>events</code>, <code>cardholders</code>, <code>doors</code></td><td><code>raw_act</code>, tables like <code>contacts</code>, <code>opportunities</code>, <code>history</code></td></tr>
+<tr><td>Who owns it at Work.Life</td><td>Ops / facilities / IT</td><td>Sales team</td></tr>
+<tr><td>Dashboards that use it</td><td>"Footfall", "attendance", "utilisation"</td><td>"Pipeline", "conversion", "leads"</td></tr>
+<tr><td>The HubSpot sentence in the brief</td><td>HubSpot replaces nothing here</td><td>HubSpot probably <i>replaces</i> Act! for sales</td></tr>
+</table>
+
+<p>How to ask, in the client call: <i>"In your source list you mention ACT. Is that your ACT365 access-control system, the Act! CRM, or something else? And which data from it feeds the warehouse today?"</i> Simple, specific, no assumptions. ✅</p>
+
+<hr/>
+
+<h2>Part A — ACT365: Door Access Control</h2>
+
+<h3>2. How Access Control Works in a Coworking Building</h3>
+
+<pre>
+   Priya taps her card ──► READER on the door ──► CONTROLLER ──► ACT365 cloud
+                                                                    │
+                                    "Is card 04A1B2C301 in a group  │
+                                     that may open this door now?"  │
+                                                                    ▼
+                                           ✅ Access Granted  /  ❌ Access Denied
+                                                                    │
+                                                         EVENT LOGGED (time, door, card)
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Thing</th><th>Meaning</th><th>Mini Work.Life example</th></tr>
+<tr><td><b>Cardholder</b></td><td>A person who has credentials</td><td>CH-1001 Priya Sharma</td></tr>
+<tr><td><b>Card / fob / PIN</b></td><td>The credential</td><td>Card 04A1B2C301</td></tr>
+<tr><td><b>Door</b></td><td>A reader-controlled door</td><td>Soho Main Entrance, Soho Office 101 Door</td></tr>
+<tr><td><b>Cardholder group</b></td><td>Which doors, at what times</td><td>"Soho Office 101" = main entrance + floor + office 101</td></tr>
+<tr><td><b>Event</b></td><td>One tap, granted or denied</td><td>EV00005 07:02 UTC Leah, Main Entrance, Granted</td></tr>
+</table>
+
+<h3>3. How Nexudus and ACT365 Talk</h3>
+
+<p>Per Nexudus's documentation, the ACT365 integration works like this:</p>
+
+<ul>
+    <li>You create one ACT365 group per Nexudus <b>pass, resource, desk and office</b>.</li>
+    <li>Nexudus <b>adds</b> a customer to the right group when they get a contract or booking, and <b>removes</b> them when the pass expires, contract is cancelled or booking ends.</li>
+    <li>Door events can optionally create <b>check-ins</b> back in Nexudus.</li>
+    <li>It's listed as an add-on at <b>£50 per location per month</b>.</li>
+</ul>
+
+<pre>
+   NEXUDUS (truth: who has paid for what)
+      │  contract K002 starts → "add Priya to group Soho Office 101"
+      ▼
+   ACT365 (truth: who can open which door, and who actually did)
+      │  door events
+      ▼
+   back to NEXUDUS as CHECK-INS  (optional)   and/or   straight to BigQuery
+</pre>
+
+<p>So "physical occupancy" can come from <b>two places</b>: Nexudus check-ins (simpler, already joined to customers) or raw ACT365 events (more detail, every door). Another question for the client: <i>which one does the warehouse use today?</i></p>
+
+<hr/>
+
+<h3>4. Lab 8.1 — Analyse a Month of Door Events</h3>
+
+<p>ACT365 is sold through security installers, so there's no "free trial" like Nexudus. We use the lab files instead, which are shaped like a real event export:</p>
+
+<ul>
+    <li><code>act365_cardholders.csv</code>: 15 cardholders, their card number, group and (where known) the Nexudus email.</li>
+    <li><code>act365_door_events_sep2026.csv</code>: 276 events across September 2026.</li>
+</ul>
+
+<p>Load both into Excel with Power Query (like Chapter 06). Then answer:</p>
+
+<ol>
+    <li><b>How many events?</b> 276. Now: how many <b>people visited</b>? That's a different question!</li>
+    <li>Filter to one person on one day. Notice that Priya taps <b>twice</b> each morning: main entrance, then office door. If you count events, you <b>double count</b> office members (but not hot-deskers, who only tap the main door). <b>Rule:</b> count unique <i>person-days</i> on the <b>main entrance</b> only.</li>
+    <li>Look at <code>event_time_utc</code>. 07:02 UTC is <b>08:02 in London</b> in September (British Summer Time). If you group by hour in UTC, the "morning rush" lands at the wrong hour. And a late-night event at 23:30 UTC can land on the wrong <i>day</i>.</li>
+    <li>Find <code>CH-9001 Cleaner SparkleClean</code>. Contractors have cards too. They're not members. <b>Exclude them</b>, or your "member attendance" includes cleaners. 😄</li>
+    <li>Find the <code>Access Denied</code> event. Daniel Hughes (Brightline, left in June) tried his old card on 2 Sep. ACT365 said no, because Nexudus had removed him from the group. The integration worked! This kind of check is also a nice <b>security report</b>.</li>
+</ol>
+
+<hr/>
+
+<h3>5. Lab 8.2 — Find the Churn Warning</h3>
+
+<p>Make a PivotTable: rows = <b>week</b> of September, columns = <b>site</b>, values = <b>count of unique cardholder per day on Main Entrance</b>. (Tip: add a helper column <code>person_day = cardholder_id &amp; "|" &amp; LEFT(event_time_utc,10)</code> and remove duplicates.)</p>
+
+<p>You should see something like:</p>
+
+<pre>
+   Main-entrance person-days per week (Sep 2026)
+
+               Soho (6 people)      Reading / GreenRoot (6 people)
+   Week 1          19                     17      (Tue–Fri only)
+   Week 2          22                     22
+   Week 3          20                     12      ◄─ dropping
+   Week 4          18                      7      ◄─ dropping fast
+   Week 5          10                      1      (Mon–Wed only) 🚨
+</pre>
+
+<p>Now compute a <b>badge-in rate</b> for GreenRoot: person-days ÷ (contracted desks × working days). In week 2: 22 ÷ (6 × 5) = <b>73%</b>. In week 4: 7 ÷ 30 = <b>23%</b>.</p>
+
+<p>The contract says GreenRoot pays for 6 desks until 31 Dec. Nexudus contracted occupancy says "100% of Office 201, all good". The door says <b>the team has stopped coming in</b>. That's the most valuable insight in this whole lab, and only the door data shows it. 🔮</p>
+
+<hr/>
+
+<h3>6. Privacy: Door Logs Are Personal Data</h3>
+
+<p>A door log tells you <b>when a named person arrived, every day</b>. Under UK GDPR that's personal data, and people would rightly be uncomfortable seeing it in a chatbot.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   SAFE vs UNSAFE for the AI layer                           │
+│                                                             │
+│   ✅ "GreenRoot's weekly attendance fell from 73% to 23%"   │
+│      (company level, aggregated)                            │
+│                                                             │
+│   ❌ "Hannah Wood hasn't come in since 16 Sep"              │
+│      (individual tracking)                                  │
+│                                                             │
+│   ❌ Work.Life STAFF door data → that's people/HR data,     │
+│      explicitly OUT OF SCOPE in the brief                   │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>This is exactly the brief's principle <i>"Safe data only... Sensitive data stays out."</i> In the warehouse we'd expose only a <b>modelled, aggregated</b> table (company × site × week) to the AI, never the raw events. Write this down; it'll be a key point in the security chapter.</p>
+
+<hr/>
+
+<h2>Part B — Act!: The Sales CRM</h2>
+
+<h3>7. What a CRM Holds</h3>
+
+<p>A CRM (Customer Relationship Management) tool is where sales people track <b>everyone they talk to</b>, long before anyone becomes a member in Nexudus.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Act! record</th><th>What it is</th><th>Mini Work.Life example</th></tr>
+<tr><td><b>Contact</b></td><td>A person</td><td>Ben Carter, COO, Ortho Robotics</td></tr>
+<tr><td><b>Company</b></td><td>An organisation</td><td>Ortho Robotics</td></tr>
+<tr><td><b>Opportunity</b></td><td>A potential deal, with stage, value, close date</td><td>"Ortho Robotics – Office 202", £4,200/month, Tour Done</td></tr>
+<tr><td><b>Activity</b></td><td>A scheduled call, meeting, tour, to-do</td><td>"Tour Reading 202, 2 Sep, 11:00"</td></tr>
+<tr><td><b>History / notes</b></td><td>What happened, in free text</td><td>"Wants 10 desks from Nov, price sensitive"</td></tr>
+<tr><td><b>Groups</b></td><td>Lists / segments</td><td>"Brokers", "Renewals Q4"</td></tr>
+</table>
+
+<p>What a CRM knows that Nexudus doesn't:</p>
+<ul>
+    <li><b>Where leads come from</b> (website, broker, referral, walk-in)</li>
+    <li><b>Deals that didn't happen</b> (lost prospects and why)</li>
+    <li><b>Why members leave</b> (Brightline: "moving to hybrid")</li>
+    <li><b>What's coming</b> (pipeline, upcoming renewals)</li>
+</ul>
+
+<hr/>
+
+<h3>8. Lab 8.3 — Start the Trial and Import</h3>
+
+<ol>
+    <li>Start the <b>Act! Premium Cloud</b> free trial (14 days, browser based, no card, at the time of writing).</li>
+    <li>Import <code>act_contacts.csv</code>: File/Tools → Import, map columns (Contact → name, E-mail → email, ID/Status, Referred By).</li>
+    <li>Create the <b>opportunities</b> from <code>act_opportunities.csv</code> (import if your edition allows, otherwise by hand; there are only 7). Set stage, status, product, value and dates.</li>
+    <li>Create a sales <b>process</b> with stages: Enquiry → Tour Booked → Tour Done → Proposal Sent → Closed Won / Closed Lost.</li>
+    <li>Log an <b>activity</b>: "Call Emma Clarke re renewal" for next week. Log a <b>history</b> note on Brightline.</li>
+</ol>
+
+<p>📝 <b>Notebook:</b> look at the contacts you imported. Priya's email is <code>Priya.Sharma@pixelchai.co.uk</code>, but in Nexudus she's <code>priya@pixelchai.co.uk</code>. The company is "Pixel Chai Studio <b>Ltd</b>" here and "Pixel Chai Studio" in Nexudus. <b>No shared ID.</b> Hold that thought for Chapter 11.</p>
+
+<hr/>
+
+<h3>9. Lab 8.4 — Pipeline, Win/Loss and Renewals</h3>
+
+<p>Use Act!'s opportunity list/reports (or export to Excel) and answer:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Open pipeline value (monthly)?</td><td>GreenRoot renewal £2,800 + Ortho Robotics £4,200 = <b>£7,000/month</b></td></tr>
+<tr><td>Win rate (closed deals)?</td><td>3 won / 5 closed = <b>60%</b></td></tr>
+<tr><td>Why did Brightline leave?</td><td>"Moving to hybrid; downsizing to home working" (only here!)</td></tr>
+<tr><td>Lead sources?</td><td>Website 3, Broker 2, Walk-in 1, Referral 1</td></tr>
+<tr><td>Discount given to Pixel Chai?</td><td>Quoted £2,600, won £2,400 = 7.7%</td></tr>
+<tr><td>Which renewal is coming?</td><td>GreenRoot, contract ends 31 Dec 2026, proposal sent</td></tr>
+</table>
+
+<p>🔁 Notice: Emma Clarke was <b>referred by Ravi Patel</b>, an existing member. Referral data turns into a nice insight ("our members bring members") that no other system has.</p>
+
+<p><b>Getting data out of Act!:</b> export to CSV/Excel, or use Act!'s web API for integrations (check what your edition offers). If Work.Life is moving sales to <b>HubSpot</b>, the long-term answer is: migrate history to HubSpot once, keep a frozen copy in the warehouse, and stop extracting from Act!.</p>
+
+<p>Before your 14 days end: <b>export contacts and opportunities</b> to <code>lab-data/my-exports/act/</code>.</p>
+
+<hr/>
+
+<h3>10. Putting A and B Together: The GreenRoot Renewal</h3>
+
+<pre>
+   SYSTEM       WHAT IT SAYS ABOUT GREENROOT                        MOOD
+   ──────       ───────────────────────────                        ────
+   Nexudus      Contract K005 active, Office 201, £2,700, ends     😊
+                31 Dec 2026. No notice given.
+   NetSuite     Paid every invoice. £2,900 revenue in Sep.         😊
+   Act!         Renewal proposal sent at £2,800. Stage: open.      😊
+   ACT365       Attendance 73% → 23% → ~0 in 3 weeks.              🚨
+
+   ONE SYSTEM ALONE: "everything's fine".
+   ALL SYSTEMS TOGETHER: "our Reading anchor tenant may be leaving.
+                          Reading's only office revenue is at risk.
+                          Call Emma this week."
+</pre>
+
+<p>That is the whole point of the project in one example. It's what the brief means by <b>"proactive insight"</b> and <b>"foresight over time"</b>, and what Phase 2 calls <b>"context packs a team member can take into a renewal conversation"</b>. It only works if the data from different systems lands in one place and is <b>joined correctly</b>.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: A client lists a source system by an ambiguous name. What do you do?</b></p>
+<p><i>"I don't guess. I check what I can (dataset and table names in the warehouse, existing dashboards, who owns it), then confirm with the client using a specific question: which product it is, who uses it, and which data from it flows today."</i></p>
+
+<p><b>Q: How would you measure physical occupancy from door access events?</b></p>
+<p><i>"Count unique person-days on the main entrance, not raw events, because people tap several doors. Exclude contractors and staff, convert UTC to local time, and compare person-days with contracted desks times working days to get a badge-in rate per company, site and week."</i></p>
+
+<p><b>Q: What are the privacy concerns with access-control data?</b></p>
+<p><i>"It's personal data that shows individual movements. I'd keep raw events in a restricted layer, expose only aggregated company-level metrics to reporting and AI, exclude staff data entirely, and agree retention with the data protection lead."</i></p>
+
+<p><b>Q: What does a CRM tell you that the membership system doesn't?</b></p>
+<p><i>"Lead sources, prospects who never signed, lost reasons, churn reasons, upcoming renewals and pipeline value. It's the past and future of the customer relationship, while the membership system is the present."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>"ACT" is ambiguous</b></td><td>ACT365 (doors) or Act! (CRM). Confirm with the client.</td></tr>
+<tr><td><b>ACT365</b></td><td>Cardholders, groups, doors, events. Nexudus provisions access.</td></tr>
+<tr><td><b>Counting footfall</b></td><td>Unique person-days on the main door. Not events.</td></tr>
+<tr><td><b>Door data = personal data</b></td><td>Aggregate for AI. Staff data out of scope.</td></tr>
+<tr><td><b>Act! CRM</b></td><td>Contacts, companies, opportunities, activities, history.</td></tr>
+<tr><td><b>CRM-only knowledge</b></td><td>Lead source, lost reasons, churn reasons, pipeline.</td></tr>
+<tr><td><b>Join the systems</b></td><td>GreenRoot looks fine in 3 systems and at risk in the 4th.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>In Chapter 09 we go to where the money is counted: <b>NetSuite</b>. Chart of accounts, subsidiaries and locations, invoices vs journals, the period close, and why finance's revenue number is the one the board pack trusts.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

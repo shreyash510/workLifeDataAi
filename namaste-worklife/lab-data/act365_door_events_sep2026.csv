@@ -1,0 +1,277 @@
+event_id,event_time_utc,site,door,cardholder_id,cardholder_name,event_type
+EV00005,2026-09-01T07:02:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00006,2026-09-01T07:04:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00009,2026-09-01T07:06:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00010,2026-09-01T07:08:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00011,2026-09-01T07:50:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00012,2026-09-01T07:52:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00007,2026-09-01T07:59:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00008,2026-09-01T07:59:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00001,2026-09-01T08:54:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00002,2026-09-01T08:56:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00003,2026-09-01T09:41:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00004,2026-09-01T09:43:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00013,2026-09-01T09:57:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00014,2026-09-01T09:59:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00017,2026-09-02T07:16:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00018,2026-09-02T07:18:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00015,2026-09-02T07:20:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00016,2026-09-02T07:22:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00021,2026-09-02T07:34:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00022,2026-09-02T07:36:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00029,2026-09-02T08:01:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00030,2026-09-02T08:03:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00276,2026-09-02T08:14:00Z,SOHO,Soho Main Entrance,CH-1005,Daniel Hughes,Access Denied - Card Not In Group
+EV00031,2026-09-02T09:14:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00019,2026-09-02T09:16:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00032,2026-09-02T09:16:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00027,2026-09-02T09:17:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00020,2026-09-02T09:18:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00028,2026-09-02T09:19:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00025,2026-09-02T09:25:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00026,2026-09-02T09:27:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00023,2026-09-02T09:48:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00024,2026-09-02T09:50:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00042,2026-09-03T07:01:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00037,2026-09-03T07:16:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00038,2026-09-03T07:18:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00047,2026-09-03T08:01:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00048,2026-09-03T08:03:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00045,2026-09-03T08:21:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00046,2026-09-03T08:23:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00043,2026-09-03T08:32:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00044,2026-09-03T08:34:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00033,2026-09-03T08:43:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00034,2026-09-03T08:45:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00049,2026-09-03T09:10:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00050,2026-09-03T09:12:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00041,2026-09-03T09:13:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00035,2026-09-03T09:36:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00036,2026-09-03T09:38:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00039,2026-09-03T09:58:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00040,2026-09-03T09:59:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00055,2026-09-04T07:19:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00056,2026-09-04T07:21:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00066,2026-09-04T07:27:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00067,2026-09-04T07:29:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00059,2026-09-04T07:57:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00057,2026-09-04T07:59:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00058,2026-09-04T07:59:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00060,2026-09-04T08:07:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00061,2026-09-04T08:09:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00053,2026-09-04T08:25:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00054,2026-09-04T08:27:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00051,2026-09-04T08:45:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00052,2026-09-04T08:47:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00068,2026-09-04T09:20:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00069,2026-09-04T09:22:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00064,2026-09-04T09:38:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00062,2026-09-04T09:40:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00065,2026-09-04T09:40:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00063,2026-09-04T09:42:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00078,2026-09-07T07:05:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00079,2026-09-07T07:07:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00070,2026-09-07T08:04:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00071,2026-09-07T08:06:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00072,2026-09-07T08:26:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00073,2026-09-07T08:28:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00076,2026-09-07T08:30:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00077,2026-09-07T08:32:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00082,2026-09-07T09:17:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00083,2026-09-07T09:19:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00080,2026-09-07T09:38:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00081,2026-09-07T09:40:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00074,2026-09-07T09:56:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00075,2026-09-07T09:58:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00090,2026-09-08T07:03:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00091,2026-09-08T07:05:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00088,2026-09-08T07:14:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00084,2026-09-08T07:32:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00085,2026-09-08T07:34:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00092,2026-09-08T08:02:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00093,2026-09-08T08:04:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00086,2026-09-08T08:14:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00089,2026-09-08T08:14:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00087,2026-09-08T08:16:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00094,2026-09-08T09:04:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00095,2026-09-08T09:06:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00096,2026-09-08T09:19:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00097,2026-09-08T09:21:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00104,2026-09-09T07:04:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00102,2026-09-09T07:36:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00103,2026-09-09T07:38:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00107,2026-09-09T08:24:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00098,2026-09-09T08:25:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00108,2026-09-09T08:26:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00099,2026-09-09T08:27:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00105,2026-09-09T08:34:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00106,2026-09-09T08:36:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00100,2026-09-09T09:40:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00101,2026-09-09T09:42:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00120,2026-09-10T07:00:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00121,2026-09-10T07:02:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00115,2026-09-10T07:09:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00117,2026-09-10T07:11:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00116,2026-09-10T07:11:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00118,2026-09-10T07:41:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00119,2026-09-10T07:43:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00113,2026-09-10T07:49:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00114,2026-09-10T07:51:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00128,2026-09-10T08:00:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00129,2026-09-10T08:02:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00109,2026-09-10T08:40:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00124,2026-09-10T08:41:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00110,2026-09-10T08:42:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00125,2026-09-10T08:43:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00126,2026-09-10T08:49:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00127,2026-09-10T08:51:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00111,2026-09-10T09:40:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00112,2026-09-10T09:42:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00122,2026-09-10T09:44:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00123,2026-09-10T09:46:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00150,2026-09-11T07:15:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00151,2026-09-11T07:17:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00130,2026-09-11T07:21:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00131,2026-09-11T07:23:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00146,2026-09-11T07:31:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00147,2026-09-11T07:33:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00132,2026-09-11T07:44:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00133,2026-09-11T07:46:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00140,2026-09-11T07:58:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00141,2026-09-11T07:59:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00134,2026-09-11T08:05:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00135,2026-09-11T08:07:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00148,2026-09-11T08:11:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00149,2026-09-11T08:13:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00136,2026-09-11T08:43:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00137,2026-09-11T08:45:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00138,2026-09-11T08:51:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00139,2026-09-11T09:07:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00142,2026-09-11T09:18:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00143,2026-09-11T09:20:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00144,2026-09-11T09:57:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00145,2026-09-11T09:59:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00160,2026-09-14T07:54:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00161,2026-09-14T07:56:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00154,2026-09-14T08:06:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00155,2026-09-14T08:08:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00152,2026-09-14T08:14:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00153,2026-09-14T08:16:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00164,2026-09-14T08:56:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00166,2026-09-14T08:58:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00165,2026-09-14T08:58:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00167,2026-09-14T08:59:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00162,2026-09-14T09:15:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00163,2026-09-14T09:17:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00156,2026-09-14T09:49:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00158,2026-09-14T09:51:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00157,2026-09-14T09:51:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00159,2026-09-14T09:53:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00174,2026-09-15T07:11:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00175,2026-09-15T07:13:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00183,2026-09-15T07:18:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00184,2026-09-15T07:20:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00168,2026-09-15T07:37:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00169,2026-09-15T07:39:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00172,2026-09-15T08:40:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00173,2026-09-15T08:42:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00176,2026-09-15T08:44:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00179,2026-09-15T09:10:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00180,2026-09-15T09:12:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00170,2026-09-15T09:15:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00171,2026-09-15T09:17:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00185,2026-09-15T09:19:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00186,2026-09-15T09:21:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00181,2026-09-15T09:23:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00182,2026-09-15T09:25:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00177,2026-09-15T09:57:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00178,2026-09-15T09:59:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00193,2026-09-16T07:16:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00187,2026-09-16T07:24:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00189,2026-09-16T07:24:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00188,2026-09-16T07:26:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00190,2026-09-16T07:26:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00194,2026-09-16T09:11:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00195,2026-09-16T09:15:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00196,2026-09-16T09:17:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00191,2026-09-16T09:45:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00192,2026-09-16T09:47:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00199,2026-09-17T07:48:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00201,2026-09-17T07:49:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00200,2026-09-17T07:50:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00197,2026-09-17T09:07:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00198,2026-09-17T09:09:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00202,2026-09-17T09:20:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00203,2026-09-17T09:22:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00210,2026-09-18T07:18:00Z,RDG,Reading Main Entrance,CH-2013,Sam Ellis,Access Granted
+EV00211,2026-09-18T07:20:30Z,RDG,Reading Office 201 Door,CH-2013,Sam Ellis,Access Granted
+EV00206,2026-09-18T08:19:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00207,2026-09-18T08:21:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00208,2026-09-18T09:20:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00209,2026-09-18T09:22:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00204,2026-09-18T09:48:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00205,2026-09-18T09:50:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00212,2026-09-21T08:04:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00213,2026-09-21T08:06:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00219,2026-09-21T08:42:00Z,RDG,Reading Main Entrance,CH-2012,Hannah Wood,Access Granted
+EV00220,2026-09-21T08:44:30Z,RDG,Reading Office 201 Door,CH-2012,Hannah Wood,Access Granted
+EV00214,2026-09-21T08:51:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00215,2026-09-21T08:53:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00216,2026-09-21T08:57:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00217,2026-09-21T09:28:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00218,2026-09-21T09:30:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00225,2026-09-22T07:55:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00226,2026-09-22T07:57:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00227,2026-09-22T08:18:00Z,RDG,Reading Main Entrance,CH-2009,Olu Adeyemi,Access Granted
+EV00228,2026-09-22T08:20:30Z,RDG,Reading Office 201 Door,CH-2009,Olu Adeyemi,Access Granted
+EV00223,2026-09-22T08:34:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00224,2026-09-22T08:36:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00221,2026-09-22T09:51:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00222,2026-09-22T09:53:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00229,2026-09-23T07:20:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00230,2026-09-23T07:22:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00233,2026-09-23T07:54:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00234,2026-09-23T07:56:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00236,2026-09-23T07:57:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00237,2026-09-23T07:59:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00231,2026-09-23T08:43:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00232,2026-09-23T08:45:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00235,2026-09-23T09:51:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00248,2026-09-24T07:11:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00249,2026-09-24T07:13:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00250,2026-09-24T07:56:00Z,RDG,Reading Main Entrance,CH-2010,Jack Turner,Access Granted
+EV00251,2026-09-24T07:58:30Z,RDG,Reading Office 201 Door,CH-2010,Jack Turner,Access Granted
+EV00244,2026-09-24T08:04:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00245,2026-09-24T08:06:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00246,2026-09-24T08:08:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00247,2026-09-24T08:17:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00240,2026-09-24T08:25:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00241,2026-09-24T08:27:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00242,2026-09-24T09:21:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00243,2026-09-24T09:23:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00238,2026-09-24T09:56:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00239,2026-09-24T09:58:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00255,2026-09-25T07:16:00Z,RDG,Reading Main Entrance,CH-2011,Mei Lin,Access Granted
+EV00256,2026-09-25T07:18:30Z,RDG,Reading Office 201 Door,CH-2011,Mei Lin,Access Granted
+EV00254,2026-09-25T08:53:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00252,2026-09-25T09:15:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00253,2026-09-25T09:17:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00261,2026-09-28T07:04:00Z,RDG,Reading Main Entrance,CH-2008,Emma Clarke,Access Granted
+EV00262,2026-09-28T07:06:30Z,RDG,Reading Office 201 Door,CH-2008,Emma Clarke,Access Granted
+EV00259,2026-09-28T07:40:00Z,SOHO,Soho Main Entrance,CH-1003,Leah Brooks,Access Granted
+EV00260,2026-09-28T07:42:30Z,SOHO,Soho Office 101 Door,CH-1003,Leah Brooks,Access Granted
+EV00257,2026-09-28T08:01:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00258,2026-09-28T08:03:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00267,2026-09-29T08:42:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00263,2026-09-29T08:54:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00264,2026-09-29T08:56:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00265,2026-09-29T09:45:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00266,2026-09-29T09:47:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted
+EV00268,2026-09-30T07:38:00Z,SOHO,Soho Main Entrance,CH-1001,Priya Sharma,Access Granted
+EV00269,2026-09-30T07:40:30Z,SOHO,Soho Office 101 Door,CH-1001,Priya Sharma,Access Granted
+EV00274,2026-09-30T08:01:00Z,SOHO,Soho Main Entrance,CH-1007,Ravi Patel,Access Granted
+EV00272,2026-09-30T08:56:00Z,SOHO,Soho Main Entrance,CH-1004,Tom Okafor,Access Granted
+EV00273,2026-09-30T08:58:30Z,SOHO,Soho Office 101 Door,CH-1004,Tom Okafor,Access Granted
+EV00275,2026-09-30T09:24:00Z,SOHO,Soho Main Entrance,CH-1014,Fatima Ali,Access Granted
+EV00270,2026-09-30T09:33:00Z,SOHO,Soho Main Entrance,CH-1002,Arjun Mehta,Access Granted
+EV00271,2026-09-30T09:35:30Z,SOHO,Soho Office 101 Door,CH-1002,Arjun Mehta,Access Granted

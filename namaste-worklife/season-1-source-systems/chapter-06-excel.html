@@ -1,0 +1,301 @@
+<h2>Chapter 06 — Excel: The Spreadsheets Nobody Talks About (Hands-On Lab)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Every architecture diagram shows the "real" systems: Nexudus, NetSuite, HubSpot. But ask anyone in a business where the <i>actual</i> numbers live, and they'll quietly say: <b>"in a spreadsheet."</b> 😄 Work.Life's brief lists Excel as a source system and complains that reporting <i>"sits in spreadsheets, and depends on someone finding time to rebuild it."</i> So we start here. In this lab you'll become the Work.Life ops analyst for a day.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What Excel is used for at a coworking company (and why)</li>
+    <li>Lab 6.1: Import the lab files the right way (Power Query)</li>
+    <li>Lab 6.2: Turn ranges into Tables</li>
+    <li>Lab 6.3: "Is this contract active?" (the most important formula)</li>
+    <li>Lab 6.4: MRR, members and occupancy per site</li>
+    <li>Lab 6.5: Budget vs actual with SUMIFS</li>
+    <li>Lab 6.6: A PivotTable P&amp;L per site</li>
+    <li>Lab 6.7: Break it on purpose (the dangers of Excel)</li>
+    <li>How Excel data gets into the warehouse</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. What Excel Does at Work.Life</h3>
+
+<p>Systems like Nexudus are great at <i>running</i> the business (sign a member, send an invoice). They're bad at things nobody built a screen for. That's where Excel fills the gap:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Spreadsheet</th><th>Who owns it</th><th>Why it's not in a system</th></tr>
+<tr><td><b>Budget / targets</b> per site per month</td><td>Finance</td><td>Made once a year in Excel; NetSuite budgets are often not used</td></tr>
+<tr><td><b>Capacity sheet</b>: true sellable desks, sq ft</td><td>Ops</td><td>Nexudus capacity is out of date after refits</td></tr>
+<tr><td><b>Lease schedule</b>: rent, break dates, expiry</td><td>Property / Finance</td><td>Lives with the lawyer's documents</td></tr>
+<tr><td><b>Broker commission tracker</b></td><td>Sales</td><td>Not tracked in the CRM</td></tr>
+<tr><td><b>Manual adjustments</b> ("exclude this test member")</td><td>Analyst</td><td>Quick fix nobody put back in the source</td></tr>
+<tr><td><b>Weekly member report</b></td><td>Ops</td><td>Rebuilt by hand every week (the brief's pain point!)</td></tr>
+</table>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   EXCEL IN A DATA PROJECT = TWO DIFFERENT THINGS            │
+│                                                             │
+│   1. A SOURCE  (budget, capacity, leases)                   │
+│      → must be loaded into the warehouse, carefully         │
+│                                                             │
+│   2. A SYMPTOM (weekly report rebuilt by hand)              │
+│      → must be REPLACED by the warehouse                    │
+│                                                             │
+│   Know which one you're looking at.                         │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Lab 6.1 — Import the Lab Files (Power Query)</h3>
+
+<p>Open a new workbook called <code>MiniWorkLife.xlsx</code>. Do <b>not</b> double-click the CSVs. Double-clicking lets Excel "guess" types and it will damage your data (dates flip, leading zeros vanish, "07700 900101" becomes a number).</p>
+
+<ol>
+    <li><b>Data → Get Data → From File → From Text/CSV</b>.</li>
+    <li>Pick <code>contracts.csv</code>. Click <b>Transform Data</b> (this opens Power Query).</li>
+    <li>Check each column's type: <code>start_date</code>, <code>end_date</code>, <code>notice_given_on</code> → <b>Date</b>. Prices → <b>Whole Number</b>. IDs → <b>Text</b>.</li>
+    <li><b>Close &amp; Load</b>. It lands as a Table on its own sheet.</li>
+    <li>Repeat for <code>resources</code>, <code>members</code>, <code>companies</code>, <code>bookings_sep2026</code>, <code>netsuite_gl_sep2026</code>, <code>excel_capacity_budget_2026</code>.</li>
+</ol>
+
+<p>💡 Notice what Power Query just did: <b>Extract</b> (read the file), <b>Transform</b> (fix types), <b>Load</b> (into a sheet). That's ETL! The same idea as Fivetran + dbt, just on your laptop. And Power Query remembers the steps, so <b>Data → Refresh All</b> re-runs them when the file changes. That's a pipeline.</p>
+
+<hr/>
+
+<h3>3. Lab 6.2 — Name Your Tables</h3>
+
+<p>Click inside each table → <b>Table Design → Table Name</b>. Name them: <code>Contracts</code>, <code>Resources</code>, <code>Members</code>, <code>Companies</code>, <code>Bookings</code>, <code>GL</code>, <code>Budget</code>.</p>
+
+<p>Why? Because <code>=SUM(Contracts[monthly_price_gbp])</code> is readable and grows automatically. <code>=SUM(I2:I8)</code> silently breaks the day someone adds row 9. Structured references are the spreadsheet version of column names in SQL.</p>
+
+<hr/>
+
+<h3>4. Lab 6.3 — "Is This Contract Active?"</h3>
+
+<p>This one question is behind occupancy, MRR, member counts and churn. Get it right once.</p>
+
+<p>On a new sheet called <code>Settings</code>, put the snapshot date in cell B1: <code>30/09/2026</code>. Name the cell <code>SnapshotDate</code> (Formulas → Define Name).</p>
+
+<p>In the <code>Contracts</code> table add a column <code>is_active</code>:</p>
+
+<pre>
+=AND([@start_date] &lt;= SnapshotDate,
+     OR([@end_date] = "", [@end_date] &gt;= SnapshotDate))
+</pre>
+
+<p>Read it out loud: <i>"started on or before the snapshot date, AND either has no end date, or ends on or after it."</i></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Contract</th><th>Start</th><th>End</th><th>is_active on 30 Sep 2026</th><th>Why</th></tr>
+<tr><td>K001 Priya hot desk</td><td>2025-10-01</td><td>2026-03-31</td><td>FALSE</td><td>Ended (upgrade)</td></tr>
+<tr><td>K002 Pixel Chai 101</td><td>2026-04-01</td><td>2027-03-31</td><td>TRUE</td><td></td></tr>
+<tr><td>K003 Brightline 103</td><td>2025-07-01</td><td>2026-06-30</td><td>FALSE</td><td>Left</td></tr>
+<tr><td>K004 Ravi hot desk</td><td>2025-01-15</td><td>(blank)</td><td>TRUE</td><td>Rolling</td></tr>
+<tr><td>K005 GreenRoot 201</td><td>2026-01-01</td><td>2026-12-31</td><td>TRUE</td><td></td></tr>
+<tr><td>K006 Fatima flex</td><td>2026-02-01</td><td>2026-07-31</td><td>FALSE</td><td>Transferred</td></tr>
+<tr><td>K007 Fatima hot desk</td><td>2026-08-01</td><td>(blank)</td><td>TRUE</td><td></td></tr>
+</table>
+
+<p><b>Blank end date = rolling contract.</b> In SQL later this is the classic <code>end_date IS NULL OR end_date &gt;= :date</code>. Forget the NULL case and you'll lose every rolling member. Very common bug.</p>
+
+<p>Now add a <code>desks</code> column. How many desks does each contract hold?</p>
+
+<pre>
+=IF([@plan_code]="P-OFFICE",
+    XLOOKUP([@resource_code], Resources[resource_code], Resources[capacity_people]),
+    IF([@plan_code]="P-HOT", 1, 0))
+</pre>
+
+<p>Notice the business decision hiding here: <b>does a Flex member hold a desk?</b> We said 0, because they use day passes. Someone else might say 1. <i>This is a definition</i>, and it belongs in the KPI dictionary from Chapter 02.</p>
+
+<hr/>
+
+<h3>5. Lab 6.4 — Members, MRR and Occupancy per Site</h3>
+
+<p>Make a sheet called <code>KPIs</code>. Put <code>SOHO</code> in A2 and <code>RDG</code> in A3.</p>
+
+<pre>
+MRR (B2):
+=SUMIFS(Contracts[monthly_price_gbp], Contracts[site_code], A2, Contracts[is_active], TRUE)
+
+Desks contracted (C2):
+=SUMIFS(Contracts[desks], Contracts[site_code], A2, Contracts[is_active], TRUE)
+
+Sellable desks (D2):
+=XLOOKUP(A2 &amp; "2026-09", Budget[site_code] &amp; Budget[month], Budget[sellable_desks])
+
+Desk occupancy (E2):
+=C2 / D2
+
+Offices occupied (F2):
+=COUNTIFS(Contracts[site_code], A2, Contracts[plan_code], "P-OFFICE", Contracts[is_active], TRUE)
+
+Total offices (G2):
+=COUNTIFS(Resources[site_code], A2, Resources[resource_type], "private_office")
+</pre>
+
+<p>You should get:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Site</th><th>MRR</th><th>Desks contracted</th><th>Sellable</th><th>Desk occupancy</th><th>Office occupancy</th></tr>
+<tr><td>SOHO</td><td>£3,040</td><td>6 (4 office + 2 hot)</td><td>34</td><td>17.6%</td><td>1 / 3 = 33%</td></tr>
+<tr><td>RDG</td><td>£2,700</td><td>6</td><td>31</td><td>19.4%</td><td>1 / 2 = 50%</td></tr>
+</table>
+
+<p>Now count <b>active members</b>. This is harder than it looks: contracts point to <i>one</i> member (the contract holder), but Pixel Chai has 4 people. Members belong to companies, and companies hold contracts. Try:</p>
+
+<pre>
+Active companies at SOHO:
+=COUNTA(UNIQUE(FILTER(Contracts[company_id],
+        (Contracts[site_code]="SOHO") * (Contracts[is_active]=TRUE))))
+   → 3  (Pixel Chai, Nomad, Kite &amp; Key)
+
+Active members at SOHO (people in those companies):
+   → 6  (4 Pixel Chai + Ravi + Fatima)
+</pre>
+
+<p>Try the second one yourself with <code>FILTER</code> + <code>COUNTIFS</code> on the Members table. If it feels awkward, good: you just discovered why we model data in a warehouse instead of in spreadsheets. 🙂</p>
+
+<hr/>
+
+<h3>6. Lab 6.5 — Budget vs Actual</h3>
+
+<p>Revenue for profitability comes from finance (the GL), not Nexudus. On the <code>KPIs</code> sheet:</p>
+
+<pre>
+Actual revenue SOHO (H2):
+=SUMIFS(GL[amount_gbp], GL[location], "Soho", GL[account_type], "Income")
+   → £3,475
+
+Actual direct costs SOHO (I2):  (accounts 5000-5999 = site costs)
+=SUMIFS(GL[amount_gbp], GL[location], "Soho", GL[account], "&gt;=5000", GL[account], "&lt;6000")
+   → £7,650
+
+Budget revenue SOHO (J2):
+=XLOOKUP("SOHO2026-09", Budget[site_code] &amp; Budget[month], Budget[budget_revenue_gbp])
+   → £9,200
+
+Variance (K2):  =H2 - J2   → −£5,725   (−62%)
+</pre>
+
+<p>⚠️ <b>Did you notice?</b> The GL says <code>location = "Soho"</code> but the budget says <code>site_code = "SOHO"</code>. Two systems, two spellings for the same site. You needed a <b>mapping</b> in your head. In the warehouse we write that mapping down as a table (<code>dim_site</code>). That is "master data", and it's one of the most valuable things in the whole project.</p>
+
+<hr/>
+
+<h3>7. Lab 6.6 — A PivotTable P&amp;L</h3>
+
+<ol>
+    <li>Click inside the <code>GL</code> table → <b>Insert → PivotTable</b>.</li>
+    <li>Rows: <code>account_type</code>, then <code>account_name</code>.</li>
+    <li>Columns: <code>location</code>.</li>
+    <li>Values: Sum of <code>amount_gbp</code>.</li>
+</ol>
+
+<pre>
+                         Reading       Soho
+   Income
+     Office Revenue        2,700      2,400
+     Coworking Revenue         -        640
+     Meeting Room Revenue    200        435   ← 525 billed − 90 credit
+   Expense
+     Rent                  1,300      4,500
+     Business Rates          250        900
+     Service Charge          150        400
+     Utilities               200        350
+     Cleaning                150        300
+     Site Staff              400      1,200
+     Central Overheads       500      1,000
+
+   Contribution (before central)   +450     −4,175
+   After central costs              −50     −5,175
+</pre>
+
+<p>So: <b>is Soho profitable?</b> No. <b>Why?</b> Look back at Lab 6.4: Office 102 (8 desks, £5,000 list) has been empty all year and Office 103 has been empty since Brightline left. The costs are fixed, so empty offices go straight to the bottom line. Just like Chapter 01 said. You just did the leadership team's question by hand. 🎯</p>
+
+<p>And Reading? Profitable <i>before</i> central costs, slightly loss-making <i>after</i>. Same question, two honest answers. Context matters.</p>
+
+<hr/>
+
+<h3>8. Lab 6.7 — Break It on Purpose</h3>
+
+<p>Now feel why the brief wants to move away from spreadsheets. Try each one and watch what happens:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Do this</th><th>What breaks</th><th>Real-world name</th></tr>
+<tr><td>Rename column <code>location</code> to <code>Site</code> in the GL file, then Refresh All</td><td>Power Query step fails or SUMIFS returns errors</td><td>Schema drift</td></tr>
+<tr><td>Type "Soho " (with a space) in one GL row</td><td>That row silently disappears from the total</td><td>Dirty data</td></tr>
+<tr><td>Save a copy as <code>MiniWorkLife_FINAL_v2_reallyfinal.xlsx</code> and edit both</td><td>Which one is true?</td><td>No single source of truth</td></tr>
+<tr><td>Hard-type 9,500 over the budget formula "just for this month"</td><td>Nobody knows it's not a formula</td><td>Hidden manual override</td></tr>
+<tr><td>Change <code>SnapshotDate</code> to 31/10/2026</td><td>Everything recalculates, but you lost September's numbers</td><td>No history / snapshots</td></tr>
+</table>
+
+<p>Every one of these happens in real companies every week. The warehouse fixes them with: fixed schemas, tests, one shared model, and daily snapshots.</p>
+
+<hr/>
+
+<h3>9. How Excel Gets Into the Warehouse</h3>
+
+<pre>
+   Finance's budget.xlsx  ──►  saved in SharePoint / OneDrive / Google Drive
+                                       │
+                 ┌─────────────────────┼─────────────────────┐
+                 ▼                     ▼                     ▼
+          Fivetran file          Small Python job       Google Sheets
+          connector (reads       (reads the file,       connected to
+          the file on a          checks columns,        BigQuery as an
+          schedule)              loads to BigQuery)     external table
+                 └─────────────────────┼─────────────────────┘
+                                       ▼
+                          BigQuery: raw_excel.budget_2026
+                                       ▼
+                     dbt test: "columns exist, no blank site_code,
+                                month is a real month, numbers are numbers"
+</pre>
+
+<p>Rules that make Excel safe as a source:</p>
+<ul>
+    <li><b>One owner</b> per sheet, written down.</li>
+    <li><b>A fixed template</b>: same columns, same tab name, no merged cells, no totals rows inside the data.</li>
+    <li><b>Codes, not free text</b>: <code>SOHO</code>, not "Soho site (new)".</li>
+    <li><b>Tests in the pipeline</b> that shout when the template changes.</li>
+    <li><b>Long term:</b> if a sheet is critical (budget), consider moving it into a proper tool. If it's a report (weekly members), replace it with the warehouse.</li>
+</ul>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: A finance team wants their budget spreadsheet in the warehouse. How do you do it safely?</b></p>
+<p><i>"Agree a fixed template with one owner, store it in a known location like SharePoint, load it on a schedule with a file connector or a small script into a raw table, and add tests for expected columns, valid site codes and numeric values. If the template changes, the pipeline fails loudly instead of loading bad numbers."</i></p>
+
+<p><b>Q: How do you decide if a contract is active on a date?</b></p>
+<p><i>"Start date on or before the date, and end date either null or on or after the date. The null case matters because rolling contracts have no end date. I'd define it once in the model and reuse it everywhere."</i></p>
+
+<p><b>Q: Why not just keep doing the reporting in Excel?</b></p>
+<p><i>"It's manual, so it's slow and depends on one person. There's no version control, no tests, no history, and many copies of the truth. Small changes like a renamed column or a trailing space silently change results. A warehouse with a modelled layer fixes those and lets every report and the AI use the same definitions."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Excel as source</b></td><td>Budgets, capacity, leases: load them, with tests.</td></tr>
+<tr><td><b>Excel as symptom</b></td><td>Hand-built weekly reports: replace them.</td></tr>
+<tr><td><b>Power Query</b></td><td>A mini ETL pipeline on your laptop.</td></tr>
+<tr><td><b>Active contract</b></td><td>start ≤ date AND (end is blank OR end ≥ date).</td></tr>
+<tr><td><b>Master data</b></td><td>"Soho" vs "SOHO": you need one site mapping table.</td></tr>
+<tr><td><b>Soho result</b></td><td>MRR £3,040, revenue £3,475, costs £7,650 → losing money because 2 offices are empty.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>In Chapter 07 we start the <b>Nexudus</b> 21-day trial and create Mini Work.Life inside the real tool Work.Life runs on: locations, plans, offices, members, contracts, bookings and invoices. You'll see where every column in <code>contracts.csv</code> really comes from.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

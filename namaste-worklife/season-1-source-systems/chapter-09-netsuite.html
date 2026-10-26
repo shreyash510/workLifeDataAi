@@ -1,0 +1,358 @@
+<h2>Chapter 09 — NetSuite: Where the Money Is Counted (Hands-On Lab)</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Nexudus tells you who the members are. <b>NetSuite tells you whether the company is making money.</b> 💷 When the board pack says "revenue", "costs" or "profit", those numbers come from here. When the leadership team asks the AI <i>"is Soho profitable?"</i>, the answer must match what finance reports, to the pound. If it doesn't, nobody will ever trust the AI again. So we need to understand how accountants think.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What an ERP is, and what NetSuite does at Work.Life</li>
+    <li>Accounting in 10 minutes: double entry, debits and credits</li>
+    <li>The chart of accounts</li>
+    <li>Subsidiaries, locations, departments, classes (how "a site" appears)</li>
+    <li>Transactions: invoice, credit memo, bill, payment, journal</li>
+    <li>Accrual accounting and deferred revenue (the prepaid trap)</li>
+    <li>Accounting periods and the month-end close</li>
+    <li>Getting access to learn (NetSuite is hard; plan B)</li>
+    <li>Lab 9.1: Turn our GL file into proper double entry</li>
+    <li>Lab 9.2: Build the site P&amp;L and reconcile with Nexudus</li>
+    <li>Lab 9.3: Practise in a real accounting tool (Xero demo)</li>
+    <li>How data leaves NetSuite (SuiteAnalytics Connect, SuiteQL, Fivetran)</li>
+    <li>SQL: a P&amp;L by site from NetSuite tables</li>
+    <li>The Xero → NetSuite migration and what it means for history</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>It's 1 October. The CEO opens the AI and asks <i>"what was Soho's revenue in September?"</i>.</p>
+
+<ul>
+    <li>Nexudus says <b>£3,565</b> (everything invoiced).</li>
+    <li>NetSuite says <b>£3,475</b>.</li>
+    <li>And the finance team says <i>"don't use either yet, we haven't closed September."</i></li>
+</ul>
+
+<p>Three answers. Only one is right <b>for the board pack</b>, and only after the close. By the end of this chapter you'll know exactly why each number is what it is.</p>
+
+<hr/>
+
+<h3>2. What Is NetSuite?</h3>
+
+<p><b>NetSuite</b> (Oracle NetSuite) is a cloud <b>ERP</b>: Enterprise Resource Planning. In plain words: <b>the company's official accounting system</b>, plus purchasing, billing, budgets and reporting.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>At Work.Life, NetSuite is used for</th><th>By</th></tr>
+<tr><td>The general ledger (every £ in and out)</td><td>Finance</td></tr>
+<tr><td>Supplier bills (rent, rates, cleaning, energy) and paying them</td><td>Accounts payable</td></tr>
+<tr><td>Customer invoices/receipts (likely fed from Nexudus)</td><td>Accounts receivable</td></tr>
+<tr><td>Month-end close, P&amp;L, balance sheet</td><td>Finance lead</td></tr>
+<tr><td>Board pack financials</td><td>CFO / FD</td></tr>
+</table>
+
+<p>From the 173tech deck: Work.Life <b>migrated from Xero to NetSuite</b> last year, and 173tech added NetSuite into the reporting layer. Remember this; it matters at the end.</p>
+
+<hr/>
+
+<h3>3. Accounting in 10 Minutes</h3>
+
+<p>Every money event is recorded <b>twice</b>: where it came from and where it went. That's <b>double entry</b>. The two sides always balance.</p>
+
+<pre>
+   Pixel Chai is invoiced £2,400 for Office 101 (ignore VAT for now)
+
+   ACCOUNT                         DEBIT      CREDIT
+   ───────                         ─────      ──────
+   1100 Accounts Receivable        2,400                ← they owe us
+   4000 Office Revenue                         2,400    ← we earned it
+                                  ──────     ──────
+                                   2,400      2,400     ✅ balanced
+
+   Pixel Chai pays
+
+   1000 Bank                       2,400                ← money arrives
+   1100 Accounts Receivable                    2,400    ← they no longer owe
+</pre>
+
+<p>Rules of thumb (don't memorise "why", just the pattern):</p>
+<table border="1" cellpadding="10">
+<tr><th>Account type</th><th>Goes UP with</th><th>Examples</th></tr>
+<tr><td>Asset</td><td>Debit</td><td>Bank, Accounts Receivable</td></tr>
+<tr><td>Liability</td><td>Credit</td><td>Accounts Payable, VAT owed, <b>Deferred Revenue</b>, Deposits held</td></tr>
+<tr><td>Income</td><td>Credit</td><td>Office Revenue, Meeting Room Revenue</td></tr>
+<tr><td>Expense</td><td>Debit</td><td>Rent, Utilities, Cleaning</td></tr>
+</table>
+
+<p>For our P&amp;L we only need two: <b>Income = credits − debits</b> and <b>Expense = debits − credits</b>. If you write SQL that just sums an "amount" column without knowing the sign convention, you'll get revenue that's negative, or costs added to revenue. Very common, very embarrassing.</p>
+
+<hr/>
+
+<h3>4. The Chart of Accounts</h3>
+
+<p>The <b>chart of accounts</b> (CoA) is the list of every "bucket" money can go into. Ours (in <code>netsuite_gl_sep2026.csv</code>):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Number</th><th>Name</th><th>Type</th><th>P&amp;L section</th></tr>
+<tr><td>4000</td><td>Office Revenue</td><td>Income</td><td>Revenue</td></tr>
+<tr><td>4010</td><td>Coworking Revenue</td><td>Income</td><td>Revenue</td></tr>
+<tr><td>4100</td><td>Meeting Room Revenue</td><td>Income</td><td>Revenue</td></tr>
+<tr><td>4200</td><td>Event Revenue</td><td>Income</td><td>Revenue</td></tr>
+<tr><td>5000–5300</td><td>Rent, Rates, Service Charge, Utilities, Site Staff, Cleaning</td><td>Expense</td><td>Site direct costs</td></tr>
+<tr><td>6000</td><td>Central Overheads</td><td>Expense</td><td>Central costs (allocated)</td></tr>
+</table>
+
+<p>The CoA is <b>business context</b>. The AI needs to know "4000–4999 = revenue, 5000–5999 = site costs, 6000+ = central". That mapping is exactly the kind of thing the brief means by <i>"loading business context"</i>.</p>
+
+<hr/>
+
+<h3>5. How "a Site" Appears in NetSuite</h3>
+
+<p>NetSuite tags each transaction line with <b>segments</b>. These let finance slice the P&amp;L.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Segment</th><th>Typical meaning</th><th>At a coworking company, could be...</th></tr>
+<tr><td><b>Subsidiary</b></td><td>A legal entity with its own books</td><td>Work.Life Ltd, maybe a separate company per building lease</td></tr>
+<tr><td><b>Location</b></td><td>A physical place</td><td>Soho, Reading... (our lab uses this)</td></tr>
+<tr><td><b>Department</b></td><td>A team / cost centre</td><td>Sales, Community, Finance, Central</td></tr>
+<tr><td><b>Class</b></td><td>Any other grouping</td><td>Product line: Offices, Coworking, Meeting Rooms, Events</td></tr>
+<tr><td>Custom segments</td><td>Anything else</td><td>Lease ID, project</td></tr>
+</table>
+
+<p>❓ <b>Question for the client:</b> "Is the site a Location, Department, Class or Subsidiary in your NetSuite?" Different companies do it differently. Until you know, you can't write the query.</p>
+
+<p>And remember Chapter 06: NetSuite calls it <code>Soho</code>, Nexudus calls it something else, Excel calls it <code>SOHO</code>. We need a <b>site mapping table</b> (<code>dim_site</code>) that links all three.</p>
+
+<hr/>
+
+<h3>6. The Transactions</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Transaction</th><th>What happens</th><th>GL effect (simplified)</th><th>In our lab</th></tr>
+<tr><td><b>Invoice</b></td><td>We bill a customer</td><td>Dr AR / Cr Revenue (+ Cr VAT)</td><td>INV-2609-01 to 08</td></tr>
+<tr><td><b>Credit Memo</b></td><td>We reduce what a customer owes</td><td>Dr Revenue / Cr AR</td><td>CN-2609-01 (−£90 goodwill)</td></tr>
+<tr><td><b>Customer Payment</b></td><td>Customer pays</td><td>Dr Bank / Cr AR</td><td>(not in lab)</td></tr>
+<tr><td><b>Vendor Bill</b></td><td>A supplier bills us</td><td>Dr Expense / Cr AP</td><td>BILL-2609-01 to 10</td></tr>
+<tr><td><b>Bill Payment</b></td><td>We pay a supplier</td><td>Dr AP / Cr Bank</td><td>(not in lab)</td></tr>
+<tr><td><b>Journal Entry</b></td><td>Manual adjustment by finance</td><td>Anything</td><td>JE-2609-01 to 04 (staff, central allocation)</td></tr>
+</table>
+
+<p>💡 <b>Journals are where the surprises live.</b> Allocations, accruals, corrections, reclassifications. They exist only in NetSuite. Nexudus will never know about them. That's one big reason the two revenue numbers differ.</p>
+
+<hr/>
+
+<h3>7. Accrual Accounting and the Prepaid Trap</h3>
+
+<p>Accountants record revenue when it's <b>earned</b>, not when cash arrives. Imagine GreenRoot <b>prepays the full year</b> on 1 January: £32,400.</p>
+
+<pre>
+                      NEXUDUS (invoice)        NETSUITE (revenue recognised)
+   January            £32,400                  £2,700   (+ £29,700 to Deferred Revenue)
+   February           £0                       £2,700   (released from Deferred Revenue)
+   March              £0                       £2,700
+   ...                ...                      ...
+   December           £0                       £2,700
+                      ───────                  ───────
+   Year               £32,400                  £32,400   ← same total, very different months
+</pre>
+
+<p>Ask "Reading revenue in January" and Nexudus says £32,400 while NetSuite says £2,700. Both are "correct" for different questions. The <b>business context</b> must tell the AI: <i>"revenue" means recognised revenue from NetSuite, unless the user asks about invoicing or cash.</i></p>
+
+<p>Same family of traps: <b>deposits</b> (a liability, not revenue!), <b>VAT</b> (not revenue, owed to HMRC), and <b>rent-free periods</b> on leases.</p>
+
+<hr/>
+
+<h3>8. Periods and the Month-End Close</h3>
+
+<pre>
+   SEPTEMBER 2026 PERIOD
+   1 Sep ────────────── 30 Sep ──── ~working day 5–10 of Oct ──── CLOSED 🔒
+         transactions flow in         finance adds accruals,        numbers are final
+                                      journals, allocations,
+                                      corrections
+                                      ▲
+                                      numbers still CHANGING here
+</pre>
+
+<p>NetSuite has <b>accounting periods</b> that finance <b>closes</b>. Before the close, September's numbers are <b>provisional</b>. A trustworthy AI must say: <i>"September is not closed yet; these figures may change."</i> It should know which periods are closed (NetSuite stores this) and say so. That's an accuracy-gate requirement, and most text-to-SQL demos forget it.</p>
+
+<hr/>
+
+<h3>9. Getting Access to Learn</h3>
+
+<p>Honest truth: <b>NetSuite is hard to get hands on</b> as an individual. Oracle gives trial accounts to prospects through sales, and developer accounts mainly to partners. So:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Option</th><th>What you learn</th></tr>
+<tr><td>NetSuite's public <b>Help Center</b> and product tours</td><td>Screens, record types, the "NetSuite2.com" analytics data source</td></tr>
+<tr><td><b>Lab 9.1 / 9.2</b> below (Excel)</td><td>Double entry, P&amp;L by site, reconciliation. Exactly what the warehouse does.</td></tr>
+<tr><td><b>Xero demo company</b> (Lab 9.3)</td><td>A real accounting tool with invoices, bills, tracking categories and P&amp;L. Work.Life used Xero before NetSuite!</td></tr>
+<tr><td>In the real project</td><td>Work.Life gives you a <b>read-only role</b> in their NetSuite (or the warehouse copy). Ask for it on day 1.</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. Lab 9.1 — Make It Double Entry</h3>
+
+<p>Our lab GL file is <b>single-sided</b> (one row per transaction, just the P&amp;L line). Real GL lines always have a partner. In Excel, create a new table <code>GL_Lines</code> where every row of <code>netsuite_gl_sep2026.csv</code> becomes two lines:</p>
+
+<pre>
+   tran_id      account                      debit     credit
+   INV-2609-01  1100 Accounts Receivable     2,400
+   INV-2609-01  4000 Office Revenue                    2,400
+   CN-2609-01   4100 Meeting Room Revenue       90
+   CN-2609-01   1100 Accounts Receivable                  90
+   BILL-2609-01 5000 Rent                    4,500
+   BILL-2609-01 2000 Accounts Payable                  4,500
+   JE-2609-03   6000 Central Overheads       1,000
+   JE-2609-03   6900 Central Cost Recovery             1,000   (the "other side" of an allocation)
+   ...
+</pre>
+
+<p>Check: <code>SUM(debit) = SUM(credit)</code>. If not, you made a mistake. This is called a <b>trial balance</b>, and it's the first test any finance data model should pass. In dbt we'll write it as an actual test.</p>
+
+<hr/>
+
+<h3>11. Lab 9.2 — Site P&amp;L and Reconciliation</h3>
+
+<p>From Chapter 06, you already have this P&amp;L. Now reconcile Soho's revenue with Nexudus line by line:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Line</th><th>Nexudus (invoiced)</th><th>NetSuite (recognised)</th><th>Difference</th><th>Why</th></tr>
+<tr><td>Office 101 (Pixel Chai)</td><td>2,400</td><td>2,400</td><td>0</td><td></td></tr>
+<tr><td>Coworking (Ravi, Fatima)</td><td>640</td><td>640</td><td>0</td><td></td></tr>
+<tr><td>Meeting rooms</td><td>525</td><td>435</td><td><b>−90</b></td><td>Goodwill credit memo CN-2609-01 (AV failure)</td></tr>
+<tr><td><b>Total Soho</b></td><td><b>3,565</b></td><td><b>3,475</b></td><td><b>−90</b></td><td>Fully explained ✅</td></tr>
+</table>
+
+<p>A difference you can <b>fully explain</b> is fine. A difference you can't explain is a bug (or a process problem). In the real project you'll build exactly this reconciliation as a model, and run it every month. It's one of the best accuracy tests for the AI.</p>
+
+<p>Also notice the <b>customer names</b> in NetSuite: <code>Green Root Foods Ltd</code>, <code>Kite and Key Recruitment Ltd</code>. Nexudus says <code>GreenRoot Foods</code> and <code>Kite &amp; Key Recruitment</code>. If NetSuite customers don't store a Nexudus ID, joining "revenue per member" needs matching. (Chapter 11!)</p>
+
+<hr/>
+
+<h3>12. Lab 9.3 — Practise in Xero's Demo Company</h3>
+
+<ol>
+    <li>Sign up for Xero and open the <b>Demo Company</b> (Xero offers a free demo organisation for learning; check current terms).</li>
+    <li>Settings → <b>Tracking categories</b>: create "Site" with options Soho and Reading. (This is Xero's equivalent of NetSuite's Location/Class.)</li>
+    <li>Create a few accounts matching our CoA (4000, 4010, 4100, 5000...).</li>
+    <li>Raise <b>invoices</b> to Pixel Chai (£2,400, Site = Soho) and GreenRoot (£2,700, Site = Reading). Add VAT at 20% and see the VAT line go to a liability, not revenue.</li>
+    <li>Enter <b>bills</b> for Soho rent (£4,500) and Reading rent (£1,300).</li>
+    <li>Raise a <b>credit note</b> for £90.</li>
+    <li>Run <b>Profit and Loss</b>, filtered or split by tracking category "Site". You just built a site P&amp;L in a real ledger.</li>
+    <li>Find the <b>journal report</b> / account transactions: every invoice created two or more lines. Double entry, live.</li>
+</ol>
+
+<hr/>
+
+<h3>13. How Data Leaves NetSuite</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Way</th><th>What it is</th><th>Used for</th></tr>
+<tr><td><b>Saved search / report export</b></td><td>Build a search in the UI, export CSV</td><td>One-offs (and many Excel reports!)</td></tr>
+<tr><td><b>SuiteAnalytics Connect</b></td><td>ODBC/JDBC access to NetSuite's analytics data source ("NetSuite2.com") using SQL</td><td>Connectors like <b>Fivetran's NetSuite connector</b> use this</td></tr>
+<tr><td><b>SuiteQL via REST</b></td><td>Send a SQL query to NetSuite's REST API, get JSON back</td><td>Custom Python extractors</td></tr>
+<tr><td>SuiteTalk (SOAP/REST web services)</td><td>Record-level API</td><td>Integrations that also <i>write</i> data</td></tr>
+</table>
+
+<p>Brief says the extract layer is <b>"Fivetran, Python"</b>. Fivetran has a standard NetSuite connector, so NetSuite → BigQuery is most likely Fivetran. That means tables in BigQuery named like NetSuite's analytics tables, such as <code>transaction</code>, <code>transactionline</code>, <code>transactionaccountingline</code>, <code>account</code>, <code>customer</code>, <code>vendor</code>, <code>location</code>, <code>department</code>, <code>classification</code>, <code>subsidiary</code>, <code>accountingperiod</code>. (Verify exact names and columns in the NetSuite Records Catalog / the actual BigQuery dataset.)</p>
+
+<hr/>
+
+<h3>14. SQL: A P&amp;L by Site</h3>
+
+<p>Here's the <i>shape</i> of the query you'll write in BigQuery on Fivetran's NetSuite tables. Column names vary by account setup, so treat it as a pattern:</p>
+
+<pre>
+-- Site P&amp;L for September 2026 (posting lines only)
+SELECT
+  loc.name                                   AS site,
+  acc.acctnumber                             AS account_number,
+  acc.fullname                               AS account_name,
+  acc.accttype                               AS account_type,
+  SUM(CASE WHEN acc.accttype = 'Income'
+           THEN COALESCE(tal.credit, 0) - COALESCE(tal.debit, 0)   -- income: credit - debit
+           ELSE COALESCE(tal.debit, 0) - COALESCE(tal.credit, 0)   -- expense: debit - credit
+      END)                                   AS amount_gbp
+FROM netsuite.transactionaccountingline AS tal
+JOIN netsuite.transaction      AS t   ON t.id = tal.transaction
+JOIN netsuite.transactionline  AS tl  ON tl.transaction = tal.transaction
+                                     AND tl.id = tal.transactionline
+JOIN netsuite.account          AS acc ON acc.id = tal.account
+LEFT JOIN netsuite.location    AS loc ON loc.id = tl.location
+WHERE tal.posting = 'T'                                        -- only lines that hit the GL
+  AND t.trandate BETWEEN '2026-09-01' AND '2026-09-30'          -- or join accountingperiod!
+  AND acc.accttype IN ('Income', 'Expense', 'OthIncome', 'OthExpense', 'COGS')
+GROUP BY 1, 2, 3, 4
+ORDER BY site, account_number;
+</pre>
+
+<p>Things this teaches:</p>
+<ul>
+    <li><b>Header vs line vs accounting line</b>: a transaction has many lines; each line can have accounting impact lines. Segments like location usually live on the <b>line</b>.</li>
+    <li><b>Posting only</b>: non-posting things (like sales orders or estimates) must be excluded.</li>
+    <li><b>Period, not date</b>: finance reports by <b>accounting period</b>. A transaction dated 30 Sep can be posted to October. Join <code>accountingperiod</code> for board-pack accuracy.</li>
+    <li><b>Multiple books / currencies</b>: if Work.Life ever has more than one subsidiary or currency, filter to the primary accounting book and the reporting currency.</li>
+</ul>
+
+<p>Run this in your head against our lab file: Soho income = 2,400 + 640 + 435 = <b>3,475</b>, Soho site costs = <b>7,650</b>. Same as Chapter 06. ✅</p>
+
+<hr/>
+
+<h3>15. The Xero → NetSuite Migration</h3>
+
+<pre>
+   ──────── XERO ────────┤ migration ├──────── NETSUITE ────────►
+   2021 ... 2024/25      │  (last yr) │  2025/26 ... today
+</pre>
+
+<p>Two years of history in two different systems, with different account codes, different site tagging and different IDs. When the CEO asks <i>"how has Soho's profit changed over 3 years?"</i>, the warehouse must <b>stitch</b> both. Questions for the client and 173tech:</p>
+<ul>
+    <li>Was history migrated into NetSuite, or does it only live in Xero (or the warehouse)?</li>
+    <li>Is there a mapping from old Xero accounts to new NetSuite accounts?</li>
+    <li>What's the cut-over date? Any months double counted or missing?</li>
+</ul>
+
+<p>Until these are answered, the AI should only answer trend questions from the cut-over date onwards, or clearly say where the data changes source.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Why might revenue in the membership system differ from the ERP?</b></p>
+<p><i>"The membership system shows invoicing. The ERP shows recognised revenue under accrual accounting: prepayments are deferred, credit memos and journals adjust it, VAT and deposits are excluded, and items can post to a different period. I'd build a monthly reconciliation that explains each difference."</i></p>
+
+<p><b>Q: How do you compute revenue and costs from general ledger lines?</b></p>
+<p><i>"Filter to posting lines and P&amp;L account types. Income is credits minus debits, expenses are debits minus credits. Group by accounting period, not transaction date, and by the segment that represents the site, then map accounts to P&amp;L sections using the chart of accounts."</i></p>
+
+<p><b>Q: How would you get NetSuite data into BigQuery?</b></p>
+<p><i>"Usually a managed connector like Fivetran, which reads NetSuite's analytics data source through SuiteAnalytics Connect. Alternatively a scheduled SuiteQL extract via the REST API. Either way I'd land raw tables, then model a clean GL fact table and dimensions for accounts, sites and periods in dbt."</i></p>
+
+<p><b>Q: What does 'the period is closed' mean, and why does it matter for an AI assistant?</b></p>
+<p><i>"Finance locks the period once accruals, journals and corrections are in, so the numbers are final. Before that, figures are provisional. The assistant should know which periods are closed and warn when an answer uses an open period."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>NetSuite</b></td><td>The official books. Board-pack revenue and costs come from here.</td></tr>
+<tr><td><b>Double entry</b></td><td>Every event = debits = credits. Income = Cr − Dr. Expense = Dr − Cr.</td></tr>
+<tr><td><b>Chart of accounts</b></td><td>The buckets. 4xxx revenue, 5xxx site costs, 6xxx central (in our lab).</td></tr>
+<tr><td><b>Site</b></td><td>A segment (location/department/class/subsidiary). Ask which!</td></tr>
+<tr><td><b>Accrual</b></td><td>Revenue when earned. Prepaid → deferred revenue.</td></tr>
+<tr><td><b>Close</b></td><td>Open periods are provisional. The AI must say so.</td></tr>
+<tr><td><b>Data out</b></td><td>SuiteAnalytics Connect (Fivetran), SuiteQL, saved searches.</td></tr>
+<tr><td><b>History</b></td><td>Xero before, NetSuite after. Stitch carefully.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>In Chapter 10 we set up <b>HubSpot</b> (free forever), the system Work.Life says will become the <b>source of truth for member data</b>. We'll import our members and deals, connect the dots with Nexudus's native sync, and ask a tricky question: what does "source of truth" actually mean when two systems sync both ways?</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

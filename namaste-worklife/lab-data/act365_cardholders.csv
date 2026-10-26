@@ -1,0 +1,16 @@
+cardholder_id,first_name,last_name,card_number,group,nexudus_customer_email,status
+CH-1001,Priya,Sharma,04A1B2C301,Soho Office 101,priya@pixelchai.co.uk,active
+CH-1002,Arjun,Mehta,04A1B2C302,Soho Office 101,arjun@pixelchai.co.uk,active
+CH-1003,Leah,Brooks,04A1B2C303,Soho Office 101,leah@pixelchai.co.uk,active
+CH-1004,Tom,Okafor,04A1B2C304,Soho Office 101,tom@pixelchai.co.uk,active
+CH-1005,Daniel,Hughes,04A1B2C305,,daniel@brightlinelegal.co.uk,removed
+CH-1006,Sara,Kim,04A1B2C306,,sara@brightlinelegal.co.uk,removed
+CH-1007,Ravi,Patel,04A1B2C307,Soho Coworking,ravi@nomadanalytics.io,active
+CH-1014,Fatima,Ali,04A1B2C314,Soho Coworking,fatima@kiteandkey.co.uk,active
+CH-2008,Emma,Clarke,04B1C2D308,Reading Office 201,emma@greenrootfoods.com,active
+CH-2009,Olu,Adeyemi,04B1C2D309,Reading Office 201,olu@greenrootfoods.com,active
+CH-2010,Jack,Turner,04B1C2D310,Reading Office 201,jack@greenrootfoods.com,active
+CH-2011,Mei,Lin,04B1C2D311,Reading Office 201,mei@greenrootfoods.com,active
+CH-2012,Hannah,Wood,04B1C2D312,Reading Office 201,hannah@greenrootfoods.com,active
+CH-2013,Sam,Ellis,04B1C2D313,Reading Office 201,sam@greenrootfoods.com,active
+CH-9001,Cleaner,SparkleClean,04F0F0F001,All Doors (Contractor),,active
