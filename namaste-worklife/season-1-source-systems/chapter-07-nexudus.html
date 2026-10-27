@@ -2,7 +2,7 @@
 
 <p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
 
-<p>If Work.Life were a body, <b>Nexudus is the heart</b>. ❤️ Every member, every office, every meeting room booking, every monthly invoice and every key-card tap goes through it. The brief says it plainly: <i>"Nexudus is the largest source."</i> So this is the biggest chapter of Season 1. We'll start the free trial and run Mini Work.Life inside the real tool, then look at every way data gets out of it.</p>
+<p>If Work.Life were a body, <b>Nexudus is the heart</b>. ❤️ Every member, every office, every meeting room booking, every monthly invoice goes through it, and it tells the door system who may enter. The brief says it plainly: <i>"Nexudus is the largest source."</i> So this is the biggest chapter of Season 1. We'll start the free trial and run Mini Work.Life inside the real tool, then look at every way data gets out of it.</p>
 
 <p>What we will cover:</p>
 <ul>
@@ -33,9 +33,9 @@
 <ul>
     <li>A new member signs up online. Nexudus creates a <b>customer</b>, a <b>contract</b>, takes the first <b>payment</b> and emails a welcome pack.</li>
     <li>Priya books Brick Lane for 2 hours on the member app. Nexudus creates a <b>booking</b> and a <b>charge</b>.</li>
-    <li>Ravi taps his key card at the door. Nexudus logs a <b>check-in</b>.</li>
+    <li>Ravi taps their key card at the door. Nexudus logs a <b>check-in</b>.</li>
     <li>The community manager moves a team from Office 103 to 101. That ends one <b>contract</b> and starts another.</li>
-    <li>On the 1st of the month, Nexudus runs billing and creates ~8,000 <b>invoices</b>.</li>
+    <li>On the 1st of the month, Nexudus runs billing and creates thousands of <b>invoices</b> (often one per company, not per person).</li>
 </ul>
 
 <p>Nexudus is not a reporting tool. It's an <b>operational system</b>: it <i>runs</i> the building. The data it leaves behind is what we analyse.</p>
@@ -44,7 +44,7 @@
 
 <h3>2. What Is Nexudus?</h3>
 
-<p>Nexudus is a <b>coworking and flexible workspace management platform</b> (SaaS). One login runs all 14 Work.Life sites. It covers:</p>
+<p>Nexudus is a <b>coworking and flexible workspace management platform</b> (SaaS). One account can run many sites, so Work.Life most likely runs all 14 sites in one Nexudus account (confirm). It covers:</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Area</th><th>What it does</th><th>Who uses it at Work.Life</th></tr>
@@ -241,7 +241,7 @@
    P&amp;L line, and the AI will explain the "wrong" story with full confidence.
 </pre>
 
-<p>Nexudus's own docs list accounting integrations with Xero and QuickBooks. Work.Life used Xero and moved to NetSuite last year (from the 173tech deck). <b>How Nexudus invoices reach NetSuite today is a question to ask the client.</b> It could be a connector, middleware or a scheduled import. Good engineers write down what they <i>don't</i> know.</p>
+<p>Nexudus's own docs list accounting integrations with Xero and QuickBooks (vendor fact). Those are the commonly documented ones; whatever the options, <b>how Nexudus invoices reach NetSuite today is a question to ask the client.</b> It could be a connector, middleware or a scheduled import. Good engineers write down what they <i>don't</i> know.</p>
 
 <hr/>
 
@@ -272,13 +272,13 @@
 <tr><th>Way</th><th>How</th><th>Good for</th><th>Watch out</th></tr>
 <tr><td><b>1. Manual export</b></td><td>CSV/Excel from admin screens</td><td>One-offs, this lab</td><td>Manual, not repeatable. That's the "rebuilt by hand" problem.</td></tr>
 <tr><td><b>2. REST API</b></td><td><code>GET https://spaces.nexudus.com/api/{module}/{entities}</code> with a bearer token</td><td>Scheduled extract by a Python job</td><td>Pagination, rate limits, summary vs full records</td></tr>
-<tr><td><b>3. Native BigQuery integration</b></td><td>Settings → Integrations → Google BigQuery. Sends customers, teams, invoices &amp; credit notes, ledgers, bookings, contracts, check-ins. Changes sent as they happen.</td><td>Near real-time warehouse with no code</td><td>Listed at <b>£100 per location per month</b>. For 14 sites that's ~£16,800/year. Is it worth it vs a Python job?</td></tr>
+<tr><td><b>3. Native BigQuery integration</b></td><td>Settings → Integrations → Google BigQuery. Sends customers, teams, invoices &amp; credit notes, ledgers, bookings, contracts, check-ins. Changes sent as they happen.</td><td>Near real-time warehouse with no code</td><td>Listed at <b>£100 per location per month</b> on Nexudus's pricing page at the time of writing (check current price). For 14 sites that's ~£16,800/year. Is it worth it vs a Python job?</td></tr>
 <tr><td><b>4. Webhooks / Zapier</b></td><td>Nexudus calls your URL when something happens</td><td>Real-time alerts ("new member signed")</td><td>Not a full history. Missed events = gaps.</td></tr>
 </table>
 
-<p>Work.Life's brief says their extract layer is <b>"Fivetran, Python"</b>. A sensible guess: Fivetran handles systems with standard connectors (NetSuite, HubSpot), and <b>Python handles Nexudus via the API</b>. Confirm it with 173tech before designing anything. Never assume.</p>
+<p>Work.Life's brief says their extract layer is <b>"Fivetran, Python"</b>. A sensible guess: Fivetran handles systems with standard connectors (NetSuite, HubSpot), and <b>Python handles Nexudus via the API</b>. Confirm it with the client and the data partner before designing anything. Never assume.</p>
 
-<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~£16.8k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (which is exactly what 173tech is paid to do today). That trade-off belongs in the supplier response.</p>
+<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~£16.8k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (today, presumably the external data partner's job). That trade-off belongs in the supplier response.</p>
 
 <hr/>
 
@@ -352,7 +352,7 @@ with open("coworkers.jsonl", "w") as f:
 
 <h3>17. One More Thing: Nexudus ↔ HubSpot</h3>
 
-<p>Nexudus has a native HubSpot integration (listed at £50 per location per month). It maps HubSpot <b>contacts → customers</b>, <b>companies → teams</b> and <b>deals → opportunities</b>, with two-way sync for customers and teams. This matters because the brief says <i>"HubSpot is being integrated and is expected to become the source of truth for member data."</i> We'll dig into what "source of truth" means when two systems sync both ways in Chapters 10 and 11.</p>
+<p>Nexudus has a native HubSpot integration (listed at £50 per location per month at the time of writing; vendor fact). It maps HubSpot <b>contacts → customers</b>, <b>companies → teams</b> and <b>deals → opportunities</b>, with two-way sync for customers and teams. This matters because the brief says <i>"HubSpot is being integrated and is expected to become the source of truth for member data."</i> We'll dig into what "source of truth" means when two systems sync both ways in Chapters 10 and 11.</p>
 
 <hr/>
 
@@ -389,6 +389,6 @@ with open("coworkers.jsonl", "w") as f:
 
 <h3>What's Next?</h3>
 
-<p>In Chapter 08 we start the <b>Act!</b> trial: the CRM where Work.Life's sales story lives. Leads, tours, proposals, won and lost deals, and the one thing Nexudus never knows: <b>why</b> a member left.</p>
+<p>In Chapter 08 we meet the brief's mystery source, <b>"ACT"</b>. It could be ACT365 door access (who actually comes in) or the Act! CRM (leads, tours, won and lost deals, and the one thing Nexudus never knows: <b>why</b> a member left). We learn both.</p>
 
 <p>Keep learning, keep building! See you in the next one!</p>

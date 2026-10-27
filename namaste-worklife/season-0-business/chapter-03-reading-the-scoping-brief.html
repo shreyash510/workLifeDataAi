@@ -1,0 +1,366 @@
+<h2>Chapter 03 — Reading the Scoping Brief Like an Engineer</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapters 01 and 02 we learned the business and the numbers it runs on. Now we open the <b>real document that started this project</b>: <i>Work.Life Data &amp; AI Infrastructure — Supplier Scoping Brief</i>, written by Work.Life's Operations &amp; IT Systems team in July 2026. It is only a few pages long, but every sentence in it is either a fact, a wish, a rule, or a hole. Our job in this chapter is to read it like an engineer: pull each of those out, write them down, and turn them into requirements we can build and test.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What a scoping brief is (and what it is not)</li>
+    <li>The brief's 8 sections at a glance</li>
+    <li>The 4-highlighter method: facts, wants, rules, unknowns</li>
+    <li>The facts: size, stack and maturity</li>
+    <li>The one thing they want (and everything they don't)</li>
+    <li>The 8 principles, translated into engineering requirements</li>
+    <li>Reading between the lines</li>
+    <li>The timeline, and a hidden tension in it</li>
+    <li>Section 7: the 10 questions we must answer</li>
+    <li>New questions for the client</li>
+    <li>The one-page summary</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Two engineers get the same brief on a Monday morning.</p>
+
+<ul>
+    <li><b>Engineer A</b> reads <i>"ask questions about the business in natural language"</i>, gets excited, and by lunch has a demo: an LLM connected straight to BigQuery, answering questions about the sample tables. It looks amazing. 🤩</li>
+    <li><b>Engineer B</b> reads the same line, then keeps reading. <i>"Works from a controlled copy."</i> <i>"People data excluded."</i> <i>"If it confidently returns a wrong figure, trust is lost."</i> <i>"Cannot become a six figure operation."</i> By lunch Engineer B has no demo, but has a list of 20 requirements and 10 questions for the client.</li>
+</ul>
+
+<p>Engineer A's demo breaks four of the eight non-negotiable principles. It would lose the deal in the first call. Engineer B wins it.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   A brief is not a wish list. It is a test.                 │
+│   Every sentence is one of:                                 │
+│     • a FACT      (true today, use it)                      │
+│     • a WANT      (what success looks like)                 │
+│     • a RULE      (break it and you're out)                 │
+│     • an UNKNOWN  (ask, don't guess)                        │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. What Is a Scoping Brief?</h3>
+
+<p>Companies buying a technical project usually go through a few kinds of documents. They are easy to mix up:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Document</th><th>Who writes it</th><th>What it asks</th><th>How formal</th></tr>
+<tr><td><b>Scoping brief / RFI</b> (Request for Information)</td><td>The client</td><td>"Is this possible? How would you do it? Roughly what would it cost?"</td><td>Light. Thinking, not a contract.</td></tr>
+<tr><td><b>RFP</b> (Request for Proposal)</td><td>The client</td><td>"Give us a fixed scope, plan and price."</td><td>Heavy. Scored, compared, often legal.</td></tr>
+<tr><td><b>Proposal / SOW</b> (Statement of Work)</td><td>The supplier</td><td>"Here is exactly what we'll deliver, when, for how much."</td><td>Becomes part of the contract.</td></tr>
+</table>
+
+<p>Work.Life's document is clearly the first kind. It says so directly: <i>"This is a request for your thinking, not a commitment to purchase."</i> And in Section 8: <i>"We are not looking for a polished formal proposal at this stage."</i></p>
+
+<p>That changes how we respond. A 40-page glossy proposal would actually <b>hurt</b> us here. They want short, clear, honest written answers, then a call.</p>
+
+<p>Two more facts hidden in Section 1 matter a lot:</p>
+<ul>
+    <li><b>"We are speaking to more than one supplier"</b> → it's a competition.</li>
+    <li><b>"We will compare responses on a like for like basis"</b> → answer <i>their</i> questions, in <i>their</i> order, with numbers they can put side by side. Don't make them dig.</li>
+</ul>
+
+<hr/>
+
+<h3>3. The Brief's 8 Sections at a Glance</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Section</th><th>What it really tells us</th><th>Highlighter</th></tr>
+<tr><td>1</td><td>Purpose of this document</td><td>It's an RFI, it's competitive, answer Section 7</td><td>Fact</td></tr>
+<tr><td>2</td><td>About Work.Life</td><td>Size of the business; "not a data business"</td><td>Fact</td></tr>
+<tr><td>3</td><td>Where we are today</td><td>The current stack and the maturity gaps</td><td>Fact</td></tr>
+<tr><td>4</td><td>Where we want to get to</td><td>Phase 1 (build now) and Phase 2 (design for, don't price)</td><td>Want</td></tr>
+<tr><td>5</td><td>Principles</td><td>8 non-negotiables</td><td>Rule</td></tr>
+<tr><td>6</td><td>Scope</td><td>In scope vs out of scope, side by side</td><td>Rule</td></tr>
+<tr><td>7</td><td>What we'd like you to tell us</td><td>The 10 questions we're scored on</td><td>Want</td></tr>
+<tr><td>8</td><td>How to respond</td><td>Format, decision date, go-live target</td><td>Fact</td></tr>
+</table>
+
+<p>Notice what's <b>missing</b>: no budget figure, no named users, no data volumes, no SSO provider, no list of board-pack KPIs. Those are our unknowns. We'll collect them in section 10.</p>
+
+<hr/>
+
+<h3>4. The Facts: Size, Stack and Maturity</h3>
+
+<p><b>The business (Section 2):</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Fact</th><th>Value</th><th>Why an engineer cares</th></tr>
+<tr><td>Sites</td><td>14 coworking offices across the UK</td><td>"Is site X profitable?" has 14 possible answers. Small enough to test every one by hand.</td></tr>
+<tr><td>Members</td><td>~8,000</td><td>Small data. Tables of thousands or low millions of rows. BigQuery cost will be tiny; LLM cost is the bigger worry.</td></tr>
+<tr><td>Staff</td><td>~70</td><td>The brief doesn't say how big the leadership team is (we ask: question #13). It is a small slice of ~70 staff, so Phase 1 has few users. Our cost chapters assume 10 leadership users, clearly labelled as an assumption.</td></tr>
+<tr><td>Products</td><td>Coworking, private offices, event space</td><td>Matches Chapter 01.</td></tr>
+<tr><td>Identity</td><td>B Corp; "not a data business"</td><td>No in-house data team will run this. It must be simple to operate.</td></tr>
+</table>
+
+<p><b>The stack (Section 3):</b></p>
+
+<pre>
+   SOURCE SYSTEMS        EXTRACT &amp; LOAD     WAREHOUSE       MODELLING         REPORTING
+   ──────────────        ──────────────     ─────────       ─────────         ─────────
+   Nexudus  (largest) ─┐
+   NetSuite           ─┤  Fivetran  ─┐                      dbt:              Tableau
+   ACT                ─┼─►           ├──►  BigQuery  ──►    raw →          ──►  (under review,
+   Excel              ─┤  Python    ─┘                      intermediate →     "do not assume
+   HubSpot (incoming) ─┘                                    modelled           Tableau is fixed")
+
+   Kept running today by an EXTERNAL data partner.
+</pre>
+
+<p>Good news for us: the hard plumbing <b>already exists</b>. Data is already centralised and modelled. Phase 1 is not "build a warehouse"; it's "build something trustworthy on top of a warehouse that exists". That makes it a much smaller project than it sounds.</p>
+
+<p><b>The maturity table (Section 3)</b> is the client grading themselves:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Level</th><th>Question it answers</th><th>Status (their words)</th></tr>
+<tr><td>Descriptive</td><td>What happened?</td><td>In place, but "largely static and often rebuilt manually"</td></tr>
+<tr><td>Diagnostic</td><td>Why did it happen?</td><td>Limited</td></tr>
+<tr><td>Predictive</td><td>What will happen?</td><td>Not in place</td></tr>
+<tr><td>Prescriptive</td><td>What should we do?</td><td>Not in place</td></tr>
+<tr><td>Activation</td><td>Act on it automatically</td><td>Minimal, a few alerts</td></tr>
+</table>
+
+<p>Phase 1 is mostly about the <b>diagnostic</b> row (ask "why?" and get an answer), with a first step into <b>activation</b> (proactive insight). We go deep on this ladder in Chapter 19.</p>
+
+<p>And the real pain, in one sentence: <i>"Insight is slow and laborious to produce."</i> They also say: <i>"We want to fix the source of that, not add another dashboard on top."</i> So if our answer is "a new dashboard", we've failed the brief.</p>
+
+<hr/>
+
+<h3>5. The One Thing They Want (and Everything They Don't)</h3>
+
+<p>Section 4 is unusually disciplined. The leadership team chose <b>one</b> priority, deliberately:</p>
+
+<pre>
+   "a secure environment where the leadership team can
+    ask questions about the business in plain language
+    and trust the answers"
+</pre>
+
+<p>Break it into the five Phase 1 capabilities they list:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Capability</th><th>Engineering meaning</th><th>Chapter</th></tr>
+<tr><td>1</td><td>Natural-language questions, accurate answers</td><td>Text-to-SQL (or semantic-layer queries) over BigQuery, with verified results</td><td>20, 21</td></tr>
+<tr><td>2</td><td>Business context awareness</td><td>Load the board pack, KPI definitions, targets and current status as context</td><td>22</td></tr>
+<tr><td>3</td><td>Proactive insight</td><td>Scheduled checks, alerts and digests pushed to leaders</td><td>24</td></tr>
+<tr><td>4</td><td>Foresight over time</td><td>Trend and anomaly detection on their own history</td><td>24, 31</td></tr>
+<tr><td>5</td><td>Leadership team first</td><td>Small user group, tight access, wider rollout later</td><td>26, 32</td></tr>
+</table>
+
+<p>Their example questions are worth memorising, because they will be the first things typed into our system:</p>
+<ul>
+    <li><i>"What is the state of the business right now?"</i> → a KPI snapshot vs targets (Chapter 02).</li>
+    <li><i>"Is a given site profitable?"</i> → site contribution from NetSuite (Chapter 09).</li>
+    <li><i>"If not, why not?"</i> → drill into revenue, occupancy, pricing and costs. This is the diagnostic layer.</li>
+    <li><i>"What could we do about it?"</i> → prescriptive. Hard. Be honest about what an AI can and can't recommend.</li>
+</ul>
+
+<p><b>Phase 2</b> is for context only: <i>"please keep them in mind for architecture, but do not price them now."</i></p>
+<ul>
+    <li>Real-time member and retention reporting</li>
+    <li>Churn and renewal prediction, plus "context packs" for renewal conversations</li>
+    <li>Forecasting: resident revenue, net member movements, seasonality, meeting room demand</li>
+    <li>Role-based access for wider teams, and agents/automations</li>
+</ul>
+
+<p><b>Out of scope (Section 6):</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>In scope now (Phase 1)</th><th>Out of scope</th></tr>
+<tr><td>Secure environment for leadership to query a controlled copy of BigQuery in natural language</td><td>Member-facing AI and member tooling</td></tr>
+<tr><td>Loading business context (board pack, KPIs, definitions)</td><td>Front-end finance automation</td></tr>
+<tr><td>Accuracy testing against actual results before go-live</td><td>People and HR data and use cases</td></tr>
+<tr><td>Security, access control, documentation</td><td>Phase 2 use cases (but architecture must allow them)</td></tr>
+</table>
+
+<p>⚠️ <b>Scope creep warning:</b> it will be tempting to show off churn prediction in the first demo. Don't. Pricing or building Phase 2 now tells the client you didn't read the brief. Instead, show <i>how</i> Phase 1's design makes Phase 2 cheap later. That's exactly what their Section 7 "Scalability" question asks.</p>
+
+<hr/>
+
+<h3>6. The 8 Principles → Engineering Requirements</h3>
+
+<p>Section 5 says these came from the leadership team and are <b>"non-negotiable"</b>. This is the most important table in the chapter. Each principle becomes something we can build <i>and test</i>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Principle (their words)</th><th>What it means technically</th><th>How we prove it</th><th>Chapter</th></tr>
+<tr><td><b>Warehouse first, on a copy</b></td><td>AI reads only from a separate BigQuery dataset/project with copies of approved marts. Never from Nexudus, NetSuite etc. directly. Never from raw.</td><td>AI service account has read access to the copy only. Show the IAM policy.</td><td>23</td></tr>
+<tr><td><b>Source agnostic</b></td><td>The AI talks to stable business models (e.g. <code>fct_contract_month</code>, <code>dim_site</code>), never source-shaped tables. Swapping Nexudus → HubSpot changes dbt staging, not the AI layer.</td><td>Show that no AI prompt, metric or test mentions a source system name.</td><td>21, 28</td></tr>
+<tr><td><b>Safe data only</b></td><td>An allow-list of tables and columns. Personal data (names, emails, phones, card numbers) excluded or aggregated.</td><td>A column-level inventory, signed off by Work.Life.</td><td>26</td></tr>
+<tr><td><b>People data excluded</b></td><td>HR system never connected. Staff cost may appear only as a finance total, never per person.</td><td>No connector, no dataset, no credentials for the HR system exist.</td><td>26</td></tr>
+<tr><td><b>Accuracy is a launch gate</b></td><td>A "golden questions" test set with hand-verified answers from actuals. Go-live only when pass rate hits an agreed bar. Answers show their SQL and definitions.</td><td>Published test results; re-run on every change.</td><td>25</td></tr>
+<tr><td><b>Cost conscious</b></td><td>Managed services, no big team. Per-user and per-day token caps, query byte limits, caching, cheap models where possible.</td><td>A monthly cost model at two usage levels, plus hard caps.</td><td>27, 35</td></tr>
+<tr><td><b>Secure by design</b></td><td>Sign-in with Work.Life accounts only (SSO). Data stays in their cloud. Clear "never connect" list.</td><td>Access review; no personal or shared logins.</td><td>26</td></tr>
+<tr><td><b>Documented, handover ready</b></td><td>Setup, data flows, definitions, runbooks and costs written down. No single person holds the knowledge.</td><td>Someone new can operate it from the docs alone.</td><td>36</td></tr>
+</table>
+
+<p>Look at Engineer A's demo from section 1 again: connected to the live warehouse (not a copy), on raw tables (not source agnostic), with member emails visible (not safe), and no accuracy testing. Four rules broken in one afternoon. 😬</p>
+
+<hr/>
+
+<h3>7. Reading Between the Lines</h3>
+
+<p>Good engineers notice what the client is <i>signalling</i>, not just what they wrote. Here's what stands out:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>They wrote</th><th>What it probably means</th><th>How we respond</th></tr>
+<tr><td>"We are not a data business, and we do not want to become one."</td><td>They don't want to hire data engineers. They've been burned by complexity, or fear it.</td><td>Managed services, few moving parts, a clear support model (Section 7, Q9).</td></tr>
+<tr><td>"Kept running by an external data partner"</td><td>Someone outside Work.Life already knows the pipeline: how each source is extracted, what the dbt models do, where the quirks are. The brief doesn't name them or say whether they are one of the suppliers being asked.</td><td>We need that partner's knowledge (handover, documentation, access), or we must rediscover it ourselves. Ask how they will be involved (Chapter 04).</td></tr>
+<tr><td>"Please do not assume Tableau is fixed."</td><td>The BI tool might change. Don't tie the AI to Tableau.</td><td>Keep the AI layer independent of the BI tool. Both read the same models.</td></tr>
+<tr><td>"Often rebuilt manually", "sits in spreadsheets"</td><td>The models don't cover everything. Some KPIs live only in Excel.</td><td>Expect to model missing KPIs in dbt before the AI can answer them (Chapter 06).</td></tr>
+<tr><td>"HubSpot is expected to become the source of truth for member data over time"</td><td>A migration is in flight. Member data will move during our project.</td><td>Source-agnostic design is not theory here; it will be tested in year one.</td></tr>
+<tr><td>"If it confidently returns a wrong figure, trust is lost."</td><td>They've seen AI hallucinate. One bad number in a board meeting ends the project.</td><td>Lead with accuracy. Show SQL, definitions and a refusal mode ("I can't answer that reliably").</td></tr>
+<tr><td>"Cannot become a six figure operation"</td><td>Total yearly running cost must be well under £100k, probably far under.</td><td>Give real numbers at two usage levels with caps (Q4).</td></tr>
+<tr><td>"Honest feedback on what is and is not realistic is more useful to us than an optimistic pitch."</td><td>They've received optimistic pitches before. Over-promising will lose.</td><td>Say clearly what's hard (prescriptive answers, end-of-2026 timing).</td></tr>
+<tr><td>"ACT"</td><td>Never explained. Could be the Act! CRM or the ACT365 door-access system.</td><td>Ask. We explored both in Chapter 08.</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. The Timeline, and a Hidden Tension in It</h3>
+
+<pre>
+   JUL 2026            MID SEP 2026          END 2026               ~MAR 2027
+   ────────            ────────────          ────────               ─────────
+   Brief sent  ──────► Partner selected ───► Phase 1 target:  ····► "6 month mark"
+                                             "working, trusted       (if counted from
+                                              capability for          selection)
+                                              leadership"
+                       │◄──── about 3.5 months ────►│
+</pre>
+
+<p>Spot the tension: Section 7 asks <i>"what could realistically be delivered by a 3 month mark and a 6 month mark"</i>. But Section 8 wants a working, <b>trusted</b> capability by end of 2026, only about 3.5 months after selection.</p>
+
+<p>So the honest answer probably looks like this:</p>
+<ul>
+    <li><b>By ~3 months (end 2026):</b> Phase 1 live for the leadership team on a <b>limited, tested set of questions</b>: the KPIs from the board pack, passing the accuracy gate.</li>
+    <li><b>By ~6 months:</b> wider question coverage, proactive digests and alerts, hardened docs and handover. Phase 2 design ready.</li>
+</ul>
+
+<p>"Trusted" is the hard word. Trust needs the accuracy gate, which needs agreed KPI definitions, which needs time with Finance and Ops. The <b>biggest risk to the timeline is on the client's side</b>: decisions, definitions and access. That's why Section 7, Q3 ("what do you need from us?") matters so much. We plan this properly in Chapter 34.</p>
+
+<hr/>
+
+<h3>9. Section 7: The 10 Questions We Must Answer</h3>
+
+<p>This is the scoring sheet. Every answer we write in this series traces back to one of these:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Topic</th><th>What they're really asking</th><th>Where we answer it</th></tr>
+<tr><td>1</td><td>Feasibility &amp; approach</td><td>Can you build it on our BigQuery? What architecture, in plain terms?</td><td>Ch 20–23</td></tr>
+<tr><td>2</td><td>Timeline</td><td>What's done at 3 months and 6 months, and what must be true on our side?</td><td>Ch 34</td></tr>
+<tr><td>3</td><td>What you need from us</td><td>Access, data prep, decisions, people</td><td>Ch 11 list + Ch 33</td></tr>
+<tr><td>4</td><td>Cost</td><td>One-off build + yearly running cost (leadership only vs wider team). How do you cap tokens?</td><td>Ch 27, 35</td></tr>
+<tr><td>5</td><td>Security</td><td>Access control, isolation, what to never connect, AI usage policy ideas</td><td>Ch 26</td></tr>
+<tr><td>6</td><td>Accuracy</td><td>How do you stop confidently wrong answers? How does the check against actuals work?</td><td>Ch 25</td></tr>
+<tr><td>7</td><td>Resilience</td><td>How do you stay source agnostic?</td><td>Ch 21, 28</td></tr>
+<tr><td>8</td><td>Documentation &amp; handover</td><td>Not dependent on one person</td><td>Ch 36</td></tr>
+<tr><td>9</td><td>Support &amp; resourcing</td><td>Ongoing support; what must we hold in house?</td><td>Ch 35, 36</td></tr>
+<tr><td>10</td><td>Scalability</td><td>How does Phase 1 extend to Phase 2 without a rebuild?</td><td>Ch 29–32</td></tr>
+</table>
+
+<p>Notice the pattern: Q2, Q4 and Q9 each ask for <b>two levels</b> (3 vs 6 months; leadership vs wider team; support vs in-house). Answer both levels every time, or the like-for-like comparison won't work in our favour.</p>
+
+<p>Season 5, Chapter 33 writes the full response to these 10 questions.</p>
+
+<hr/>
+
+<h3>10. New Questions for the Client</h3>
+
+<p>Chapter 11 collects questions #1–12 from the hands-on labs. Reading the brief closely adds #13–22 here. Section 7 tells us how to use them: <i>"Where something depends on decisions we have not yet made, tell us what you would need from us to firm it up."</i> So listing them isn't weakness; it's what they asked for.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Question</th><th>Why it matters</th></tr>
+<tr><td>13</td><td>Who exactly is "the leadership team"? How many people, which roles?</td><td>User count drives cost, access design and testing.</td></tr>
+<tr><td>14</td><td>Can we see a recent board pack and the KPI definitions behind it?</td><td>It <i>is</i> the "business context" for Phase 1.</td></tr>
+<tr><td>15</td><td>Which identity provider do Work.Life accounts use (Google Workspace, Microsoft 365, other)?</td><td>"Access via Work.Life accounts only" means SSO with that provider.</td></tr>
+<tr><td>16</td><td>Is the BigQuery project owned by Work.Life or by the data partner? Which region?</td><td>Where the "controlled copy" lives, and who controls it.</td></tr>
+<tr><td>17</td><td>What counts as "sensitive" in the current reporting extracts? Is there a written rule?</td><td>"Safe data only" should follow the same principle they use today.</td></tr>
+<tr><td>18</td><td>Which channel should proactive insight arrive in: email, Slack, Teams?</td><td>Shapes the alerts and digests design.</td></tr>
+<tr><td>19</td><td>Is there a budget range for build and for yearly running?</td><td>Avoids proposing something they can't buy.</td></tr>
+<tr><td>20</td><td>What accuracy bar would leadership accept before go-live?</td><td>The launch gate needs a number, agreed in advance.</td></tr>
+<tr><td>21</td><td>Does the BI tool review end before Phase 1 starts?</td><td>The AI and the new BI tool should share one semantic layer.</td></tr>
+<tr><td>22</td><td>Any existing internal AI usage policy?</td><td>They invite recommendations in Q5; start from what exists.</td></tr>
+</table>
+
+<hr/>
+
+<h3>11. The One-Page Summary</h3>
+
+<p>If you only keep one thing from this chapter, keep this box. Pin it above your desk for the rest of the series. 📌</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────┐
+│  WORK.LIFE PHASE 1 · REQUIREMENTS ON ONE PAGE                    │
+├──────────────────────────────────────────────────────────────────┤
+│  WHO      Leadership team only (size unknown, ask #13),          │
+│           Work.Life accounts only (SSO)                          │
+│  WHAT     Ask the business questions in plain English; get       │
+│           answers that are correct, explained and in context     │
+│           + proactive alerts/digests + trend spotting            │
+│  ON       A controlled COPY of modelled BigQuery data            │
+│  NEVER    Live sources · raw tables · HR/people data ·           │
+│           sensitive personal data · member-facing features       │
+│  GATE     Golden-question accuracy test vs actuals, before       │
+│           anyone relies on it                                    │
+│  COST     Low, managed, capped. Not "six figures", no big team   │
+│  RESILIENT  Swap Nexudus/HubSpot in dbt, AI layer untouched      │
+│  DOCS     Anyone can run it from the documentation               │
+│  LATER    Phase 2 (retention, churn, forecasting, RBAC, agents)  │
+│           must fit on top without a rebuild. Don't price it.     │
+│  DATES    Partner by mid-Sep 2026 · Phase 1 trusted by end 2026  │
+│  RESPOND  Short written answers to the 10 questions + a call.    │
+│           Honest > optimistic.                                   │
+└──────────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: A client says "we want to ask our data questions in plain English". What do you ask before designing anything?</b></p>
+<p><i>"Who will ask, which questions matter most, and what 'correct' means. I'd ask for the board pack and KPI definitions, the user count, how they sign in, what data is off-limits, what accuracy bar they'd accept, and their budget for running costs. Without definitions and an accuracy bar, you can't prove the answers are right."</i></p>
+
+<p><b>Q: The brief says the AI must work "from a controlled copy" of the warehouse. How would you implement that on BigQuery?</b></p>
+<p><i>"A separate dataset, or project, that holds only approved, modelled tables, refreshed from the main marts on a schedule. The AI's service account can read only that dataset. Sensitive columns are dropped or aggregated before the copy, so the AI can't see them even by mistake."</i></p>
+
+<p><b>Q: What does "source agnostic" mean for an AI layer, and why does it matter here?</b></p>
+<p><i>"The AI only ever sees business-shaped models and metric definitions, never source-shaped tables. If Nexudus is replaced, or HubSpot becomes the member source, you rewrite the staging models in dbt to feed the same marts, and the AI keeps working. It matters here because the HubSpot migration is already under way."</i></p>
+
+<p><b>Q: The client wants a trusted capability within about 3.5 months of choosing a partner. Is that realistic?</b></p>
+<p><i>"For a narrow, well-tested set of leadership questions, yes, because the warehouse and models already exist. For broad coverage, probably not. The real risk is agreeing definitions and getting access in time, so I'd say that honestly and plan the first release around the board-pack KPIs."</i></p>
+
+<p><b>Q: Why would you avoid pricing churn prediction in your response?</b></p>
+<p><i>"Because the brief explicitly says Phase 2 is context only and not to price it. Responses are compared like for like, so adding it would confuse the comparison and suggest we didn't read the brief. Instead I'd explain how the Phase 1 design makes churn prediction easy to add later."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Kind of document</b></td><td>A scoping brief (RFI): thinking, not a proposal. Short and honest wins.</td></tr>
+<tr><td><b>4 highlighters</b></td><td>Facts, wants, rules, unknowns. Every sentence is one of them.</td></tr>
+<tr><td><b>The one want</b></td><td>Leaders ask questions in plain English and <i>trust</i> the answers.</td></tr>
+<tr><td><b>8 principles</b></td><td>Each one becomes a requirement with a test. Break one and you're out.</td></tr>
+<tr><td><b>Existing stack</b></td><td>BigQuery + dbt already exist. Phase 1 builds on top; it doesn't rebuild.</td></tr>
+<tr><td><b>Phase 2</b></td><td>Design for it, don't price it.</td></tr>
+<tr><td><b>Timeline</b></td><td>About 3.5 months from selection to "trusted". Client-side decisions are the biggest risk.</td></tr>
+<tr><td><b>Section 7</b></td><td>The 10 questions are the scoring sheet. Answer both levels where asked.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>We know <b>what</b> the client wants. In Chapter 04 we meet <b>who</b>: the leadership team, the Operations &amp; IT Systems team that wrote this brief, finance, sales and site teams, the external data partner that keeps the pipeline running, and where we fit in. Knowing who decides, who uses and who maintains is half of delivering a project well.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

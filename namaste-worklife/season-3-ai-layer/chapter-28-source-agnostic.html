@@ -1,0 +1,293 @@
+<h2>Chapter 28 — Source Agnostic: Swapping Nexudus Without Breaking AI</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>This is the Season 3 finale. 🎬 One principle is left, and the brief singles it out by asking us to <i>explain</i> it:</p>
+
+<p><i>"Source agnostic: If we replace a source system, for example Nexudus, or as HubSpot becomes our member source of truth, we want to swap the feed into the warehouse without rebuilding the AI layer on top. Please explain how your approach delivers this resilience."</i></p>
+
+<p>And Section 7, Q7: <i>"How does your solution stay source agnostic if we change a system feeding the warehouse?"</i></p>
+
+<p>This isn't a hypothetical. The brief says HubSpot <i>"is expected to become the source of truth for member data over time"</i>. A source change will happen during or soon after Phase 1. Today we design for it, then rehearse it.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>The idea in one picture: a contract in the middle</li>
+    <li>What "source-shaped" vs "business-shaped" means</li>
+    <li>Where each source's details are allowed to live</li>
+    <li>Enforcing the contract: dbt model contracts and tests</li>
+    <li>Lab 28.1: Rehearse the HubSpot switch</li>
+    <li>The hard bits: history, overlap, identity</li>
+    <li>Lab 28.2: The "no source names" check</li>
+    <li>What would break the promise</li>
+    <li>The Season 3 recap: all 8 principles, one page</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Picture a different company with an AI assistant whose prompt says:</p>
+
+<pre>
+   "Member data is in the table nexudus_coworkers. Use the column
+    'CoworkerType' to find residents. Revenue is in nexudus_invoices."
+</pre>
+
+<p>The company moves its members to a new system. Overnight, the AI's instructions point at tables that stop updating. It doesn't crash. It keeps answering, confidently, from <b>stale data</b>. Membership looks frozen for three weeks until someone notices the numbers haven't moved.</p>
+
+<p>Now compare our design. The AI has never heard the word "Nexudus". It knows <code>dim_company</code>, <code>fct_contract_month</code> and the metric <code>mrr</code>, all in <code>ai_safe</code>. When the source changes, someone rewrites how those tables are <b>filled</b>. The AI asks the same questions of the same tables, and gets fresh answers.</p>
+
+<hr/>
+
+<h3>2. The Idea in One Picture</h3>
+
+<pre>
+   SOURCE-SHAPED                     THE CONTRACT                 BUSINESS-SHAPED
+   (changes)                         (stable)                     (never knows the source)
+   ─────────────                     ────────────                 ───────────────────────
+
+   Nexudus ──► stg_nexudus__* ─┐
+                               │     ┌──────────────────────┐
+   HubSpot ──► stg_hubspot__* ─┼──►  │ marts                 │ ──► ai_safe ──► semantic layer
+                               │     │  dim_member           │                  ──► AI layer
+   NetSuite ─► stg_netsuite__* ┤     │  dim_company          │                  ──► BI tool
+                               │     │  fct_contract_month   │                  ──► digests
+   Excel ───► stg_excel__* ────┤     │  fct_site_month_kpis  │
+                               │     │  …                    │
+   ACT ─────► stg_act__* ──────┘     │ + member_xref         │
+                                     └──────────────────────┘
+          ▲                                   ▲
+          │                                   │
+   SWAP HAPPENS HERE                 THIS SHAPE NEVER CHANGES
+   (dbt staging + intermediate)      (names, columns, types, meaning)
+</pre>
+
+<p>The marts are a <b>contract</b>: a promise about names, columns, types and meaning. Everything to the right of the contract depends only on the promise. Everything to the left can change, as long as the promise is kept.</p>
+
+<p>Note that <code>dim_member</code> and <code>member_xref</code> are in the marts but <b>not</b> in <code>ai_safe</code> (Chapter 23): the AI never sees people. They still matter here, because the HubSpot switch is mostly about member records, and member counts and company links that the AI <i>does</i> see (<code>dim_company</code>, <code>fct_contract_month</code>, <code>fct_site_month_kpis</code>) are built from them.</p>
+
+<hr/>
+
+<h3>3. Source-Shaped vs Business-Shaped</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Source-shaped ❌ (never in the AI layer)</th><th>Business-shaped ✅ (marts; the AI sees only the <code>ai_safe</code> subset)</th></tr>
+<tr><td><code>nexudus_coworkers.CoworkerType</code></td><td><code>dim_member.plan_type</code></td></tr>
+<tr><td>Nexudus customer ID <code>M001</code></td><td><code>member_key</code> (our own stable key, Chapter 11)</td></tr>
+<tr><td>NetSuite location <code>"Soho"</code> / Excel <code>"SOHO"</code></td><td><code>site_code = 'SOHO'</code> via <code>dim_site</code> and the site mapping (Chapter 16)</td></tr>
+<tr><td>HubSpot lifecycle stage <code>"customer"</code></td><td><code>dim_member.status = 'active'</code></td></tr>
+<tr><td>Act! <code>ID/Status = "Former Customer"</code></td><td>A churn classification in the marts (<code>movement_type = 'churn'</code>, the contract-movements model proposed in Chapter 21), built from contract end reasons, not from CRM status</td></tr>
+</table>
+
+<p>You did the hardest part of this in Chapter 11 when you built the crosswalk. <code>member_key</code> is <b>ours</b>. It doesn't belong to Nexudus or HubSpot, so it survives either being replaced.</p>
+
+<hr/>
+
+<h3>4. Where Each Source's Details Are Allowed to Live</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Layer</th><th>May mention source systems?</th><th>Example</th></tr>
+<tr><td>Raw (Fivetran / Python loads)</td><td>✅ Yes, it's a copy of the source</td><td><code>raw_nexudus.coworkers</code></td></tr>
+<tr><td>Staging</td><td>✅ Yes: one model per source table, renamed and typed</td><td><code>stg_nexudus__members</code></td></tr>
+<tr><td>Intermediate</td><td>✅ Yes, where sources are combined and the crosswalk is applied</td><td><code>int_members_unioned</code></td></tr>
+<tr><td>Marts</td><td>⚠️ Only as lineage columns (e.g. <code>source_system</code> for audit)</td><td><code>dim_member</code></td></tr>
+<tr><td><code>ai_safe</code></td><td>❌ No</td><td>—</td></tr>
+<tr><td>Semantic layer</td><td>❌ No. Metrics reference marts only.</td><td><code>mrr</code></td></tr>
+<tr><td>Context cards, prompts, golden questions</td><td>❌ No. They speak business language.</td><td>"Desk occupancy, Operations, v1.0"</td></tr>
+</table>
+
+<p>There's one exception, and it's deliberate: a context card may say <i>where the truth comes from</i> for humans, such as "Recognised revenue = NetSuite GL". That's documentation, not a dependency. If NetSuite were replaced, one sentence changes and no logic does.</p>
+
+<hr/>
+
+<h3>5. Enforcing the Contract</h3>
+
+<p>A promise needs checks, or it erodes one "quick fix" at a time. dbt can enforce a mart's shape directly:</p>
+
+<pre>
+# models/marts/dim_member.yml
+models:
+  - name: dim_member
+    config:
+      contract:
+        enforced: true          # build FAILS if columns or types drift
+    columns:
+      - name: member_key
+        data_type: string
+        constraints: [ { type: not_null } ]
+        tests: [ unique ]
+      - name: company_key
+        data_type: string
+        tests:
+          - relationships: { to: ref('dim_company'), field: company_key }
+      - name: home_site_code
+        data_type: string
+      - name: plan_type
+        data_type: string
+        tests:
+          - accepted_values: { values: ['coworking', 'flex', 'office'] }
+      - name: joined_on
+        data_type: date
+      - name: status
+        data_type: string
+        tests:
+          - accepted_values: { values: ['active', 'left'] }
+</pre>
+
+<p>Three layers of protection:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Check</th><th>Catches</th></tr>
+<tr><td><b>Model contract</b> (shape)</td><td>A renamed, dropped or retyped column</td></tr>
+<tr><td><b>dbt tests</b> (values)</td><td>New status values ("lead", "prospect") leaking in from the new source; broken keys</td></tr>
+<tr><td><b>Golden questions</b> (meaning)</td><td>Same shape and valid values, but different numbers. E.g. the new source counts members differently.</td></tr>
+</table>
+
+<p>The third row is the one people forget. A swap can keep every column and still change the <b>meaning</b>. The golden set from Chapter 25 is the proof that the swap didn't change the answers.</p>
+
+<hr/>
+
+<h3>6. Lab 28.1 — Rehearse the HubSpot Switch</h3>
+
+<p>Scenario: from 1 January 2027 (made up), HubSpot becomes the source of truth for <b>member and company records</b>. Nexudus keeps contracts, bookings and invoices (it still runs the buildings). Walk through the change:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>What changes</th><th>Layer</th><th>AI layer touched?</th></tr>
+<tr><td>1</td><td>Fivetran HubSpot connector already loads contacts and companies (Chapter 10). Confirm the fields are mapped, including <code>nexudus_customer_id</code>.</td><td>Raw</td><td>No</td></tr>
+<tr><td>2</td><td>Build <code>stg_hubspot__contacts</code> and <code>stg_hubspot__companies</code>: rename, type, normalise emails</td><td>Staging</td><td>No</td></tr>
+<tr><td>3</td><td>Update <code>member_xref</code>: HubSpot ID becomes the primary match, Nexudus ID secondary. <code>member_key</code> values <b>do not change</b>.</td><td>Intermediate</td><td>No</td></tr>
+<tr><td>4</td><td>Change the intermediate member model (e.g. <code>int_members_unioned</code>): attributes from HubSpot from the cut-over date, Nexudus before it</td><td>Intermediate</td><td>No</td></tr>
+<tr><td>5</td><td><code>dim_member</code> and <code>dim_company</code> build with the <b>same contract</b>. dbt contract + tests pass.</td><td>Marts</td><td>No</td></tr>
+<tr><td>6</td><td><code>ai_safe</code> copy job runs unchanged (it never copied <code>dim_member</code> anyway; <code>dim_company</code> keeps the same columns)</td><td>ai_safe</td><td>No</td></tr>
+<tr><td>7</td><td>Golden set runs in CI. Tier 1 answers for past closed months must be <b>identical</b>.</td><td>Test</td><td>No (it's the proof)</td></tr>
+<tr><td>8</td><td>One context card sentence updated: "Member records: HubSpot (from Jan 2027)"</td><td>Docs</td><td>Text only</td></tr>
+</table>
+
+<p><b>Result:</b> zero changes to prompts, semantic definitions, the AI service or the BI tool. The work lands in steps 2 to 4, which is the kind of work the external data partner who keeps the pipeline running already does.</p>
+
+<p><b>Your task:</b> repeat the table for a different swap: <i>Nexudus is replaced by another workspace platform</i> for contracts and bookings. Which steps get bigger? (Hint: contracts drive <code>fct_contract_month</code> and the upgrade/transfer/churn classification. The new system's contract model might not map one-to-one.)</p>
+
+<hr/>
+
+<h3>7. The Hard Bits</h3>
+
+<p>Source agnostic doesn't mean source swaps are <b>free</b>. It means the cost lands in one place. Be honest with the client about what's in that place:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Hard bit</th><th>Why it's hard</th><th>Approach</th></tr>
+<tr><td><b>History</b></td><td>The new system starts on day one; years of history are in the old one</td><td>Keep the old source's raw data and staging models. Union old (before cut-over) and new (after) in intermediate. If Work.Life's older finance history sits in an earlier ledger (unknown: ask the client), it's the same pattern.</td></tr>
+<tr><td><b>Overlap</b></td><td>During migration both systems are live and may disagree</td><td>Agree a cut-over date per entity; dbt picks a source by date. Reconciliation report during overlap.</td></tr>
+<tr><td><b>Identity</b></td><td>New system, new IDs</td><td><code>member_xref</code> gets a new column; <code>member_key</code> never changes (Chapter 11)</td></tr>
+<tr><td><b>Meaning drift</b></td><td>New system defines "active" or "company" differently</td><td>Map to the mart's accepted values; flag unmappable cases; golden questions prove it</td></tr>
+<tr><td><b>Missing fields</b></td><td>New system lacks something the old had</td><td>The contract shows the gap at build time. Decide with the owner: source it elsewhere, or retire the metric with notice.</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. Lab 28.2 — The "No Source Names" Check</h3>
+
+<p>Here's a simple, automatic test you can put in CI. It searches everything on the business-shaped side for source system names:</p>
+
+<pre>
+# ci/check_source_agnostic.sh
+# Fail the build if the AI layer mentions a source system by name.
+FORBIDDEN='nexudus|netsuite|hubspot|act365|fivetran|stg_|raw_'
+
+grep -R -i -n -E "$FORBIDDEN" \
+  semantic/  ai_service/prompts/  golden/  \
+  models/ai_safe/ \
+  --include='*.yml' --include='*.sql' --include='*.txt' --include='*.md' \
+  | grep -v 'source_of_truth:'          # documentation lines are allowed
+  &amp;&amp; { echo "❌ Source-specific reference found in AI layer"; exit 1; }
+
+echo "✅ AI layer is source agnostic"
+</pre>
+
+<p>It's crude, and that's the point. It turns a principle from the brief into a test that runs on every change. In the supplier response we can write: <i>"Source agnosticism is enforced automatically: the build fails if any AI prompt, metric or test references a source system."</i> That's far stronger than "we'll be careful".</p>
+
+<hr/>
+
+<h3>9. What Would Break the Promise</h3>
+
+<p>Watch for these in reviews. Each one quietly reconnects the AI to a source:</p>
+
+<ul>
+    <li>❌ A "quick" metric defined on a staging model because the mart didn't have the column yet</li>
+    <li>❌ A prompt example that mentions <code>CoworkerType</code> or a Nexudus ID format</li>
+    <li>❌ Free SQL (Chapter 20) allowed to see anything outside <code>ai_safe</code></li>
+    <li>❌ The BI tool's own calculated fields duplicating a metric (now there are two places to update)</li>
+    <li>❌ Source IDs (<code>M001</code>, HubSpot IDs) used as join keys in marts instead of <code>member_key</code></li>
+</ul>
+
+<p>Lab 28.2's check catches the first two. IAM (Chapter 26) prevents the third. The semantic layer (Chapter 21) prevents the fourth. The crosswalk (Chapter 11) prevents the fifth. Every principle in this season is held up by something from an earlier chapter. That's not an accident.</p>
+
+<hr/>
+
+<h3>10. Season 3 Recap: All 8 Principles on One Page</h3>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────────────┐
+│  WORK.LIFE PHASE 1 · HOW EACH PRINCIPLE IS MET                           │
+├──────────────────────────────┬───────────────────────────────────────────┤
+│ Warehouse first, on a copy   │ ai_safe: dbt-built copy, separate project │
+│                              │ (Ch 23)                                   │
+│ Source agnostic              │ Marts as enforced contracts; no source    │
+│                              │ names in the AI layer, checked in CI (28) │
+│ Safe data only               │ Signed column inventory; dbt test (26)    │
+│ People data excluded         │ No HR connector, dataset or credential;   │
+│                              │ payroll only as site totals (26)          │
+│ Accuracy is a launch gate    │ Tier 1 100% on last 3 closed months; tier │
+│                              │ 2 ≥ 90%, misses caveated; tier 3 100%;    │
+│                              │ monthly reconciliation with Finance (25)  │
+│ Cost conscious               │ Serverless; caps per query/user/day/month │
+│                              │ (27)                                      │
+│ Secure by design             │ SSO + allow-list; read-only identity;     │
+│                              │ audit log; never-connect list (26)        │
+│ Documented, handover ready   │ Definitions, context, golden set, infra   │
+│                              │ and checks all in git (21–28 → Ch 36)     │
+├──────────────────────────────┴───────────────────────────────────────────┤
+│ The core: the LLM translates, the warehouse calculates, the semantic     │
+│ layer defines, and context explains (Ch 19–22)                           │
+└──────────────────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What does 'source agnostic' mean for an AI analytics layer, and how do you deliver it?</b></p>
+<p><i>"The AI only depends on business-shaped marts and metric definitions, never on source tables or IDs. Source details live in dbt staging and intermediate models. Marts are enforced contracts, with dbt model contracts for shape, tests for values, and golden questions for meaning. Swapping a source means rewriting staging to fill the same contract, with no AI changes."</i></p>
+
+<p><b>Q: HubSpot is becoming the member source of truth. Walk me through the change.</b></p>
+<p><i>"Load HubSpot (already via Fivetran), build staging models, make HubSpot IDs the primary match in the crosswalk while keeping our member_key stable, switch member attributes by cut-over date in the intermediate model, rebuild the marts against the same contract, and run the golden set to prove past answers haven't changed. Prompts, metrics and the AI service don't change."</i></p>
+
+<p><b>Q: Does source agnostic mean switching systems is free?</b></p>
+<p><i>"No. It means the cost is contained in one well-understood place, the staging and intermediate layers, which is the work a data partner already does. History, overlap periods, identity and differences in meaning still need real effort, and I'd say that honestly."</i></p>
+
+<p><b>Q: How do you stop the design from slowly losing its source agnosticism?</b></p>
+<p><i>"Automate it: a CI check that fails if prompts, metrics or tests mention source systems; IAM so the AI can't see staging; enforced model contracts; and the semantic layer as the only place metrics are defined."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>The contract</b></td><td>Marts are a stable promise; sources change behind them.</td></tr>
+<tr><td><b>Where sources live</b></td><td>Raw, staging, intermediate. Never in ai_safe, metrics, prompts or tests.</td></tr>
+<tr><td><b>Three checks</b></td><td>Model contracts (shape), tests (values), golden set (meaning).</td></tr>
+<tr><td><b>Our key</b></td><td><code>member_key</code> survives any system swap.</td></tr>
+<tr><td><b>HubSpot switch</b></td><td>Staging + crosswalk + intermediate. Zero AI changes.</td></tr>
+<tr><td><b>Honest cost</b></td><td>History, overlap, identity and meaning still need work, in one place.</td></tr>
+<tr><td><b>CI check</b></td><td>The principle becomes a test that fails the build.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Season 3 done! 🎉 You now have a complete Phase 1 design that meets all 8 of the brief's principles. In <b>Season 4</b> we look past Phase 1 to where the brief says it goes next: automated retention reporting, churn and renewal prediction with context packs, forecasting, and role-based access with agents. All of it is designed to extend from what we just built, without a rebuild.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

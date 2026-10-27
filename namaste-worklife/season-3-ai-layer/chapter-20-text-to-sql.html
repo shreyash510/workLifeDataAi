@@ -1,0 +1,323 @@
+<h2>Chapter 20 — Text-to-SQL: How an LLM Answers From a Warehouse</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 19 we found our rung: <b>diagnostic</b>, asking "why?" in plain English. Today we open the engine that makes it work. A leader types "Is Soho profitable?", and a few seconds later a number appears. What actually happened in between? And why does the simple version of this fail so badly?</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What an LLM is good at, and what it is bad at</li>
+    <li>The naive version: "here's the schema, write SQL"</li>
+    <li>Five ways the naive version goes wrong (with the lab data)</li>
+    <li>The safe pipeline: 7 steps from question to answer</li>
+    <li>Two styles: free SQL vs metric queries</li>
+    <li>Lab 20.1: Be the LLM: write the SQL for 3 questions</li>
+    <li>Guardrails: what the SQL is never allowed to do</li>
+    <li>What a good answer looks like on screen</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Remember Engineer A from Chapter 03? They built a demo in an afternoon: an LLM, the BigQuery schema pasted into the prompt, and a chat box. Let's watch it in a leadership meeting.</p>
+
+<pre>
+   Leader:  "What was Soho's revenue in September?"
+   Demo:    "Soho's revenue in September 2026 was £3,565."
+
+   Finance: "That's not what the ledger says. We closed September at £3,475."
+</pre>
+
+<p>The demo summed Nexudus invoices. Finance's number is <b>recognised revenue</b> in NetSuite, which includes the £90 goodwill credit memo for the AV failure on 24 September (Chapter 09). Both numbers exist. The demo picked one, said it with total confidence, and didn't show its workings.</p>
+
+<p>Nothing crashed. No error appeared. And trust was lost in one sentence. That's the failure the brief warns about: <i>"If it confidently returns a wrong figure, trust is lost."</i></p>
+
+<hr/>
+
+<h3>2. What an LLM Is Good At, and Bad At</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Good at ✅</th><th>Bad at ❌</th></tr>
+<tr><td>Understanding messy human questions ("how's Soho looking?")</td><td>Arithmetic over many rows (it guesses)</td></tr>
+<tr><td>Writing SQL that is syntactically correct</td><td>Knowing <i>your</i> definition of revenue, churn or occupancy</td></tr>
+<tr><td>Turning a table of results into a clear paragraph</td><td>Knowing which of two similar tables is the right one</td></tr>
+<tr><td>Asking a clarifying question when told to</td><td>Admitting it doesn't know, unless designed to</td></tr>
+<tr><td>Following written rules and examples</td><td>Remembering facts about your business it was never given</td></tr>
+</table>
+
+<p>So the design principle for this whole season is:</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   THE LLM TRANSLATES. THE WAREHOUSE CALCULATES.             │
+│                                                             │
+│   • The LLM turns words into a query, and results into      │
+│     words.                                                  │
+│   • Every number comes from BigQuery, never from the LLM's  │
+│     memory or arithmetic.                                   │
+│   • Every definition comes from the semantic layer          │
+│     (Chapter 21), never from the LLM's guess.               │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>3. The Naive Version</h3>
+
+<pre>
+   ┌──────────┐   question    ┌──────────────────────────┐   SQL   ┌──────────┐
+   │  Leader  │──────────────►│ LLM + "here is the schema │───────►│ BigQuery │
+   └──────────┘               │  of every table"          │        │ (all of  │
+        ▲                     └──────────────────────────┘        │  it)     │
+        │        "Soho's revenue was £3,565"                       └────┬─────┘
+        └───────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>It demos beautifully on simple questions. It fails in production because the LLM has to <b>guess</b> the business logic every single time, and guesses differently on different days.</p>
+
+<hr/>
+
+<h3>4. Five Ways the Naive Version Goes Wrong</h3>
+
+<p>All five of these really happen with the lab data:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Failure</th><th>Lab example</th><th>Wrong answer</th><th>Right answer</th></tr>
+<tr><td>1</td><td><b>Wrong source</b> for the metric</td><td>"Soho revenue, September"</td><td>£3,565 (Nexudus invoices)</td><td>£3,475 (NetSuite recognised)</td></tr>
+<tr><td>2</td><td><b>Grain fan-out</b>: join at the wrong level</td><td>"GreenRoot's MRR": join members (6 people) to contracts</td><td>£16,200</td><td>£2,700</td></tr>
+<tr><td>3</td><td><b>Wrong definition</b></td><td>"How many members churned in 2026?" counting every ended contract</td><td>3 contracts</td><td>1 company (Brightline), 2 people. K001 was an upgrade, K006 a transfer.</td></tr>
+<tr><td>4</td><td><b>Silent ambiguity</b></td><td>"Is Soho profitable?"</td><td>"Yes/No" with no basis</td><td>"Before central costs: −£4,175. After: −£5,175."</td></tr>
+<tr><td>5</td><td><b>Wrong join key</b></td><td>"Soho actual vs budget": join NetSuite <code>Soho</code> to Excel <code>SOHO</code> on text</td><td>No rows, so "no budget set"</td><td>−£5,725 vs budget (−62%)</td></tr>
+</table>
+
+<p>Look at the pattern. None of these is a SQL <i>syntax</i> problem. Every one is a <b>business knowledge</b> problem. A better LLM doesn't fix them. A better <b>design</b> does: give the LLM tables that are already at the right grain, with the definitions already applied and the keys already joined. That's what the marts from Season 2 and the semantic layer from Chapter 21 are for.</p>
+
+<hr/>
+
+<h3>5. The Safe Pipeline: 7 Steps</h3>
+
+<p>Here is the pipeline Phase 1 actually runs for every question. We'll use it in every chapter of this season.</p>
+
+<pre>
+   "Is Soho profitable?"
+          │
+          ▼
+   ① UNDERSTAND     Classify the question. Which metrics? Which site? Which period?
+          │         Is it ambiguous?  → ask back: "Before or after central costs?"
+          │                             (or answer both, clearly labelled)
+          │         No period given?  → default to the LAST CLOSED month
+          ▼         Open month asked for → answer it, labelled PROVISIONAL
+   ② RETRIEVE       Pull only the relevant context:
+          │         • metric definitions (semantic layer, Ch 21)
+          │         • KPI meaning + targets: get_business_context (Ch 22)
+          │         • the few tables/columns needed (from ai_safe only)
+          ▼
+   ③ PLAN           Prefer a METRIC query: query_metrics(site_contribution,
+          │                                   site=Soho, month=2026-09)
+          │         Fall back to FREE SQL (run_sql) only if no metric fits, and say so
+          ▼
+   ④ GENERATE       Produce the query
+          │
+          ▼
+   ⑤ VALIDATE       • Parses? (BigQuery dry run)
+          │         • Only reads the ai_safe dataset?
+          │         • Read-only (SELECT)? Max 200 rows back? Bytes under cap?
+          │         • Fails → fix and retry (max 2), then give up honestly
+          ▼
+   ⑥ EXECUTE        Run on BigQuery as the read-only AI service account
+          │
+          ▼
+   ⑦ ANSWER         Write the answer FROM THE RESULT ROWS ONLY, and show:
+                    number · definition used · period · data freshness · the SQL
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>Which naive failure it fixes</th></tr>
+<tr><td>① Understand (ask back on ambiguity)</td><td>#4 silent ambiguity</td></tr>
+<tr><td>② Retrieve (definitions, not just schema)</td><td>#1 wrong source, #3 wrong definition</td></tr>
+<tr><td>③ Plan (metric first)</td><td>#2 grain fan-out, #5 wrong join key, because the metric is pre-built at the right grain with the site mapping already applied</td></tr>
+<tr><td>⑤ Validate</td><td>Runaway cost, writes, access to the wrong data</td></tr>
+<tr><td>⑦ Answer with workings</td><td>Makes any remaining error <b>visible</b>, so a human catches it</td></tr>
+</table>
+
+<p><b>Why the period rule in step ①?</b> Finance numbers for a month keep moving until Finance <b>closes</b> that period in NetSuite (Chapter 09). Look at the lab GL: the meeting-room invoices, the £90 credit memo CN-2609-01, the site-staff journals and the central cost allocations are all dated <b>30 September</b>, the last day of the month. Ask "Soho revenue for September" on 25 September and you'd get a different number from the one Finance closes with. So when a leader doesn't name a month, the assistant uses the <b>last closed month</b>. When they ask about a month that's still open, it answers, but labels the figure <b>PROVISIONAL</b> and says what usually still changes (late invoices, credit memos, accruals, allocations). When Work.Life's close usually finishes is unknown: that's client question #11.</p>
+
+<p>In our design the LLM reaches the warehouse through exactly <b>three tools</b>, and nothing else. We use these names for the rest of the series:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Tool</th><th>What it does</th><th>Used in step</th></tr>
+<tr><td><code>query_metrics</code></td><td>Asks for a governed metric by name, with dimensions, filters and a period. The semantic layer (Chapter 21) writes the SQL.</td><td>③ (first choice)</td></tr>
+<tr><td><code>run_sql</code></td><td>Runs one read-only SELECT over <code>ai_safe</code>, after the step ⑤ checks. Answers are labelled "Exploratory".</td><td>③ (fallback)</td></tr>
+<tr><td><code>get_business_context</code></td><td>Returns the KPI cards, glossary entries and dated notes relevant to the question (Chapter 22). Text only: never figures.</td><td>②</td></tr>
+</table>
+
+<hr/>
+
+<h3>6. Two Styles: Free SQL vs Metric Queries</h3>
+
+<p>There are two ways the LLM can talk to the warehouse:</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Free SQL (text-to-SQL), tool <code>run_sql</code></th><th>Metric queries (text-to-metric), tool <code>query_metrics</code></th></tr>
+<tr><td><b>What the LLM writes</b></td><td>Any SELECT over the allowed tables</td><td>"metric + dimensions + filters + period", which the semantic layer compiles to SQL</td></tr>
+<tr><td><b>Example</b></td><td><code>SELECT SUM(amount_gbp) FROM fct_gl WHERE …</code></td><td><code>{metric: site_contribution, site: Soho, month: 2026-09}</code></td></tr>
+<tr><td><b>Flexibility</b></td><td>✅ Very high</td><td>🟡 Only what's been defined</td></tr>
+<tr><td><b>Accuracy</b></td><td>🟠 Depends on the LLM's guess every time</td><td>✅ Same definition every time</td></tr>
+<tr><td><b>Testability</b></td><td>🟠 Hard: infinite possible queries</td><td>✅ Test each metric once</td></tr>
+<tr><td><b>Best for</b></td><td>Exploration: "which companies booked Brick Lane most?"</td><td>Board-pack KPIs: revenue, occupancy, churn, contribution</td></tr>
+</table>
+
+<p><b>Our design uses both, in a fixed order:</b> metric query first. Free SQL only when no metric fits, and then the answer is labelled <i>"Exploratory: this isn't a governed KPI. Check before you rely on it."</i> Leaders get speed on new questions without ever confusing an exploratory number with a board-pack number.</p>
+
+<hr/>
+
+<h3>7. Lab 20.1 — Be the LLM</h3>
+
+<p>You are the LLM. You've been given the tables in <code>ai_safe</code> (built in Season 2, Chapters 16 and 17). Write the BigQuery SQL for each question, then check it against the answer. Here are the columns you're allowed to use:</p>
+
+<pre>
+   ai_safe.fct_site_month_kpis   site_code, month_start, mrr_gbp, desks_contracted,
+                                 sellable_desks, desk_occupancy, has_finance_actuals,
+                                 revenue_gbp, direct_costs_gbp, contribution_gbp,
+                                 central_costs_gbp, contribution_after_central_gbp,
+                                 budget_revenue_gbp, revenue_vs_budget_gbp,
+                                 budget_desk_occupancy, meeting_room_hours
+   ai_safe.dim_site              site_code, site_name, ...
+   ai_safe.fct_booking           booking_id, booking_date, month_start, site_code,
+                                 resource_code, resource_type, company_key,
+                                 hours, price_gbp, status
+</pre>
+
+<p>💡 <code>revenue_gbp</code> here is <b>recognised</b> revenue: the NetSuite GL lines with <code>pl_category = 'revenue'</code>, credit memos included. The lab mart has no "is this period closed?" column yet; in the real build that flag comes from NetSuite's accounting periods (client question #11), and the AI service adds the PROVISIONAL label from it.</p>
+
+<p><b>Q1. "Is Soho profitable?"</b> (no month named, so use the last closed month: in this lab, September 2026)</p>
+<pre>
+SELECT
+  site_code,
+  revenue_gbp,
+  direct_costs_gbp,
+  contribution_gbp,                    -- before central costs
+  contribution_after_central_gbp
+FROM ai_safe.fct_site_month_kpis
+WHERE site_code = 'SOHO'
+  AND month_start = DATE '2026-09-01';
+
+-- Expected: SOHO | 3475 | 7650 | -4175 | -5175
+</pre>
+
+<p><b>Q2. "Which sites are furthest below budget on revenue?"</b></p>
+<pre>
+SELECT
+  site_code,
+  revenue_vs_budget_gbp                                           AS gap_gbp,
+  ROUND(SAFE_DIVIDE(revenue_gbp, budget_revenue_gbp) - 1, 3)      AS gap_pct
+FROM ai_safe.fct_site_month_kpis
+WHERE month_start = DATE '2026-09-01'
+ORDER BY gap_gbp;
+
+-- Expected: SOHO −5,725 (−62%), RDG −300 (−9%)
+</pre>
+
+<p><b>Q3. "How busy was Brick Lane in September?"</b></p>
+<pre>
+SELECT
+  SUM(hours)                         AS hours_booked,
+  22 * 10                            AS hours_available,   -- 22 working days × 10 h
+  ROUND(SUM(hours) / (22 * 10), 3)   AS utilisation
+FROM ai_safe.fct_booking
+WHERE resource_code = 'SOHO-MR-BRICK'
+  AND status = 'confirmed'
+  AND booking_date BETWEEN '2026-09-01' AND '2026-09-30';
+
+-- Expected: 9 | 220 | 0.041  (4.1%)
+</pre>
+
+<p>Now spot the difference. Q1 and Q2 are one-table lookups on a governed mart, so they'd become <b>metric queries</b>. Q3 has a <b>hard-coded assumption</b> (22 days × 10 hours) that the LLM invented. That's exactly the kind of thing that should live in the semantic layer as <code>room_hours_available</code>, defined once by Ops. Chapter 21 fixes this.</p>
+
+<hr/>
+
+<h3>8. Guardrails: What the SQL Is Never Allowed to Do</h3>
+
+<p>These are checked by <b>code</b> in step ⑤, not by asking the LLM nicely in the prompt. Prompts are suggestions; code is a wall.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Rule</th><th>How it's enforced</th></tr>
+<tr><td>Read only: no INSERT, UPDATE, DELETE, CREATE, DROP</td><td>The service account has <b>no write permission</b> anywhere, plus a statement-type check before running</td></tr>
+<tr><td>Only the <code>ai_safe</code> dataset</td><td>IAM: the account can't even see other datasets (Chapter 26)</td></tr>
+<tr><td>No query over N bytes</td><td>BigQuery <code>maximum_bytes_billed</code> on every job (Chapter 27)</td></tr>
+<tr><td>Bounded result size</td><td>At most <b>200 rows</b> go back to the LLM (outer <code>LIMIT 200</code>). Bigger results must be aggregated first, and the answer says it was truncated. Leaders ask about sites and months, not row dumps; and every row sent costs tokens (Chapter 27).</td></tr>
+<tr><td>Bounded retries</td><td>Max 2 fix-and-retry loops, then "I couldn't answer that reliably"</td></tr>
+<tr><td>No numbers from memory</td><td>Answer step gets only the result rows; a check flags any number in the answer that isn't in the rows</td></tr>
+</table>
+
+<p>💡 That last check is cheap and powerful. Extract every number from the drafted answer and confirm each one appears in (or is a simple rounding of) the query results. If the LLM writes "£3,565" and the result says 3475, block it.</p>
+
+<hr/>
+
+<h3>9. What a Good Answer Looks Like</h3>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────────┐
+│ Q: Is Soho profitable?                                               │
+├──────────────────────────────────────────────────────────────────────┤
+│ No. In September 2026 Soho made a loss.                              │
+│                                                                      │
+│   Recognised revenue        £3,475    (budget £9,200, −62%)          │
+│   Direct costs              £7,650    (on budget)                    │
+│   Site contribution        −£4,175    ← before central costs         │
+│   After central costs      −£5,175                                   │
+│                                                                      │
+│ Main driver: revenue, not costs. 2 of 3 private offices are empty    │
+│ (Office 102 all year, Office 103 since Brightline left in June) and  │
+│ 18 of 20 hot desks are unsold.                                       │
+│                                                                      │
+│ ⓘ Definitions: Site contribution (Finance, v1.2) · Recognised        │
+│   revenue = NetSuite income accounts                                 │
+│ ⓘ Period: Sep 2026 (closed) · Data as of 06:00 today                 │
+│ ⓘ [Show SQL]   👍 👎  [Flag as wrong]                                │
+└──────────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Every element has a job. The <b>definition</b> line stops the Ops vs Finance argument from Chapter 02. The <b>period status</b> ("closed") tells a leader whether the number can still move; for an open month it would read <b>PROVISIONAL</b>. <b>Show SQL</b> lets an analyst or Finance audit it. <b>Flag as wrong</b> feeds the golden set (Chapter 25).</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Why not just give an LLM the warehouse schema and let it write SQL?</b></p>
+<p><i>"Because the hard part isn't SQL syntax, it's business logic: which source is the truth for revenue, what grain to join at, how churn is defined. The LLM has to guess that every time, and its guesses vary. You get answers that look right and are wrong. I'd give it governed metrics and pre-modelled marts, so it chooses rather than invents the logic."</i></p>
+
+<p><b>Q: What is the difference between text-to-SQL and text-to-metric?</b></p>
+<p><i>"Text-to-SQL generates arbitrary SQL. Text-to-metric has the LLM pick a defined metric, dimensions and filters, and a semantic layer compiles the SQL. The second is less flexible but consistent and testable, so I'd use it first for KPIs and fall back to SQL for exploratory questions, clearly labelled."</i></p>
+
+<p><b>Q: How do you stop the LLM from inventing numbers?</b></p>
+<p><i>"Numbers only come from query results. The answer step is given the result rows and nothing else, and a post-check confirms every number in the answer appears in those rows. If the check fails, the answer is blocked or regenerated."</i></p>
+
+<p><b>Q: How do you make generated SQL safe to run?</b></p>
+<p><i>"Enforce it outside the model: a read-only service account that can only see the safe dataset, a statement-type check, a dry run, a maximum-bytes-billed cap, a row limit and bounded retries. Never rely on the prompt alone."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Golden rule</b></td><td>The LLM translates; the warehouse calculates.</td></tr>
+<tr><td><b>Naive failures</b></td><td>Wrong source, fan-out, wrong definition, silent ambiguity, wrong join key. All business logic, not syntax.</td></tr>
+<tr><td><b>7 steps</b></td><td>Understand → retrieve → plan → generate → validate → execute → answer.</td></tr>
+<tr><td><b>Metric first</b></td><td>Governed metrics for KPIs; free SQL only for exploration, labelled.</td></tr>
+<tr><td><b>Guardrails in code</b></td><td>Read-only, ai_safe only, byte caps, 200-row cap, bounded retries.</td></tr>
+<tr><td><b>Three tools</b></td><td>query_metrics (first), run_sql (fallback, labelled), get_business_context (meaning, never figures).</td></tr>
+<tr><td><b>Periods</b></td><td>No month named → last closed month. Open month → PROVISIONAL label.</td></tr>
+<tr><td><b>Show workings</b></td><td>Definition, period status, freshness and SQL on every answer.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Every fix in this chapter pointed to the same thing: definitions that live <b>outside</b> the LLM. In <b>Chapter 21</b> we build that home: the <b>semantic layer</b>, where "revenue" is defined once, in code, and every dashboard and every AI answer uses that one definition.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

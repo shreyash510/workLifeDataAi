@@ -1,0 +1,370 @@
+<h2>Chapter 30 — Churn &amp; Renewal Prediction + Context Packs</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 29 the automated weekly report flagged Reading: one company, a renewal due on 31 Dec, and attendance falling fast. Today we take the second Phase 2 item from the brief: <i>"Churn and renewal prediction, with context packs a team member can take into a renewal conversation."</i></p>
+
+<p>Two halves: a <b>score</b> that says who is at risk, and a <b>pack</b> that helps a person do something about it. The pack is the part that actually keeps members. 🤝</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>A small story: Brightline, and the one we can still save</li>
+    <li>What exactly are we predicting?</li>
+    <li>The signals: what each system knows about risk</li>
+    <li>The honest bit: one churn is not a training set</li>
+    <li>Lab 30.1: A rules-based risk score in SQL</li>
+    <li>Lab 30.2: Score the lab companies</li>
+    <li>Step 2 later: machine learning in BigQuery, done safely</li>
+    <li>Lab 30.3: The GreenRoot context pack</li>
+    <li>Privacy: what never goes in a pack</li>
+    <li>Testing scores and packs</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Brightline Legal rented Office 103 at Soho for £1,400 a month. On 30 Apr 2026 they gave notice. On 30 Jun they left. The reason, which only the CRM knows: <i>"Moving to hybrid; downsizing to home working."</i></p>
+
+<p>By the time anyone saw it, it was a <b>lagging</b> fact. Notice had been given. The conversation that might have kept them (a smaller office? a flex plan?) never happened in time.</p>
+
+<p>Now look at GreenRoot Foods at Reading. Contract ends 31 Dec. No notice given. Invoices paid. Renewal proposal sent. And the door data says the team has almost stopped coming in: badge-in rate <b>73% → 23% → almost zero</b> over the weeks of September (Chapter 08). Same story, but this time we have <b>three months</b> to act.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   A risk score is only worth building if it arrives         │
+│   EARLY ENOUGH for a person to act, and EXPLAINS itself     │
+│   well enough that they know WHAT to talk about.            │
+│                                                             │
+│   Score → reasons → context pack → human conversation.      │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. What Exactly Are We Predicting?</h3>
+
+<p>"Predict churn" is too vague to build. Pin down four things first:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Decision</th><th>Our choice</th><th>Why</th></tr>
+<tr><td><b>Unit</b></td><td>Company × contract end (a renewal event)</td><td>Companies sign and leave, not individual people. NetSuite is company-level too (Chapter 11).</td></tr>
+<tr><td><b>Label</b></td><td>Did the company's total MRR drop to zero within 1 month of the contract end?</td><td>Uses Chapter 29's movement classes, so upgrades and transfers are <b>not</b> churn</td></tr>
+<tr><td><b>When we predict</b></td><td>120 days before contract end, refreshed weekly</td><td>Private offices have a 3-month minimum term (<code>plans.csv</code>). Earlier than notice = time to act.</td></tr>
+<tr><td><b>Rolling contracts</b></td><td>Separate, simpler watch: attendance drop on open-ended plans</td><td>Hot-desk plans renew monthly with no end date to count down to</td></tr>
+</table>
+
+<p>Agree these with the client. "Churn" is a board-pack definition (Chapter 11, question 10), and whoever owns renewals at Work.Life (sales, membership or site teams: we don't know yet, so ask) should agree the timing.</p>
+
+<hr/>
+
+<h3>3. The Signals</h3>
+
+<p>Remember Chapter 11's lesson: most good answers need more than one system. Churn is the best example.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Signal</th><th>System</th><th>Lab example</th><th>Leading or lagging?</th></tr>
+<tr><td>Attendance trend (company level)</td><td>ACT365 (aggregated)</td><td>GreenRoot 73% → 23%</td><td>🟢 Leading, the strongest</td></tr>
+<tr><td>Days until contract end</td><td>Nexudus</td><td>GreenRoot: 31 Dec 2026</td><td>🟢 Leading</td></tr>
+<tr><td>Renewal deal stage</td><td>Act! → HubSpot</td><td>GreenRoot: Proposal Sent, £2,800</td><td>🟢 Leading</td></tr>
+<tr><td>Price change at renewal</td><td>CRM vs Nexudus</td><td>£2,700 → £2,800 (+3.7%)</td><td>🟡 Context</td></tr>
+<tr><td>Discount vs list price</td><td>Nexudus</td><td>Pixel Chai: £2,400 vs £2,600 list (7.7%)</td><td>🟡 Context</td></tr>
+<tr><td>Meeting room use trend</td><td>Nexudus bookings</td><td>GreenRoot: 2 bookings, none after 18 Sep</td><td>🟡 Leading, weaker</td></tr>
+<tr><td>Service issues / credits</td><td>NetSuite</td><td>Pixel Chai: −£90 goodwill credit, AV failure</td><td>🟡 Context</td></tr>
+<tr><td>Team size change</td><td>Nexudus members</td><td>Pixel Chai grew 1 → 4 people</td><td>🟡 Context</td></tr>
+<tr><td>Tenure, lead source</td><td>Nexudus, CRM</td><td>GreenRoot: since Jan 2026, referral</td><td>⚪ Background</td></tr>
+<tr><td>Notice given</td><td>Nexudus</td><td>Brightline: 30 Apr</td><td>🔴 Lagging. It's almost the answer.</td></tr>
+</table>
+
+<p>⚠️ <b>Notice given</b> is not a prediction signal. It's the outcome arriving early. If you train a model with it, the model looks brilliant in testing and is useless in practice. This mistake has a name: <b>label leakage</b>.</p>
+
+<hr/>
+
+<h3>4. The Honest Bit: One Churn Is Not a Training Set</h3>
+
+<p>The Mini Work.Life lab has exactly <b>one</b> churned company (Brightline) and we don't even have their door data from the spring. You cannot train or validate a machine learning model on that. 🙂</p>
+
+<p>The real Work.Life is different: about 8,000 members across 14 sites, with an existing BigQuery pipeline that an external data partner keeps running. There may be enough renewal history for ML. But we don't know yet:</p>
+
+<ul>
+    <li>How many contract ends are in the history, and how many were churn?</li>
+    <li>How far back does door data go, and is it kept in a usable form?</li>
+    <li>How far back does finance history go in NetSuite, and does older history sit in an earlier ledger? (Unknown. Ask: Chapter 11, question 5.)</li>
+    <li>Were lost reasons recorded consistently in the CRM?</li>
+</ul>
+
+<p>So the recommendation is a two-step plan:</p>
+
+<pre>
+   STEP 1 (ship first)                         STEP 2 (only if the data supports it)
+   ───────────────────                         ─────────────────────────────────────
+   Rules-based score                           ML model (BigQuery ML)
+   • 4–6 rules agreed with Sales               • trained on years of renewal events
+   • every point has a plain reason            • backtested against step 1
+   • works with little history                 • must BEAT the rules to replace them
+   • backtest on real history                  • still returns reasons, not just a number
+</pre>
+
+<p>This is also cheaper and easier to hand over, which matters for <i>"cost conscious"</i> and <i>"documented and handover ready"</i>.</p>
+
+<hr/>
+
+<h3>5. Lab 30.1 — A Rules-Based Risk Score</h3>
+
+<p>Four rules to start with. The points are <b>(made up)</b>: in a real project you'd set them with the sales team, then tune them on history.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Rule</th><th>Points</th><th>Reason text shown to the user</th></tr>
+<tr><td>Attendance in the last 2 weeks fell 50%+ vs the 2 weeks before that window</td><td>+40</td><td>"Team attendance has dropped sharply"</td></tr>
+<tr><td>Attendance fell 25–50%</td><td>+15</td><td>"Team attendance is falling"</td></tr>
+<tr><td>Fixed-term contract ends within 120 days and renewal isn't won</td><td>+25</td><td>"Renewal due soon and not yet agreed"</td></tr>
+<tr><td>Renewal price is higher than today's price</td><td>+10</td><td>"Renewal proposal is a price increase"</td></tr>
+<tr><td>Credit memo in the last 90 days</td><td>+10</td><td>"Recent service issue (credit given)"</td></tr>
+</table>
+
+<p>Bands: <b>High</b> 60+, <b>Medium</b> 30–59, <b>Low</b> under 30.</p>
+
+<pre>
+-- models/phase2/fct_renewal_risk.sql   (one row per active company × site, rebuilt weekly)
+-- Inputs: fct_contract_month (end_date, mrr_gbp), the aggregated attendance table
+-- (company × site × week, person_days, possible_days), CRM renewal deals, fct_gl credit memos.
+
+WITH attendance AS (
+  SELECT company_key, site_code,
+    SAFE_DIVIDE(SUM(IF(week_rank IN (4, 5), person_days, 0)),
+                SUM(IF(week_rank IN (4, 5), possible_days, 0))) AS rate_before,   -- weeks 4–5 ago
+    SAFE_DIVIDE(SUM(IF(week_rank IN (1, 2), person_days, 0)),
+                SUM(IF(week_rank IN (1, 2), possible_days, 0))) AS rate_recent    -- last 2 weeks
+  FROM {{ ref('int_attendance_company_week_ranked') }}       -- week_rank 1 = most recent week
+  GROUP BY 1, 2
+),
+features AS (
+  SELECT
+    c.company_key, c.site_code, c.mrr_gbp, c.end_date,
+    DATE_DIFF(c.end_date, CURRENT_DATE(), DAY)              AS days_to_end,
+    1 - SAFE_DIVIDE(a.rate_recent, a.rate_before)           AS attendance_drop,
+    d.stage                                                 AS renewal_stage,
+    d.quoted_monthly_gbp                                    AS renewal_price,
+    cm.credit_memos_90d
+  FROM {{ ref('int_active_contracts') }} c
+  LEFT JOIN attendance a USING (company_key, site_code)
+  LEFT JOIN {{ ref('int_open_renewal_deals') }} d USING (company_key, site_code)
+  LEFT JOIN {{ ref('int_credit_memos_90d') }} cm USING (company_key)
+),
+scored AS (
+  SELECT *,
+    IF(attendance_drop &gt;= 0.50, 40, IF(attendance_drop &gt;= 0.25, 15, 0))                       AS pts_attendance,
+    IF(days_to_end &lt;= 120 AND IFNULL(renewal_stage, '') != 'Closed Won', 25, 0)               AS pts_renewal,
+    IF(renewal_price &gt; mrr_gbp, 10, 0)                                                         AS pts_price,
+    IF(credit_memos_90d &gt; 0, 10, 0)                                                            AS pts_service
+  FROM features
+)
+SELECT *,
+  pts_attendance + pts_renewal + pts_price + pts_service AS risk_score,
+  CASE WHEN pts_attendance + pts_renewal + pts_price + pts_service &gt;= 60 THEN 'High'
+       WHEN pts_attendance + pts_renewal + pts_price + pts_service &gt;= 30 THEN 'Medium'
+       ELSE 'Low' END AS risk_band
+FROM scored
+</pre>
+
+<p>💡 Comparing a company with <b>its own</b> earlier attendance matters. A hot-desk member coming in two days a week is normal. A six-person office team going from five days to one is not. Never compare against a global "good" rate.</p>
+
+<hr/>
+
+<h3>6. Lab 30.2 — Score the Lab Companies</h3>
+
+<p>Run it on Monday 5 Oct 2026, with door data to 30 Sep. Attendance "before" = Sep weeks 1–2, "recent" = Sep weeks 4–5 (week 5 is Mon–Wed only, so we use person-days ÷ possible days, not raw counts).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Company</th><th>Site</th><th>Attendance before → recent</th><th>Drop</th><th>Contract</th><th>Other</th><th>Score</th><th>Band</th></tr>
+<tr><td><b>GreenRoot Foods</b></td><td>Reading</td><td>39/54 = 72% → 8/48 = 17%</td><td>77% (+40)</td><td>Ends 31 Dec, renewal open (+25)</td><td>Proposal +3.7% (+10)</td><td><b>75</b></td><td>🔴 High</td></tr>
+<tr><td>Pixel Chai Studio</td><td>Soho</td><td>32/36 = 89% → 20/32 = 63%</td><td>29% (+15)</td><td>Ends 31 Mar 2027 (0)</td><td>£90 credit memo, Sep (+10)</td><td>25</td><td>🟢 Low</td></tr>
+<tr><td>Nomad Analytics</td><td>Soho</td><td><i>Suppressed: 1 member</i></td><td>— (0)</td><td>Rolling (0)</td><td>—</td><td>0</td><td>🟢 Low</td></tr>
+<tr><td>Kite &amp; Key Recruitment</td><td>Soho</td><td><i>Suppressed: 1 member</i></td><td>— (0)</td><td>Rolling (0)</td><td>—</td><td>0</td><td>🟢 Low</td></tr>
+</table>
+
+<p>Three things to notice:</p>
+<ul>
+    <li><b>GreenRoot is the only High.</b> Exactly what the cross-system story in Chapter 08 told us by eye. Now it's automatic, every week.</li>
+    <li><b>Nomad and Kite &amp; Key are one person each.</b> A "company attendance rate" for a one-person company <i>is</i> that person's attendance, so it is person-level data in disguise. The attendance aggregate therefore has a <b>minimum group size</b> (3 members here, made up; the real threshold is the client's call) and smaller companies get no attendance rule at all. (Had we computed it, Nomad would have dropped 44% → 25%, which shows the other reason for the rule: one fewer day swings a tiny sample wildly.)</li>
+    <li><b>Pixel Chai's credit memo</b> is a reminder to whoever handles their March renewal: the AV failure on 24 Sep is worth mentioning before they do.</li>
+</ul>
+
+<p>Before trusting the rules, <b>backtest</b> them on real history: run the score as at every past month end and ask (1) of the companies that churned, how many were High at least 60 days before notice, and (2) of the companies flagged High, how many actually churned. The lab can't do this (one churn, no spring door data), and that's fine. Say so in the response.</p>
+
+<hr/>
+
+<h3>7. Step 2 Later: Machine Learning, Done Safely</h3>
+
+<p>If the backtest shows the rules miss too much, and there's enough history, BigQuery ML can train a model where the data already lives. No new platform, no data leaving the warehouse.</p>
+
+<pre>
+-- One row per historical renewal event; features measured 120 days BEFORE the end date.
+CREATE OR REPLACE MODEL phase2.renewal_risk_model
+OPTIONS (
+  model_type          = 'LOGISTIC_REG',          -- simple, explainable; try BOOSTED_TREE_CLASSIFIER later
+  input_label_cols    = ['did_not_renew'],
+  auto_class_weights  = TRUE,                    -- most companies renew, so classes are unbalanced
+  data_split_method   = 'CUSTOM',
+  data_split_col      = 'is_holdout'             -- holdout = the most recent 12 months (time-based split)
+) AS
+SELECT
+  attendance_drop, days_to_end, price_change_pct, discount_pct,
+  meeting_hours_trend, credit_memos_90d, tenure_months, team_size_change,
+  did_not_renew, is_holdout
+FROM phase2.renewal_training_events;             -- note: NO notice_given column (label leakage)
+
+-- Explain each prediction, so the pack can say WHY:
+SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
+                                 TABLE phase2.renewal_features_current,
+                                 STRUCT(3 AS top_k_features));
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Rule for ML</th><th>Why</th></tr>
+<tr><td>Split by time, not at random</td><td>A random split lets the model "see the future". Train on older years, test on the latest year.</td></tr>
+<tr><td>No leaking features</td><td>Notice given, "lost" CRM stage, contract end reason. They're the answer, not a signal.</td></tr>
+<tr><td>Must beat the rules</td><td>If ML isn't clearly better on the holdout, keep the rules. Simpler to explain and run.</td></tr>
+<tr><td>Return reasons</td><td>A bare "78% risk" doesn't help anyone in a renewal meeting</td></tr>
+<tr><td>Retrain on a schedule, monitor drift</td><td>Hybrid working changed behaviour once. It will change again.</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. Lab 30.3 — The GreenRoot Context Pack</h3>
+
+<p>A <b>context pack</b> is a one-page brief, generated by the AI layer from <code>ai_safe</code>, for the person who owns the renewal. Every number comes from the semantic layer, not from the LLM's imagination.</p>
+
+<p>⚠️ What Phase 1's <code>ai_safe</code> holds today is company- and site-level only: no <code>dim_member</code>, no <code>member_xref</code>, no door events, no CRM contacts. The pack needs two <b>new, company-level</b> tables added to the copy in Phase 2, each agreed with the client: (1) attendance per company × site × week, published only for companies at or above the minimum group size; (2) renewal deals per company (stage, quoted price, lost reason), with <b>no contact names, emails or phones</b>. The account owner already knows who their contact is; they look that up in the CRM, not in the AI. Here's what the pack looks like for GreenRoot, using only lab data:</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────────┐
+│  RENEWAL CONTEXT PACK · GreenRoot Foods · Reading                    │
+│  Prepared Mon 5 Oct 2026 · data to 30 Sep 2026 · Risk: 🔴 HIGH (75)  │
+├──────────────────────────────────────────────────────────────────────┤
+│  THE ACCOUNT                                                         │
+│  Office 201 (6 desks) · 6 members · member since 1 Jan 2026          │
+│  £2,700/month at list price · contract ends 31 Dec 2026 (87 days)    │
+│  Came via referral from another member company (Nomad Analytics,     │
+│  Soho)                                                               │
+│                                                                      │
+│  WHY THE SCORE IS HIGH                                               │
+│  • Team attendance dropped sharply: weekly badge-in rate             │
+│      wk1 71% · wk2 73% · wk3 40% · wk4 23% · wk5 6% (Mon–Wed)        │
+│  • Renewal due soon and not yet agreed (Proposal Sent)               │
+│  • Renewal proposal is a price increase: £2,800 (+3.7%)              │
+│                                                                      │
+│  OTHER FACTS                                                         │
+│  • All invoices paid. September revenue £2,900 (office + rooms)      │
+│  • Meeting rooms: 2 bookings, 5 hours in Sep, none after 18 Sep      │
+│  • No service credits in the last 90 days                            │
+│                                                                      │
+│  WORTH KNOWING                                                       │
+│  • GreenRoot is Reading's only office tenant: 100% of Reading's      │
+│    office MRR. Reading budget assumes 20% desk occupancy.            │
+│  • Last company lost (Brightline, Soho, Jun 2026) left because of    │
+│    a move to hybrid working.                                         │
+│                                                                      │
+│  SUGGESTED QUESTIONS (for you to decide, not promises)               │
+│  • Has the way the team works changed since September?               │
+│  • Would a different set-up suit them better? (Flex 10 Days is       │
+│    £180 per person per month; Office 201 is 6 desks)                 │
+│  • Is the £2,800 proposal the right starting point?                  │
+│                                                                      │
+│  Sources: Nexudus (contract, bookings) · NetSuite (revenue) ·        │
+│  CRM (deal stage, lead source) · door system (company-level          │
+│  attendance, minimum group size applied)                             │
+└──────────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Workings: week 1 = 17 / 24 (Tue–Fri), week 2 = 22 / 30, week 3 = 12 / 30, week 4 = 7 / 30, week 5 = 1 / 18. September revenue = £2,700 office + £200 meeting rooms (NetSuite). 87 days = 5 Oct → 31 Dec.</p>
+
+<p>The pack is built in two parts:</p>
+<ol>
+    <li><b>Facts</b>: fixed SQL queries through the semantic layer fill a template. Deterministic, testable, the same every time.</li>
+    <li><b>Words</b>: the LLM writes the reasons and suggested questions <b>only from those facts</b>. If a number isn't in the facts, it can't appear in the text. This is called <b>grounding</b>.</li>
+</ol>
+
+<p>The pack makes suggestions. It never offers a discount or changes a deal. "What could we do about it" (the brief's prescriptive question) is answered by a <b>person</b> with better information, not by the AI on its own. That keeps Phase 2 well clear of the brief's out-of-scope <i>"member facing AI"</i>.</p>
+
+<hr/>
+
+<h3>9. Privacy: What Never Goes in a Pack</h3>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   ✅ IN THE PACK                 ❌ NEVER IN THE PACK         │
+│                                                             │
+│   Company-level attendance      Which person stopped        │
+│   ("team rate 23%"), only for   coming in, and when; any    │
+│   companies ≥ minimum size      rate for a 1–2 person team  │
+│                                                             │
+│   Deal stage, quoted price,     Contact names, emails,      │
+│   lead source (company level)   phones (stay in the CRM)    │
+│                                                             │
+│   Contract, price, revenue      Anything from HR or the     │
+│                                 people system (out of scope)│
+│                                                             │
+│   Lost reasons of companies     Free-text CRM notes, unless │
+│                                 reviewed as safe            │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Look at the lab's door data and you could say which Pixel Chai designer came in less in week 4. <b>Don't.</b> The company-level rate already tells the account owner what they need to know. Individual tracking in a sales brief would break the brief's <i>"safe data only"</i> principle and would rightly upset members. The aggregation (and the minimum-group-size filter) happens in dbt, before <code>ai_safe</code>, so the AI can't see the detail even if someone asks. People-level questions ("who at GreenRoot stopped coming in?") stay out of scope for the AI.</p>
+
+<hr/>
+
+<h3>10. Testing Scores and Packs</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>What</th><th>How</th><th>Launch gate?</th></tr>
+<tr><td>Score logic</td><td>dbt tests: one row per active company, score in 0–85, band matches score</td><td>✅ Every build</td></tr>
+<tr><td>Score usefulness</td><td>Backtest: lead time and hit rate on real history, targets agreed with Sales</td><td>✅ Before first use</td></tr>
+<tr><td>Pack facts</td><td>Golden questions (Chapter 25): "GreenRoot MRR = £2,700, ends 31 Dec, Sep revenue £2,900"</td><td>✅ Every change</td></tr>
+<tr><td>Pack words</td><td>Check every number in the text appears in the facts. Review 10 packs by hand with Sales.</td><td>✅ Before first use</td></tr>
+<tr><td>Privacy</td><td>Test that no person-level attendance or HR field is reachable from <code>ai_safe</code></td><td>✅ Every build</td></tr>
+<tr><td>Outcome</td><td>Track: of High-risk renewals with a pack, how many renewed?</td><td>Ongoing</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How would you build churn prediction for a coworking company?</b></p>
+<p><i>"Start by defining the unit and the label: company-level renewal events, where churn means total MRR drops to zero, so upgrades and transfers don't count. Predict early enough to act, say 120 days before contract end. Ship an explainable rules-based score first using attendance trend, time to renewal, renewal stage and price change, backtest it on history, and only move to an ML model if there's enough data and it clearly beats the rules."</i></p>
+
+<p><b>Q: What is label leakage? Give an example here.</b></p>
+<p><i>"It's when a feature contains the answer, so the model looks great in testing but fails in real use. Here, 'notice given' or a 'lost' CRM stage would leak the outcome. Features must be measured as they were at prediction time, before the outcome was known."</i></p>
+
+<p><b>Q: What's in a renewal context pack, and how do you stop the AI inventing things?</b></p>
+<p><i>"Account facts, the reasons behind the risk score, usage and money trends, relevant history, and suggested questions. The facts come from fixed queries through the semantic layer. The LLM only writes text from those facts, and we test that every number in the text appears in the facts."</i></p>
+
+<p><b>Q: Door data is personal data. How do you use it for churn safely?</b></p>
+<p><i>"Aggregate it to company × site × week in the modelling layer and only expose that to the AI. Compare each company with its own baseline. Never show which individual stopped coming in, and never connect staff access data, which is HR data."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Define first</b></td><td>Unit = company renewal. Label = MRR to zero. Predict 120 days out.</td></tr>
+<tr><td><b>Best signal</b></td><td>Company-level attendance vs its own baseline.</td></tr>
+<tr><td><b>Leakage</b></td><td>Notice given is the answer, not a signal.</td></tr>
+<tr><td><b>Rules first</b></td><td>Explainable, cheap, works with little history. ML must beat it.</td></tr>
+<tr><td><b>Lab result</b></td><td>GreenRoot 75 (High). Everyone else Low.</td></tr>
+<tr><td><b>Context pack</b></td><td>Facts from SQL, words from the LLM, grounded and tested.</td></tr>
+<tr><td><b>Privacy</b></td><td>No individuals, no HR, no unchecked free text.</td></tr>
+<tr><td><b>Humans decide</b></td><td>The pack suggests. A person has the conversation.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>If GreenRoot doesn't renew, what happens to Reading's revenue in January? That's a <b>forecast</b>. In <b>Chapter 31</b> we work through the brief's forecasting list: <i>"resident revenue projection, net member movements, seasonality and meeting room demand."</i></p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

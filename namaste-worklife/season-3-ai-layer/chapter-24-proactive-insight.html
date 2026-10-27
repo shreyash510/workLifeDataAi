@@ -1,0 +1,271 @@
+<h2>Chapter 24 — Proactive Insight: Alerts, Digests &amp; Trends</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>So far our AI waits to be asked. The brief wants more. Two of the five Phase 1 capabilities are about the system speaking first:</p>
+<ul>
+    <li><i>"Proactive insight. The capability surfaces relevant information and trends to us, rather than us always having to pull it."</i></li>
+    <li><i>"Foresight over time. Spotting patterns and early signals in our own data."</i></li>
+</ul>
+<p>Today we design both: a weekly digest, a small set of alerts, and early-signal checks. And we design them so leaders read them instead of filtering them to a folder.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Pull vs push, and why push is harder</li>
+    <li>The three push products: digest, alert, early signal</li>
+    <li>The architecture: rules compute, the LLM narrates</li>
+    <li>Lab 24.1: Write the alert rules and fire them on the lab data</li>
+    <li>The Monday digest, written for real</li>
+    <li>Early signals: the GreenRoot pattern</li>
+    <li>Trends and anomalies: simple first, statistics later</li>
+    <li>Fighting alert fatigue</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Look at GreenRoot again (Chapters 08 and 11). In September their door badge-ins fell from <b>73%</b> to <b>23%</b> of contracted desk-days in two weeks, then to almost zero. Their contract ends <b>31 Dec 2026</b>. They pay <b>£2,700/month</b>, and they're Reading's only office tenant.</p>
+
+<p>Every system had a piece of this. Nobody saw the whole picture, because nobody was <i>asking</i>. Nexudus said "100% of Office 201 contracted, all good". The renewal proposal sat in the CRM at "Proposal Sent".</p>
+
+<p>A good proactive system would have said, around the end of September:</p>
+
+<pre>
+   🔔 Early signal · Reading · GreenRoot Foods
+   Attendance fell from 73% to 23% over 2 weeks (contracted: 6 desks).
+   Their contract (Office 201, £2,700/month) ends 31 Dec 2026, in 92 days.
+   Renewal proposal is open in the CRM (£2,800/month quoted).
+   Why this matters: falling attendance before renewal is the strongest
+   churn warning we track. Suggest: renewal conversation this month.
+</pre>
+
+<p>That's the brief's "foresight": not a prediction model, just <b>joining signals that already exist</b> and saying it out loud in time to act.</p>
+
+<hr/>
+
+<h3>2. Pull vs Push</h3>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Pull (Ch 20–23)</th><th>Push (this chapter)</th></tr>
+<tr><td>Who starts it</td><td>A leader asks</td><td>The system, on a schedule</td></tr>
+<tr><td>Risk if wrong</td><td>One wrong answer, seen by one person</td><td>Wrong alert sent to everyone. Or worse: a missed one.</td></tr>
+<tr><td>Main failure</td><td>Inaccuracy</td><td><b>Noise</b>: too many alerts, so all get ignored</td></tr>
+<tr><td>Success metric</td><td>Answer accuracy</td><td>Alert <b>precision</b> (how many led to action) and nothing important missed</td></tr>
+</table>
+
+<hr/>
+
+<h3>3. Three Push Products</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Product</th><th>When</th><th>Content</th><th>Ladder rung</th></tr>
+<tr><td><b>📰 Weekly digest</b></td><td>Monday 07:00</td><td>State of the business vs targets, biggest movers, what to watch</td><td>1–2 (descriptive + diagnostic)</td></tr>
+<tr><td><b>🚨 Threshold alert</b></td><td>When a rule breaks (checked daily after the dbt run)</td><td>One problem, one owner, one suggested next step</td><td>5 (activation)</td></tr>
+<tr><td><b>🔔 Early signal</b></td><td>When a leading indicator turns</td><td>A pattern that predicts a future problem</td><td>3 (light predictive)</td></tr>
+</table>
+
+<p>Delivery channel is a client decision. It's question #18 on our list: email, Slack or Teams? Design the content once and render it to whichever channel they use. Every message links back to the AI app so a leader can ask "why?" in one click.</p>
+
+<hr/>
+
+<h3>4. The Architecture: Rules Compute, the LLM Narrates</h3>
+
+<p>Same golden rule as Chapter 20: <b>the LLM translates, the warehouse calculates.</b> For push it's even stricter. The LLM never <i>decides</i> whether something is alert-worthy. Rules in SQL do.</p>
+
+<pre>
+   06:00  dbt build (existing) ──► ai_safe refreshed
+            │
+   06:30  ⑧ SCHEDULER (Cloud Scheduler → Cloud Run job)
+            │
+            ├─► ① RUN RULES       SQL checks over ai_safe (alert_rule from each
+            │                     KPI context card, Ch 22) → list of findings
+            │                     { rule, site, metric, value, target, severity }
+            │
+            ├─► ② DEDUPE          already alerted this week? still open? → skip
+            │
+            ├─► ③ NARRATE         LLM turns each finding (+ KPI card) into 3–5
+            │                     plain-English lines. Number check: every figure
+            │                     must appear in the finding.
+            │
+            ├─► ④ DELIVER         email / Slack / Teams, to the rule's audience
+            │
+            └─► ⑤ LOG             ai_logs.alerts: sent, opened, 👍/👎, action taken
+</pre>
+
+<p>Why not let the LLM look at all the data and "find interesting things"? Because it can't promise it will find the same thing tomorrow, or that it didn't miss something. Rules are boring, testable and complete. The LLM's job is to make them readable.</p>
+
+<hr/>
+
+<h3>5. Lab 24.1 — Write the Alert Rules</h3>
+
+<p>Here are five starter rules. Each is a SQL query over <code>ai_safe</code> that returns a row per finding. Run them in your head (or in BigQuery) against the September lab data:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Rule</th><th>Fires on lab data?</th></tr>
+<tr><td>R1</td><td>Site revenue below budget by more than 10% for the month</td><td>✅ Soho: −62%. Reading: −9.4%, so no.</td></tr>
+<tr><td>R2</td><td>Site contribution negative (before central costs)</td><td>✅ Soho: −£4,175</td></tr>
+<tr><td>R3</td><td>Desk occupancy more than 10 points below budget</td><td>✅ Soho: 17.6% vs 85%. Reading: 19.4% vs 20%, so no.</td></tr>
+<tr><td>R4</td><td>A private office empty for 60+ days</td><td>✅ Soho Office 102 (all year), Office 103 (since 1 Jul)</td></tr>
+<tr><td>R5</td><td>Company attendance down by more than 50% over 4 weeks <b>and</b> contract ends within 120 days</td><td>✅ GreenRoot (ends 31 Dec)</td></tr>
+</table>
+
+<p>Here's R5 written out. Note it uses only <b>aggregated</b> attendance (company × week), never individual door events (Chapter 26):</p>
+
+<pre>
+-- R5: early churn signal
+WITH att AS (
+  SELECT company_key, week_start, attendance_rate         -- badge-in days / (desks × working days)
+  FROM ai_safe.agg_company_week_attendance
+),
+trend AS (
+  SELECT
+    company_key,
+    MAX(IF(week_start = DATE '2026-09-07', attendance_rate, NULL)) AS rate_then,
+    MAX(IF(week_start = DATE '2026-09-21', attendance_rate, NULL)) AS rate_now
+  FROM att GROUP BY company_key
+)
+SELECT c.company_name, t.rate_then, t.rate_now, k.contract_end_date,
+       DATE_DIFF(k.contract_end_date, DATE '2026-09-30', DAY) AS days_to_end
+FROM trend t
+JOIN ai_safe.dim_company c USING (company_key)
+JOIN ai_safe.fct_contract_month k USING (company_key)
+WHERE k.month_start = DATE '2026-09-01'
+  AND t.rate_now &lt; t.rate_then * 0.5
+  AND DATE_DIFF(k.contract_end_date, DATE '2026-09-30', DAY) BETWEEN 0 AND 120;
+
+-- → GreenRoot Foods | 0.73 | 0.23 | 2026-12-31 | 92
+</pre>
+
+<p>⚠️ Two things in this query are <b>proposals</b>, not part of the Season 2 <code>ai_safe</code>. First, <code>agg_company_week_attendance</code>: a small aggregated table we'd propose adding, only for companies above a minimum group size (say 5 people, so no one person's attendance can be read off) and only with the client's sign-off, because raw or per-person door events must never reach <code>ai_safe</code>. GreenRoot has 6 people, so it qualifies; Nomad Analytics (1 person) never would. Second, <code>contract_end_date</code>: the Chapter 17 <code>fct_contract_month</code> doesn't carry it yet. It's plain business data (K005 ends 31 Dec 2026), so adding it is easy. Note it as a design decision for the client, and as an input to Phase 2 churn prediction (Chapter 30). In production the week dates are relative to today, not hard-coded.</p>
+
+<p><b>Your task:</b> notice that R1, R2, R3 and R4 all fire for Soho. Would you send four Soho alerts? (Answer in section 9.)</p>
+
+<hr/>
+
+<h3>6. The Monday Digest</h3>
+
+<p>Here's what the digest for Monday 5 October 2026 would look like from the lab data. Every number comes from a query. The LLM only writes the sentences around them, guided by the KPI cards.</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────────┐
+│ 📰 Work.Life · Weekly digest · Mon 5 Oct 2026                        │
+│ September closed in NetSuite on 2 Oct (made up): figures are final.  │
+├──────────────────────────────────────────────────────────────────────┤
+│ STATE OF THE BUSINESS (lab: 2 sites)                                 │
+│   Revenue £6,375 vs budget £12,400 (−49%)                            │
+│   Contribution −£3,725 before central costs                          │
+│                                                                      │
+│ ⚠️ NEEDS ATTENTION                                                   │
+│ • Soho: revenue −62% vs budget, contribution −£4,175. Offices 102    │
+│   and 103 empty; 18 of 20 hot desks unsold. No Soho deals open.      │
+│                                                                      │
+│ 🔔 EARLY SIGNAL                                                      │
+│ • GreenRoot (Reading, £2,700/month): attendance 73% → 23% in two     │
+│   weeks. Contract ends 31 Dec. Renewal proposal open (£2,800).       │
+│                                                                      │
+│ ✅ GOING WELL                                                        │
+│ • Reading: occupancy 19% vs 20% budget; contribution +£450.          │
+│ • Pipeline: Ortho Robotics, Office 202, £4,200/month, tour done.     │
+│                                                                      │
+│ [Ask a follow-up question →]                                         │
+└──────────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Check the arithmetic yourself: revenue 3,475 + 2,900 = 6,375; budget 9,200 + 3,200 = 12,400; contribution −4,175 + 450 = −3,725. The digest has a fixed shape (state → attention → signals → good news), driven by the board pack order from the context cards. Leaders learn where to look, and it's short enough to read on a phone.</p>
+
+<hr/>
+
+<h3>7. Early Signals: Leading Indicators</h3>
+
+<p>Chapter 02 split KPIs into <b>leading</b> (early warning) and <b>lagging</b> (already happened). The brief's "foresight over time" means watching the leading ones:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Leading indicator</th><th>Predicts</th><th>Data</th></tr>
+<tr><td>Company attendance falling</td><td>Churn at renewal</td><td>ACT365 (aggregated)</td></tr>
+<tr><td>Notice given</td><td>Revenue loss in 1–3 months</td><td>Nexudus contracts</td></tr>
+<tr><td>Renewal within 90 days, no CRM activity</td><td>Unmanaged churn risk</td><td>Nexudus + CRM</td></tr>
+<tr><td>Meeting room bookings falling for a company</td><td>Disengagement</td><td>Nexudus bookings</td></tr>
+<tr><td>Open pipeline for a site falling</td><td>Occupancy drop next quarter</td><td>CRM</td></tr>
+<tr><td>Discount creeping up</td><td>Margin pressure</td><td>Contract price vs list price</td></tr>
+</table>
+
+<p>Phase 1 watches these with <b>rules</b>. Phase 2 (Chapter 30) turns them into a <b>churn prediction model</b>. The rules come first because they're explainable on day one and they tell us which signals actually matter, which is exactly what a model needs to learn from later.</p>
+
+<hr/>
+
+<h3>8. Trends and Anomalies: Simple First</h3>
+
+<p>"Spot patterns in our own data" could mean fancy anomaly detection. BigQuery ML can do it (for example a time-series model with an anomaly-detection function). But think about Work.Life's data size:</p>
+
+<ul>
+    <li>14 sites × monthly figures = 168 data points a year</li>
+    <li>Strong seasonality ("August is quiet - holidays", from the Excel budget notes)</li>
+    <li>A few years of history at most. How far back the NetSuite history goes, and whether older finance data sits in an earlier ledger, is unknown: ask the client</li>
+</ul>
+
+<p>That's not enough for a statistical model to beat simple rules reliably. So:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Stage</th><th>Method</th><th>Example</th></tr>
+<tr><td><b>Phase 1</b></td><td>Compare to budget (the business's own expectation, seasonality included)</td><td>"Soho revenue 62% below budget"</td></tr>
+<tr><td><b>Phase 1</b></td><td>Compare to the same month last year</td><td>"August meeting room hours down 30% vs August 2025" (made up)</td></tr>
+<tr><td><b>Phase 1</b></td><td>Consecutive-period trends</td><td>"Occupancy fell 3 months in a row"</td></tr>
+<tr><td>Phase 2</td><td>Statistical anomaly detection, forecasts with ranges</td><td>Chapter 31</td></tr>
+</table>
+
+<p>💡 The budget is the best anomaly detector Work.Life already has. Finance already built seasonality into it. Comparing actuals to budget is "anomaly detection" leaders already understand and trust.</p>
+
+<hr/>
+
+<h3>9. Fighting Alert Fatigue</h3>
+
+<p>Back to the task in Lab 24.1: R1 to R4 all fire for Soho. Four alerts about one problem teach leaders to ignore the channel. Rules for good alerting:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Rule</th><th>What it means</th><th>Soho example</th></tr>
+<tr><td><b>Group by subject</b></td><td>One alert per site or company, listing all findings</td><td>One Soho alert: revenue, contribution, occupancy and empty offices together</td></tr>
+<tr><td><b>Alert on change, not state</b></td><td>Fire when it starts or gets worse, not every day it stays bad</td><td>Soho alerts once; then it lives in the digest's "Needs attention" section</td></tr>
+<tr><td><b>Every alert has an owner</b></td><td>Routed to the person who can act</td><td>Soho → Ops/site lead; GreenRoot → Reading + sales</td></tr>
+<tr><td><b>Every alert has a next step</b></td><td>"So what?" answered</td><td>"Review Office 102 pricing with brokers"</td></tr>
+<tr><td><b>Measure precision</b></td><td>Track 👍/👎 and "action taken" in <code>ai_logs</code></td><td>Retire or tune rules with low precision every quarter</td></tr>
+<tr><td><b>Cap volume</b></td><td>Maximum N alerts per person per week; the rest roll into the digest</td><td>Agreed with leadership at launch</td></tr>
+</table>
+
+<p>And test the rules like anything else: each rule gets golden cases ("should fire on GreenRoot Sep 2026", "should NOT fire on Reading occupancy") in the accuracy suite (Chapter 25).</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How would you build proactive insights with an LLM without generating noise or hallucinations?</b></p>
+<p><i>"Deterministic rules in SQL decide what's worth saying, with thresholds from the business's own targets. The LLM only narrates each finding, and every number is checked against the finding. Group findings per subject, alert on change not state, route to an owner, and measure precision so noisy rules get retired."</i></p>
+
+<p><b>Q: The client asks for 'foresight'. Do they need machine learning?</b></p>
+<p><i>"Not in Phase 1. Most foresight comes from watching leading indicators, like attendance falling before a renewal, notices given or pipeline drying up, and joining signals that sit in different systems. That's explainable and immediately useful. Prediction models come in Phase 2, trained on the same signals."</i></p>
+
+<p><b>Q: How do you detect anomalies with only a few years of monthly data for 14 sites?</b></p>
+<p><i>"Use the budget as the expectation, because it already contains seasonality, plus year-on-year and consecutive-month trend rules. Statistical anomaly detection needs more data points than that to beat simple rules, so I'd add it later."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Three products</b></td><td>Weekly digest, threshold alert, early signal.</td></tr>
+<tr><td><b>Rules decide</b></td><td>SQL rules choose what to say; the LLM only writes it.</td></tr>
+<tr><td><b>Foresight</b></td><td>Leading indicators joined across systems, e.g. GreenRoot attendance + renewal date.</td></tr>
+<tr><td><b>Budget = expectation</b></td><td>Best Phase 1 anomaly detector, seasonality included.</td></tr>
+<tr><td><b>No fatigue</b></td><td>Group, alert on change, owner + next step, cap volume, measure precision.</td></tr>
+<tr><td><b>Privacy</b></td><td>Attendance only aggregated (company × week). Never per person.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>We've built answers, digests and alerts. None of them goes in front of the leadership team until they pass the gate. In <b>Chapter 25</b> we build the brief's most important principle: <b>accuracy as a launch gate</b>, with golden questions, tolerances, actuals from closed months, and a pass bar agreed before we start.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

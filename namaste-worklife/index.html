@@ -24,7 +24,7 @@
 
 <h3>🏢 Namaste Work.Life: Zero to Hero — A Real Data &amp; AI Project, End to End</h3>
 
-<p>This series takes one <b>real client project</b> and explains every piece of it. Work.Life is a UK coworking company. They want their leadership team to <b>ask questions about the business in plain English and trust the answers</b>. To build that, you need to understand the business, every system its data lives in (Nexudus, NetSuite, ACT, Excel, HubSpot), how that data travels (Fivetran, Python, BigQuery, dbt), how it is shown (Tableau, Metabase), and then the AI layer on top.</p>
+<p>This series takes one <b>real client project</b> and explains every piece of it. Work.Life is a UK coworking company. They want their leadership team to <b>ask questions about the business in plain English and trust the answers</b>. To build that, you need to understand the business, every system its data lives in (Nexudus, NetSuite, ACT, Excel, HubSpot), how that data travels (Fivetran, Python, BigQuery, dbt), how it is shown (Tableau, under review), and then the AI layer on top.</p>
 
 <p>Simple language, one topic per chapter, and in Season 1 you <b>run a Mini Work.Life yourself</b> in every tool. By the end you could sit in the client call and answer every question.</p>
 
@@ -34,7 +34,7 @@
    SOURCE SYSTEMS          PIPELINE                 WAREHOUSE + MODELS        USE IT
    ──────────────          ────────                 ──────────────────        ──────
    Nexudus  (members) ─┐
-   NetSuite (finance) ─┤   Fivetran  ─┐             BigQuery                  Tableau / Metabase
+   NetSuite (finance) ─┤   Fivetran  ─┐             BigQuery                  Tableau (under review)
    ACT      (?)       ─┼─►            ├──► raw ──► dbt: staging ──► marts ──► dashboards
    Excel    (manual)  ─┤   Python    ─┘
    HubSpot  (CRM/new) ─┘                                                  ┌─► 🤖 AI layer (Phase 1)
@@ -45,9 +45,12 @@
 <pre>
    ⭐ START HERE — the 3 that matter most:
    Chapter 01 (The Business) · Chapter 07 (Nexudus) · Chapter 11 (One Member, Five Systems)
+
+   🧭 ALREADY KNOW THE BASICS? The domain reference:
+   Chapter 38 (Glossary) · Chapter 39 (Every Integration) · Chapter 40 (A Month in the Life)
 </pre>
 
-<p><b>📊 Progress:</b> 9 of 37 chapters written · Season 1 is fully hands-on (free trials + lab data in <code>lab-data/</code>)</p>
+<p><b>📊 Progress:</b> all 40 chapters written · Season 1 is fully hands-on (free trials + lab data in <code>lab-data/</code>) · Season 6 is the domain reference</p>
 
 <p class="nz-legend">
   <span>✓ live on the blog</span>
@@ -61,12 +64,12 @@
   <div class="nz-step nz-blue nz-written">
     <span class="nz-icon"></span>
     <div class="nz-title">Season 0 · The Business &amp; The Brief</div>
-    <div class="nz-sub">2 / 4 written · how Work.Life makes money and the numbers that matter</div>
+    <div class="nz-sub">4 / 4 written · the business, its numbers, the brief and the people</div>
     <ul>
       <li><a href="season-0-business/chapter-01-how-worklife-makes-money.html">01 — What Is Work.Life? How a Coworking Business Makes Money</a> ⭐</li>
       <li><a href="season-0-business/chapter-02-coworking-kpis.html">02 — The Numbers That Run a Coworking Business (KPIs)</a></li>
-      <li>03 — Reading the Scoping Brief Like an Engineer (next up)</li>
-      <li>04 — Who's Who: Client, 173tech, Leadership &amp; Us (next up)</li>
+      <li><a href="season-0-business/chapter-03-reading-the-scoping-brief.html">03 — Reading the Scoping Brief Like an Engineer</a></li>
+      <li><a href="season-0-business/chapter-04-whos-who.html">04 — Who's Who: Client, Data Partner, Leadership &amp; Us</a></li>
     </ul>
   </div>
 
@@ -85,61 +88,72 @@
     </ul>
   </div>
 
-  <div class="nz-step nz-next">
+  <div class="nz-step nz-blue nz-written">
     <span class="nz-icon"></span>
     <div class="nz-title">Season 2 · The Pipeline</div>
-    <div class="nz-sub">0 / 7 · next up · load your own lab exports into a real warehouse</div>
+    <div class="nz-sub">7 / 7 written · load your own lab exports into a real warehouse</div>
     <ul>
-      <li>12 — ETL vs ELT and the Modern Data Stack</li>
-      <li>13 — Fivetran: Connectors, Syncs &amp; MAR Pricing</li>
-      <li>14 — Python Extractors: Pulling Nexudus into BigQuery</li>
-      <li>15 — Google BigQuery: The Warehouse</li>
-      <li>16 — dbt: Raw → Staging → Intermediate → Marts</li>
-      <li>17 — dbt in Depth: Sources, Tests, Docs &amp; Lineage</li>
-      <li>18 — The BI Layer: Tableau vs Metabase vs Looker</li>
+      <li><a href="season-2-pipeline/chapter-12-etl-vs-elt.html">12 — ETL vs ELT and the Modern Data Stack</a></li>
+      <li><a href="season-2-pipeline/chapter-13-fivetran.html">13 — Fivetran: Connectors, Syncs &amp; MAR Pricing</a></li>
+      <li><a href="season-2-pipeline/chapter-14-python-extractors.html">14 — Python Extractors: Pulling Nexudus into BigQuery</a></li>
+      <li><a href="season-2-pipeline/chapter-15-bigquery.html">15 — Google BigQuery: The Warehouse</a></li>
+      <li><a href="season-2-pipeline/chapter-16-dbt-layers.html">16 — dbt: Raw → Staging → Intermediate → Marts</a></li>
+      <li><a href="season-2-pipeline/chapter-17-dbt-in-depth.html">17 — dbt in Depth: Sources, Tests, Docs &amp; Lineage</a></li>
+      <li><a href="season-2-pipeline/chapter-18-bi-layer.html">18 — The BI Layer: Tableau vs Metabase vs Looker</a></li>
     </ul>
   </div>
 
-  <div class="nz-step nz-planned">
+  <div class="nz-step nz-blue nz-written">
     <span class="nz-icon"></span>
     <div class="nz-title">Season 3 · The AI Layer (Phase 1)</div>
-    <div class="nz-sub">0 / 10 · planned · "ask the business a question"</div>
+    <div class="nz-sub">10 / 10 written · "ask the business a question" · a Phase 1 design that meets all 8 principles</div>
     <ul>
-      <li>19 — The Analytics Maturity Ladder: Descriptive → Activation</li>
-      <li>20 — Text-to-SQL: How an LLM Answers From a Warehouse</li>
-      <li>21 — The Semantic Layer: One Definition of "Revenue"</li>
-      <li>22 — Business Context: Board Pack, KPIs &amp; Definitions</li>
-      <li>23 — Phase 1 Architecture on BigQuery ⭐</li>
-      <li>24 — Proactive Insight: Alerts, Digests &amp; Trends</li>
-      <li>25 — Accuracy as a Launch Gate: Golden Questions &amp; Actuals</li>
-      <li>26 — Security: SSO, IAM, Safe Data &amp; What Never Gets Connected</li>
-      <li>27 — Cost Control: Tokens, BigQuery Bytes &amp; Caps</li>
-      <li>28 — Source Agnostic: Swapping Nexudus Without Breaking AI</li>
+      <li><a href="season-3-ai-layer/chapter-19-analytics-maturity-ladder.html">19 — The Analytics Maturity Ladder: Descriptive → Activation</a></li>
+      <li><a href="season-3-ai-layer/chapter-20-text-to-sql.html">20 — Text-to-SQL: How an LLM Answers From a Warehouse</a></li>
+      <li><a href="season-3-ai-layer/chapter-21-semantic-layer.html">21 — The Semantic Layer: One Definition of "Revenue"</a></li>
+      <li><a href="season-3-ai-layer/chapter-22-business-context.html">22 — Business Context: Board Pack, KPIs &amp; Definitions</a></li>
+      <li><a href="season-3-ai-layer/chapter-23-phase-1-architecture.html">23 — Phase 1 Architecture on BigQuery</a> ⭐</li>
+      <li><a href="season-3-ai-layer/chapter-24-proactive-insight.html">24 — Proactive Insight: Alerts, Digests &amp; Trends</a></li>
+      <li><a href="season-3-ai-layer/chapter-25-accuracy-launch-gate.html">25 — Accuracy as a Launch Gate: Golden Questions &amp; Actuals</a></li>
+      <li><a href="season-3-ai-layer/chapter-26-security.html">26 — Security: SSO, IAM, Safe Data &amp; What Never Gets Connected</a></li>
+      <li><a href="season-3-ai-layer/chapter-27-cost-control.html">27 — Cost Control: Tokens, BigQuery Bytes &amp; Caps</a></li>
+      <li><a href="season-3-ai-layer/chapter-28-source-agnostic.html">28 — Source Agnostic: Swapping Nexudus Without Breaking AI</a></li>
     </ul>
   </div>
 
-  <div class="nz-step nz-planned">
+  <div class="nz-step nz-blue nz-written">
     <span class="nz-icon"></span>
     <div class="nz-title">Season 4 · Phase 2 (Where It Goes Next)</div>
-    <div class="nz-sub">0 / 4 · planned</div>
+    <div class="nz-sub">4 / 4 written · context only in the brief: how Phase 1 extends without a rebuild</div>
     <ul>
-      <li>29 — Automating Member &amp; Retention Reporting</li>
-      <li>30 — Churn &amp; Renewal Prediction + Context Packs</li>
-      <li>31 — Forecasting: Resident Revenue, Seasonality, Meeting Rooms</li>
-      <li>32 — Role-Based Access &amp; Agents on Top</li>
+      <li><a href="season-4-phase-2/chapter-29-member-retention-reporting.html">29 — Automating Member &amp; Retention Reporting</a></li>
+      <li><a href="season-4-phase-2/chapter-30-churn-renewal-prediction.html">30 — Churn &amp; Renewal Prediction + Context Packs</a></li>
+      <li><a href="season-4-phase-2/chapter-31-forecasting.html">31 — Forecasting: Resident Revenue, Seasonality, Meeting Rooms</a></li>
+      <li><a href="season-4-phase-2/chapter-32-role-based-access-agents.html">32 — Role-Based Access &amp; Agents on Top</a></li>
     </ul>
   </div>
 
-  <div class="nz-step nz-planned">
+  <div class="nz-step nz-blue nz-written">
     <span class="nz-icon"></span>
     <div class="nz-title">Season 5 · Delivering the Project 🏆</div>
-    <div class="nz-sub">0 / 5 · planned</div>
+    <div class="nz-sub">5 / 5 written · the response, the plan, the cost, the handover</div>
     <ul>
-      <li>33 — Answering the 10 Questions in Section 7</li>
-      <li>34 — The 3-Month and 6-Month Plan</li>
-      <li>35 — Cost: Build and Run, Leadership vs Wider Team</li>
-      <li>36 — Documentation &amp; Handover</li>
-      <li>37 — Client Call &amp; Interview Questions</li>
+      <li><a href="season-5-delivery/chapter-33-answering-section-7.html">33 — Answering the 10 Questions in Section 7</a></li>
+      <li><a href="season-5-delivery/chapter-34-three-and-six-month-plan.html">34 — The 3-Month and 6-Month Plan</a></li>
+      <li><a href="season-5-delivery/chapter-35-cost-build-and-run.html">35 — Cost: Build and Run, Leadership vs Wider Team</a></li>
+      <li><a href="season-5-delivery/chapter-36-documentation-handover.html">36 — Documentation &amp; Handover</a></li>
+      <li><a href="season-5-delivery/chapter-37-client-call-interview-questions.html">37 — Client Call &amp; Interview Questions</a></li>
+    </ul>
+  </div>
+
+  <div class="nz-step nz-blue nz-written">
+    <span class="nz-icon"></span>
+    <div class="nz-title">Season 6 · Understand It All 🧭</div>
+    <div class="nz-sub">3 / 3 written · the domain reference: every term, every integration, the business in motion</div>
+    <ul>
+      <li><a href="season-6-understand-it-all/chapter-38-glossary.html">38 — The Work.Life Glossary: Every Term, One Page</a> ⭐</li>
+      <li><a href="season-6-understand-it-all/chapter-39-integration-map.html">39 — Every Integration at Work.Life: What Flows Where, and Why</a> ⭐</li>
+      <li><a href="season-6-understand-it-all/chapter-40-a-month-in-the-life.html">40 — A Month in the Life of Work.Life: Every System, Day by Day</a> ⭐</li>
     </ul>
   </div>
 
@@ -147,7 +161,7 @@
 
 <p>🧪 <b>Lab data:</b> all Mini Work.Life files are in <code>lab-data/</code>: sites, plans, resources, companies, members, contracts, bookings, NetSuite GL, Act! contacts &amp; deals, ACT365 door events, Excel budget.</p>
 
-<p>📦 <b>The real documents behind the series:</b> <i>Work.Life Data &amp; AI Infrastructure — Supplier Scoping Brief (July 2026)</i> and the <i>Work.Life + 173tech</i> re-introduction deck.</p>
+<p>📦 <b>The real documents behind the series:</b> <i>Work.Life Data &amp; AI Infrastructure — Supplier Scoping Brief (July 2026)</i>, plus the made-up Mini Work.Life lab data.</p>
 
 <hr/>
 

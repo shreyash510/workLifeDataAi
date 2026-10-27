@@ -1,0 +1,328 @@
+<h2>Chapter 21 — The Semantic Layer: One Definition of "Revenue"</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Chapter 20 ended with one clear message: the LLM must not invent business logic. So where does the business logic live? In the <b>semantic layer</b>: a small, version-controlled set of files that says, in code, exactly what "revenue", "occupancy", "churn" and "contribution" mean at Work.Life. Dashboards read it. The AI reads it. Nobody redefines anything anywhere else.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What a semantic layer is (and isn't)</li>
+    <li>The four building blocks: entities, dimensions, measures, metrics</li>
+    <li>Lab 21.1: Write Work.Life's core metrics in YAML</li>
+    <li>Where it lives: dbt, the BI tool, or a separate service?</li>
+    <li>How the AI uses it</li>
+    <li>Synonyms: "takings", "turnover", "sales"</li>
+    <li>Who owns each definition</li>
+    <li>Why this also makes the BI review easier</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>In a business like Work.Life, the word "revenue" typically ends up defined in several places at once. We don't yet know Work.Life's exact picture (that's client question #10), but a typical one looks like this:</p>
+
+<ul>
+    <li>A calculated field in the BI tool</li>
+    <li>A dbt model column called <code>revenue</code></li>
+    <li>A Finance spreadsheet for the board pack</li>
+    <li>Someone's head</li>
+</ul>
+
+<p>Ask "what was Soho's revenue in September?" in the lab and you get three honest answers:</p>
+
+<ul>
+    <li><b>£3,040 MRR</b> (Ops, from Nexudus contracts): £2,400 Office 101 + £320 + £320 hot desks. It leaves out meeting rooms, because they're pay-as-you-go, not contracted.</li>
+    <li><b>£3,565 invoiced</b>: everything billed for September, i.e. the MRR plus £525 of meeting-room bookings.</li>
+    <li><b>£3,475 recognised</b> (Finance, from the NetSuite GL): invoiced minus the £90 goodwill credit memo CN-2609-01 for the AV failure on 24 September. This is the number a site P&amp;L uses.</li>
+</ul>
+
+<p>None of them is "wrong". They answer different questions: how much recurring income is under contract, what did we bill, and what did we actually earn. The danger is a single word, "revenue", silently meaning any of the three. Now add an AI that writes its own SQL, and you have a <b>fifth</b> definition that changes from day to day.</p>
+
+<p>The semantic layer's promise is simple: <b>say it once, in one place, and everyone uses that.</b></p>
+
+<pre>
+   BEFORE                                    AFTER
+   ──────                                    ─────
+   Tableau ── revenue = ?                    BI tool (any) ──────┐
+   dbt     ── revenue = ?                                        │
+   Excel   ── revenue = ?                    AI layer ───────────┼──► SEMANTIC LAYER ──► marts
+   AI      ── revenue = (guess)                                  │    revenue = ONE thing
+   Head    ── revenue = ?                    Digests/alerts ─────┘    (+ owner, version)
+</pre>
+
+<hr/>
+
+<h3>2. What a Semantic Layer Is</h3>
+
+<p>It's a <b>translation table between business words and SQL</b>, plus rules about how things combine.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>It IS…</th><th>It is NOT…</th></tr>
+<tr><td>A set of definitions in code (usually YAML)</td><td>A new database</td></tr>
+<tr><td>Version-controlled in git, reviewed like code</td><td>A wiki page that drifts out of date</td></tr>
+<tr><td>Compiled into SQL against the marts</td><td>A replacement for dbt models (it sits on top of them)</td></tr>
+<tr><td>The one place the AI gets definitions from</td><td>Something the AI is allowed to edit</td></tr>
+</table>
+
+<pre>
+   SOURCES ──► raw ──► staging ──► marts ──► SEMANTIC LAYER ──► consumers
+                                   (tables)   (meanings)         (BI, AI, alerts)
+
+   dbt models answer:     "what does one row of fct_site_month_kpis contain?"
+   Semantic layer answers: "what is 'site contribution', and how do I slice it?"
+</pre>
+
+<hr/>
+
+<h3>3. The Four Building Blocks</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Block</th><th>Meaning</th><th>Work.Life example</th></tr>
+<tr><td><b>Entity</b></td><td>A thing the business has, with a key</td><td>site (<code>site_code</code>), company (<code>company_key</code>). Members exist in the marts (<code>member_key</code>), but member-level data is deliberately not in <code>ai_safe</code></td></tr>
+<tr><td><b>Dimension</b></td><td>A way to slice</td><td>site name, city, month, plan type, account group</td></tr>
+<tr><td><b>Measure</b></td><td>A raw aggregation of a column</td><td><code>SUM(amount_gbp)</code> where account group = income</td></tr>
+<tr><td><b>Metric</b></td><td>A business KPI built from measures</td><td>site contribution = recognised revenue − direct costs</td></tr>
+</table>
+
+<p>The key idea is that <b>metrics are built from measures, not from scratch.</b> "Contribution" reuses "recognised revenue" and "direct costs". Fix a bug in "direct costs" and contribution is fixed everywhere automatically.</p>
+
+<hr/>
+
+<h3>4. Lab 21.1 — Write the Core Metrics</h3>
+
+<p>Here's what Work.Life's semantic layer looks like, written in the <b>dbt semantic model / MetricFlow</b> style (dbt is already in their stack). Read it slowly. Every line encodes a decision from Seasons 0 and 1.</p>
+
+<pre>
+# models/semantic/site_month.yml
+semantic_models:
+  - name: site_month
+    description: "One row per site per month. Finance figures from NetSuite,
+                  contracts from Nexudus, budget and capacity from Excel."
+    model: ref('fct_site_month_kpis')
+    defaults:
+      agg_time_dimension: month
+    entities:
+      - name: site
+        type: foreign
+        expr: site_code
+    dimensions:
+      - name: month
+        type: time
+        expr: month_start
+        type_params: { time_granularity: month }
+      - name: has_finance_actuals     # NULL finance is "no data", not £0
+        type: categorical
+      # real build: add is_period_closed from NetSuite accounting periods
+    measures:
+      - name: recognised_revenue
+        agg: sum
+        expr: revenue_gbp            # recognised: GL, after credit memos
+      - name: direct_costs
+        agg: sum
+        expr: direct_costs_gbp
+      - name: central_costs
+        agg: sum
+        expr: central_costs_gbp
+      - name: budget_revenue
+        agg: sum
+        expr: budget_revenue_gbp
+      - name: mrr
+        agg: sum
+        expr: mrr_gbp
+      - name: desks_contracted
+        agg: sum
+        expr: desks_contracted
+      - name: sellable_desks
+        agg: sum
+        expr: sellable_desks
+
+metrics:
+  - name: recognised_revenue
+    label: "Revenue (recognised)"
+    description: "Income posted to the NetSuite GL for the site and month,
+                  after credit memos. THE revenue figure for profitability.
+                  Not the same as MRR or Nexudus invoices."
+    type: simple
+    type_params: { measure: recognised_revenue }
+    meta: { owner: Finance, version: "1.2", synonyms: [revenue, takings, turnover, sales] }
+
+  - name: site_contribution
+    label: "Site contribution (before central costs)"
+    description: "Recognised revenue minus site direct costs. Answers
+                  'is the site profitable?' unless the user asks for
+                  after central costs."
+    type: derived
+    type_params:
+      expr: recognised_revenue - direct_costs
+      metrics: [ { name: recognised_revenue }, { name: direct_costs } ]
+    meta: { owner: Finance, version: "1.2" }
+
+  - name: site_contribution_after_central
+    label: "Site result after central costs"
+    type: derived
+    type_params:
+      expr: recognised_revenue - direct_costs - central_costs
+      metrics: [ { name: recognised_revenue }, { name: direct_costs }, { name: central_costs } ]
+    meta: { owner: Finance, version: "1.2" }
+
+  - name: desk_occupancy
+    label: "Desk occupancy (contracted)"
+    description: "Desks under active contract on the last day of the month
+                  divided by sellable desks from the capacity sheet."
+    type: ratio
+    type_params: { numerator: desks_contracted, denominator: sellable_desks }
+    meta: { owner: Operations, version: "1.0", synonyms: [occupancy, utilisation of desks] }
+
+  - name: mrr
+    label: "MRR (contracted)"
+    description: "Sum of monthly price of active membership contracts.
+                  Excludes meeting rooms and one-offs. Not recognised revenue."
+    type: simple
+    type_params: { measure: mrr }
+    meta: { owner: Operations, version: "1.0", synonyms: [recurring revenue, run rate] }
+
+  - name: revenue_vs_budget_pct
+    label: "Revenue vs budget (%)"
+    type: derived
+    type_params:
+      expr: recognised_revenue / budget_revenue - 1
+      metrics: [ { name: recognised_revenue }, { name: budget_revenue } ]
+    meta: { owner: Finance, version: "1.0" }
+</pre>
+
+<p><b>Your task:</b> add two more metrics yourself.</p>
+<ol>
+    <li><code>room_utilisation</code>: hours booked ÷ hours available. Put "hours available" in the model as a column (from opening hours), not a hard-coded 220. That fixes the invented assumption from Lab 20.1 Q3.</li>
+    <li><code>revenue_churn</code>: MRR from contracts ended as <i>churn</i> (not upgrade, not transfer) ÷ MRR at the start of the month. Which mart and which column does the churn classification come from?</li>
+</ol>
+
+<p><b>Check yourself:</b> <code>room_utilisation</code> needs a booking-level model plus an hours-available column per room per day. <code>revenue_churn</code> needs one more mart that the Season 2 lab doesn't have yet: a contract-movements model with a <code>movement_type</code> column (new, upgrade, transfer, churn), built once in dbt from the contract end reasons (<code>end_reason</code> in <code>stg_nexudus__contracts</code>: <i>left</i> = churn; <i>upgrade</i> and <i>transfer</i> are not). That's the classification from Chapter 02. Why it matters: K001 (Pixel Chai moving from a hot desk to Office 101) and K006 (Kite &amp; Key moving from Reading to Soho) both "ended", but the customer stayed and paid more or the same. Counting them as churn would tell leadership they lost three customers when they lost one. For 2026 in the lab, revenue churned is <b>£1,400</b> (Brightline only).</p>
+
+<hr/>
+
+<h3>5. Where Should It Live?</h3>
+
+<p>Several tools offer a semantic layer. The brief gives us two strong hints: <i>dbt is already in the stack</i>, and <i>"please do not assume Tableau is fixed"</i>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Option</th><th>Pros</th><th>Cons</th><th>Fit for Work.Life</th></tr>
+<tr><td><b>dbt semantic models (MetricFlow)</b></td><td>Lives next to the dbt models it depends on. Same repo, same review, same tests.</td><td>Vendor fact (check current dbt plans): the hosted Semantic Layer query API is a dbt Cloud feature. Without it, you need some glue (e.g. compile metrics to views).</td><td>✅ Best fit: same place as the marts</td></tr>
+<tr><td><b>Inside the BI tool</b> (Tableau, Looker, Metabase)</td><td>Easy for analysts</td><td>Tied to a tool that's under review. The AI may not be able to read it.</td><td>❌ BI tool may change</td></tr>
+<tr><td><b>Separate semantic service</b> (e.g. Cube)</td><td>Tool-neutral API for every consumer</td><td>Another system to run and pay for</td><td>🟡 Overkill for 14 sites and a small team</td></tr>
+<tr><td><b>Lightweight: YAML + metric views</b></td><td>Simplest. The definitions YAML is compiled into BigQuery views in <code>ai_safe</code> (one view per metric family).</td><td>Less flexible slicing; more views to maintain</td><td>✅ Good fallback if dbt Cloud isn't wanted</td></tr>
+</table>
+
+<p><b>Our recommendation:</b> define metrics in the dbt project (one source, owned in git). Serve them to the AI either through dbt's semantic layer API <i>or</i> by materialising the governed metrics into views in <code>ai_safe</code>. The <b>definitions file</b> is the contract; how it's served is a replaceable detail. That's the same source-agnostic thinking we apply to source systems in Chapter 28.</p>
+
+<hr/>
+
+<h3>6. How the AI Uses It</h3>
+
+<p>Back to the 7-step pipeline from Chapter 20. The semantic layer feeds steps ② and ③:</p>
+
+<pre>
+   "How's Soho doing vs budget?"
+          │
+          ▼
+   ② RETRIEVE   search metric names, labels, descriptions and synonyms
+          │       → recognised_revenue, revenue_vs_budget_pct, site_contribution
+          ▼
+   ③ PLAN       LLM calls query_metrics with a METRIC REQUEST, not SQL:
+          │       { metrics: [recognised_revenue, budget_revenue,
+          │                   revenue_vs_budget_pct, site_contribution],
+          │         where:   site = 'Soho',
+          │         period:  2026-09 }    ← no month named, so the
+          │                                 last closed month
+          ▼
+   ④ COMPILE    the semantic layer turns that into SQL. Same SQL every time.
+          ▼
+   ⑥ EXECUTE    → 3475 | 9200 | −0.62 | −4175
+          ▼
+   ⑦ ANSWER     "Soho's September revenue was £3,475, 62% below its £9,200
+                 budget. Contribution was −£4,175. [Revenue (recognised) v1.2]
+                 · Sep 2026, closed"
+</pre>
+
+<p>Notice the LLM never writes <code>revenue_gbp - direct_costs_gbp</code>. It just says "site_contribution". If Finance changes the definition (say, rates move from direct to central costs), they change <b>one line of YAML</b>, the tests run, and every dashboard and every AI answer updates together.</p>
+
+<hr/>
+
+<h3>7. Synonyms: Speaking the Leadership Team's Language</h3>
+
+<p>Leaders don't say <code>recognised_revenue</code>. They say "takings", "turnover", "how much did Soho bring in". Synonyms in the <code>meta</code> block help step ② find the right metric.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Leader says</th><th>Maps to</th><th>⚠️ Watch out</th></tr>
+<tr><td>"revenue", "turnover", "takings", "sales"</td><td><code>recognised_revenue</code></td><td>"Sales" might mean new deals won (pipeline). Ask back if unsure.</td></tr>
+<tr><td>"run rate", "recurring"</td><td><code>mrr</code></td><td>Never mix with recognised revenue in one total</td></tr>
+<tr><td>"occupancy", "how full"</td><td><code>desk_occupancy</code></td><td>Ops might mean office count. Show which definition was used.</td></tr>
+<tr><td>"profitable", "making money"</td><td><code>site_contribution</code></td><td>Also show after-central-costs (Chapter 02, section 7)</td></tr>
+<tr><td>"lost members", "churn"</td><td><code>revenue_churn</code> / logo churn</td><td>Excludes upgrades and transfers</td></tr>
+</table>
+
+<p>The synonym list starts small and grows from real questions. Every 👎 on an answer where the wrong metric was picked becomes a synonym fix plus a new golden question (Chapter 25).</p>
+
+<hr/>
+
+<h3>8. Who Owns Each Definition?</h3>
+
+<p>Chapter 04's RACI said it: <b>the business owns definitions; we only propose them.</b> The semantic layer makes that ownership concrete:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Metric family</th><th>Owner (accountable)</th><th>Changes need</th></tr>
+<tr><td>Revenue, costs, contribution, budget variance</td><td>Finance</td><td>Finance approval on the pull request</td></tr>
+<tr><td>Occupancy, MRR, members, churn, room utilisation</td><td>Operations</td><td>Ops approval on the pull request</td></tr>
+<tr><td>Pipeline, conversion</td><td>Sales</td><td>Sales approval</td></tr>
+<tr><td>Synonyms, descriptions</td><td>The analytics lead (whoever holds that role, our side or theirs), on behalf of the business</td><td>Review by the metric owner</td></tr>
+</table>
+
+<p>Each metric carries <code>owner</code> and <code>version</code> in its <code>meta</code>, and the AI shows them under every answer ("Site contribution, Finance, v1.2"). When a leader questions a number, the answer card already tells them who to ask.</p>
+
+<hr/>
+
+<h3>9. A Bonus: It Makes the BI Review Easier</h3>
+
+<p>The brief says a review of BI and reporting tooling is running in parallel: <i>"please do not assume Tableau is fixed"</i>. If definitions live inside Tableau calculated fields and the review picks a different tool (Looker, Power BI, Metabase or anything else), every calculation has to be rebuilt by hand, and probably some get rebuilt wrong.</p>
+
+<p>If definitions live in the semantic layer, the BI migration becomes "point the new tool at the same metrics". The AI layer and the new BI tool show <b>identical</b> numbers from day one. That's a strong point for our supplier response: <i>the AI project de-risks the BI decision instead of competing with it.</i></p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What is a semantic layer and why does an AI analytics tool need one?</b></p>
+<p><i>"It's a governed set of business definitions (entities, dimensions, measures and metrics) in code, compiled to SQL. The AI needs one so it picks a defined metric instead of inventing logic each time. That gives the same answer as the dashboards and makes accuracy testable per metric."</i></p>
+
+<p><b>Q: Where would you put the semantic layer for a client with dbt and an undecided BI tool?</b></p>
+<p><i>"In the dbt project, next to the marts, version-controlled and owned by the business. Serve it via the dbt semantic layer or as governed views in the AI's dataset. Not in the BI tool, because that's under review and the AI may not be able to read it."</i></p>
+
+<p><b>Q: Finance decides business rates should move from direct to central costs. What changes?</b></p>
+<p><i>"One mapping in the dbt model or measure definition, approved by Finance, with a version bump. Tests and the golden questions re-run, expected answers are updated with Finance, and every dashboard and AI answer reflects the change together. Nothing in the AI prompts changes."</i></p>
+
+<p><b>Q: How do you handle a leader using a word that maps to two metrics?</b></p>
+<p><i>"Keep synonyms in the metric metadata. Where a word is genuinely ambiguous, like 'sales' meaning revenue or won deals, the AI asks back or answers both clearly labelled. Every confusion gets logged and becomes a synonym update and a golden test."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>One definition</b></td><td>Every KPI defined once, in code, in git.</td></tr>
+<tr><td><b>Building blocks</b></td><td>Entities, dimensions, measures → metrics.</td></tr>
+<tr><td><b>Metrics reuse measures</b></td><td>Fix "direct costs" once and contribution is fixed everywhere.</td></tr>
+<tr><td><b>Home</b></td><td>dbt project, next to the marts. Not the BI tool.</td></tr>
+<tr><td><b>AI usage</b></td><td>LLM picks metrics and filters; the layer writes the SQL.</td></tr>
+<tr><td><b>Synonyms</b></td><td>Map leadership language; ask back when ambiguous.</td></tr>
+<tr><td><b>Ownership</b></td><td>Finance, Ops and Sales own their metrics. Shown on every answer.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>The semantic layer says <i>what</i> revenue is. It doesn't say <i>why it matters</i>, what the target is, or what the board worried about last month. In <b>Chapter 22</b> we load the <b>business context</b>: the board pack, the KPI dictionary and the "why", so answers carry meaning, not just numbers.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

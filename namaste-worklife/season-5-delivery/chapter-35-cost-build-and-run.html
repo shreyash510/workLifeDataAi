@@ -1,0 +1,300 @@
+<h2>Chapter 35 — Cost: Build and Run, Leadership vs Wider Team</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Brief Q4 asks for three numbers: a <b>one-off build cost</b>, and an <b>ongoing annual running cost at two levels</b>, leadership team only and wider team access. It also asks how we'd <b>manage and cap</b> usage and token costs. And the principles add a hard line: <i>"This cannot become a six figure operation needing a large data team to run."</i></p>
+
+<p>In Chapter 33 we put numbers in the response: build <b>~£63k</b>, running cost <b>~£22k a year</b> for the leadership team and <b>~£46k a year</b> for wider team access. In this chapter we show <b>exactly how we got them</b>, so you can rebuild the model yourself, change any assumption, and defend every number on the client call.</p>
+
+<p>⚠️ <b>Every figure in this chapter is an estimate.</b> Vendor prices change often. The day rate is made up for this tutorial. Before sending anything to a client, <b>check current pricing</b> on each vendor's official page and use your own team's rates.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Where the money actually goes (it's not where you think)</li>
+    <li>The assumptions table</li>
+    <li>One-off build cost</li>
+    <li>Running cost 1: AI model tokens, step by step</li>
+    <li>Running cost 2: BigQuery, hosting and the rest</li>
+    <li>Running cost 3: support (the biggest line)</li>
+    <li>Leadership vs wider team, side by side</li>
+    <li>How we cap it: 6 controls</li>
+    <li>What's NOT in these numbers</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>A leader reads "AI" in a proposal and imagines a giant bill. 💸 Then they see our running cost breakdown for the leadership team: the AI model itself is around <b>£2,000 a year</b>. BigQuery is a few hundred pounds. The biggest line by far is <b>people</b>: someone keeping it healthy, adding KPIs, and checking accuracy.</p>
+
+<p>That surprises most clients, and it's the most useful thing to explain. Work.Life has ~8,000 members and 14 sites. That's <b>small data</b>. The warehouse tables have thousands or a few million rows. The cost risk isn't the data. It's an uncapped AI service, or a system so complex it needs a data team. Our design avoids both.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   A cost with no assumptions can't be compared.             │
+│   Show:  quantity × unit price = cost   for every line,     │
+│   mark it ESTIMATE, and say which assumption moves it most. │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Where the Money Goes</h3>
+
+<pre>
+   LEADERSHIP TEAM · YEARLY RUNNING COST (estimate, ~£21,500)
+
+   Support (people)  ██████████████████████████████████████████  84%  £18,000
+   AI model tokens   ████                                         9%  £ 2,000
+   Hosting, logs     ██                                           5%  £ 1,000
+   BigQuery          █                                            2%  £   500
+</pre>
+
+<hr/>
+
+<h3>3. The Assumptions Table</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Assumption</th><th>Leadership</th><th>Wider team</th><th>Source / note</th></tr>
+<tr><td>C1</td><td>Users</td><td>10</td><td>70</td><td><b>Assumption.</b> Brief: ~70 staff. Leadership team size is unknown (client question #13)</td></tr>
+<tr><td>C2</td><td>Questions per user per working day</td><td>8</td><td>3</td><td><b>Assumption</b>; leaders explore more</td></tr>
+<tr><td>C3</td><td>Working days per month</td><td>21</td><td>21</td><td></td></tr>
+<tr><td>C4</td><td>Questions per month (C1×C2×C3)</td><td><b>1,680</b></td><td><b>4,410</b></td><td>Calculated</td></tr>
+<tr><td>C5</td><td>AI calls per question</td><td>3</td><td>3</td><td>Understand → build metric query/SQL → write answer</td></tr>
+<tr><td>C6</td><td>Input tokens per question (all calls)</td><td>30,000</td><td>30,000</td><td>Semantic layer + business context + results (estimate)</td></tr>
+<tr><td>C7</td><td>Output tokens per question</td><td>2,500</td><td>2,500</td><td>Estimate</td></tr>
+<tr><td>C8</td><td>Model price (mid-tier model)</td><td colspan="2">~$3 per million input tokens, ~$15 per million output</td><td>Published mid-tier (Sonnet-class) API pricing at time of writing. <b>Check current pricing.</b></td></tr>
+<tr><td>C9</td><td>Exchange rate</td><td colspan="2">$1 ≈ £0.75</td><td>Estimate; check on the day</td></tr>
+<tr><td>C10</td><td>Day rate (supplier)</td><td colspan="2">£750 / day</td><td><b>Made up</b> for this tutorial (same as Chapter 33)</td></tr>
+<tr><td>C11</td><td>Support days per month</td><td>2</td><td>4</td><td>Estimate</td></tr>
+</table>
+
+<p>Which assumption moves the total most? <b>C11, support days</b>. One extra day a month adds <b>£9,000 a year</b>. Ten extra leadership users add only about <b>£2,000 a year</b> in usage. That's worth saying out loud on the call.</p>
+
+<hr/>
+
+<h3>4. One-Off Build Cost</h3>
+
+<p>From the Chapter 34 plan, estimated in person-days:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Work package</th><th>Days (estimate)</th><th>Chapter</th></tr>
+<tr><td colspan="3"><b>To the 3-month launch</b></td></tr>
+<tr><td>Discovery, access, mapping marts to board-pack KPIs</td><td>6</td><td>33, 34</td></tr>
+<tr><td>Definition workshops and KPI dictionary</td><td>6</td><td>21, 22</td></tr>
+<tr><td>Safe-data inventory + <code>ai_safe</code> copy + IAM</td><td>6</td><td>23, 26</td></tr>
+<tr><td>Semantic layer v1 + dbt gap models</td><td>10</td><td>16, 21</td></tr>
+<tr><td>AI layer (question → metric/SQL → answer) + refusal mode</td><td>12</td><td>20, 23</td></tr>
+<tr><td>Chat interface, SSO, logging</td><td>6</td><td>23, 26</td></tr>
+<tr><td>Golden test automation, cost caps, monitoring</td><td>6</td><td>25, 27</td></tr>
+<tr><td>Pilot, fixes, accuracy gate</td><td>6</td><td>25</td></tr>
+<tr><td>Project management and weekly status</td><td>6</td><td>34</td></tr>
+<tr><td><i>Subtotal</i></td><td><i>64 days</i></td><td></td></tr>
+<tr><td colspan="3"><b>Months 4–6</b></td></tr>
+<tr><td>Coverage v2, alerts, trends, source-swap rehearsal</td><td>12</td><td>24, 28</td></tr>
+<tr><td>Documentation and handover</td><td>8</td><td>36</td></tr>
+<tr><td><i>Subtotal</i></td><td><i>20 days</i></td><td></td></tr>
+<tr><td><b>Total</b></td><td><b>84 days</b></td><td></td></tr>
+</table>
+
+<pre>
+   TO LAUNCH    64 days × £750 (made up) = £48,000
+   TO MONTH 6   20 days × £750           = £15,000
+                                           ───────
+   BUILD                                 ≈ £63,000   (ESTIMATE)
+</pre>
+
+<p>Why not more? Because the pipeline, warehouse and dbt models <b>already exist</b> (brief §3). We're building on top, not from scratch. If discovery shows the marts are far from the board pack, the dbt line grows. We'd say that after week 2, not after month 3.</p>
+
+<hr/>
+
+<h3>5. Running Cost 1: AI Model Tokens</h3>
+
+<p>Tokens are the units AI models charge for, roughly ¾ of a word each. Let's calculate the leadership team, step by step:</p>
+
+<pre>
+   LEADERSHIP · ONE MONTH (estimate)
+
+   Questions             10 users × 8/day × 21 days      =   1,680
+   Input tokens          1,680 × 30,000                  =  50.4 M
+   Output tokens         1,680 × 2,500                   =   4.2 M
+
+   WITHOUT CACHING
+   Input cost            50.4 M × $3 / M                 =  $151
+   Output cost            4.2 M × $15 / M                =  $ 63
+   + golden test runs    (50 questions × ~8 runs/month)  ≈  $ 51
+   + digests &amp; alerts                                    ≈  $ 10
+                                                           ──────
+                                                         ≈  $275 / month ≈ £2,500 / year
+
+   WITH PROMPT CACHING  (the ~80% of input that is the same
+                         context every time, read at ~10% price)
+   Input cost            $151 × (0.2 + 0.8 × 0.1)        ≈  $ 42
+   Everything else as above                              ≈  $124
+                                                           ──────
+                                                         ≈  $166 / month ≈ £1,500 / year
+
+   WE BUDGET                                             ≈  £2,000 / year
+</pre>
+
+<p>We budget between the two: caching should work, but we don't bet the whole budget on it. Two more savings give extra headroom:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Saving</th><th>How it works</th><th>Effect</th></tr>
+<tr><td><b>Prompt caching</b></td><td>The semantic layer and business context are the same for every question. Providers charge far less for re-reading cached input (around 90% less, at time of writing).</td><td>Already shown above</td></tr>
+<tr><td><b>Cheaper model for easy steps</b></td><td>Use a small, fast model (Haiku-class, around $1/$5 per million at time of writing) to classify the question; the mid-tier model only writes queries and answers.</td><td>Another 10–30% off</td></tr>
+<tr><td><b>Answer cache</b></td><td>"Occupancy at Soho last month" asked twice? Return the stored answer until data refreshes.</td><td>Depends on repetition</td></tr>
+</table>
+
+<p><b>Wider team:</b> 70 users × 3 questions × 21 days = 4,410 questions a month, about 2.6× the leadership volume. Uncached that's roughly $650/month (≈ £5,900/year). Wider-team questions are more varied, so they get less benefit from answer caching and more "I can't answer that, let me try again" loops. We budget <b>£6,600/year</b>, deliberately above the uncached figure.</p>
+
+<hr/>
+
+<h3>6. Running Cost 2: BigQuery, Hosting and the Rest</h3>
+
+<p><b>BigQuery</b> charges on-demand queries by data scanned (about $6.25 per TiB at time of writing, with the first 1 TiB per month free), and storage per GiB per month (with a small free allowance). <b>Check current pricing.</b></p>
+
+<pre>
+   AI QUERIES ON ai_safe · LEADERSHIP · ONE MONTH (estimate)
+
+   Queries          1,680 questions × 3 queries        ≈  5,040
+   Data per query   tables are small; partitioned,     ≈  50 MB
+                    only needed columns selected
+   Scanned          5,040 × 50 MB                      ≈  252 GB
+                                                         &lt; 1 TiB free tier
+   Query cost                                          ≈  £0
+   Storage          ai_safe copy: a few GB             ≈  £0 – a few £
+</pre>
+
+<p>So why budget <b>£500/year</b> (leadership) and <b>£1,000/year</b> (wider team)? For the daily refresh of the <code>ai_safe</code> copy, development and test environments, golden test runs, and the free tier being shared with everything else in Work.Life's billing account. The real BigQuery risk isn't volume; it's one badly written query scanning a huge table. That's why every AI query gets a <b>maximum bytes billed</b> limit (Chapter 27).</p>
+
+<p><b>Hosting, scheduling and logging</b> (for example, a small container service such as Cloud Run in Work.Life's Google Cloud, a sign-in proxy, a scheduler and a small database for the answer log): a chat app for 10 people sits mostly inside free allowances, but we budget <b>£1,000/year</b> for leadership and <b>£2,000/year</b> for the wider team to cover monitoring, log storage and spare capacity.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Technology line</th><th>Leadership (£/year)</th><th>Wider team (£/year)</th></tr>
+<tr><td>AI model tokens (incl. tests, digests)</td><td>2,000</td><td>6,600</td></tr>
+<tr><td>BigQuery (queries + storage of the copy)</td><td>500</td><td>1,000</td></tr>
+<tr><td>Hosting, scheduling, logging</td><td>1,000</td><td>2,000</td></tr>
+<tr><td><b>Technology subtotal</b></td><td><b>3,500</b></td><td><b>9,600</b></td></tr>
+</table>
+
+<hr/>
+
+<h3>7. Running Cost 3: Support</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Monthly support activity</th><th>Leadership</th><th>Wider team</th></tr>
+<tr><td>Monitoring: refreshes, costs, test runs</td><td>0.5 day</td><td>0.5 day</td></tr>
+<tr><td>Fixes and small changes (new KPI, new user, definition change)</td><td>1 day</td><td>2 days</td></tr>
+<tr><td>Monthly review: usage, cost, unanswered questions</td><td>0.5 day</td><td>0.5 day</td></tr>
+<tr><td>User support and onboarding</td><td>—</td><td>1 day</td></tr>
+<tr><td><b>Days per month</b></td><td><b>2</b></td><td><b>4</b></td></tr>
+<tr><td><b>Per year at £750/day (made up)</b></td><td><b>£18,000</b></td><td><b>£36,000</b></td></tr>
+</table>
+
+<p>Why does the wider team need twice the support? More users means more questions the system can't answer yet, more access requests and more definitions to agree. The AI cost scales with <b>users</b>; the people cost scales with the <b>variety of questions</b>.</p>
+
+<hr/>
+
+<h3>8. Side by Side</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Line (estimates)</th><th>Leadership team only</th><th>Wider team access</th></tr>
+<tr><td>One-off build (Phase 1)</td><td colspan="2" style="text-align:center">~£63,000 (£48k to launch + £15k to month 6)</td></tr>
+<tr><td>Technology per year</td><td>£3,500</td><td>£9,600</td></tr>
+<tr><td>Support per year</td><td>£18,000</td><td>£36,000</td></tr>
+<tr><td><b>Ongoing per year</b></td><td><b>~£21,500</b></td><td><b>~£45,600</b></td></tr>
+</table>
+
+<pre>
+   "CANNOT BECOME A SIX FIGURE OPERATION"   (ongoing cost per year)
+
+   £100k ┤ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  six figures
+         │
+  £45.6k ┤                         ┌──────┐  wider team
+         │                         │      │
+  £21.5k ┤          ┌──────┐       │      │  leadership only
+         │          │      │       │      │
+      £0 ┼──────────┴──────┴───────┴──────┴──────────
+                  LEADERSHIP      WIDER TEAM
+</pre>
+
+<p>Even with wider team access, ongoing cost is under half of "six figures", and needs <b>no</b> in-house data engineers (Chapter 33, Q9).</p>
+
+<p>⚠️ <b>One honest footnote:</b> wider team access also needs the role-based access work from Phase 2 (Chapter 32), which the brief asked us not to price. Say so in the response, so the client doesn't discover it later.</p>
+
+<hr/>
+
+<h3>9. How We Cap It: 6 Controls</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Control</th><th>Example setting (estimate)</th><th>Stops</th></tr>
+<tr><td>1</td><td>Per-user daily question limit</td><td>50/day leadership, 20/day wider team</td><td>One user or a script looping</td></tr>
+<tr><td>2</td><td>Monthly spending cap at the AI provider</td><td>£300 leadership, £800 wider team; alerts at 50% and 80%</td><td>Any runaway month. Service pauses and says so instead of billing more.</td></tr>
+<tr><td>3</td><td>BigQuery maximum bytes billed per query</td><td>e.g. 1 GB per AI query</td><td>One accidental full-table scan</td></tr>
+<tr><td>4</td><td>Google Cloud budget alerts</td><td>Project budget with email alerts</td><td>Surprise hosting or BigQuery costs</td></tr>
+<tr><td>5</td><td>Caching (prompt + answer)</td><td>Cache context; reuse answers until next refresh</td><td>Paying twice for the same work</td></tr>
+<tr><td>6</td><td>Model routing</td><td>Small model for simple steps</td><td>Using the expensive model for everything</td></tr>
+</table>
+
+<p>Plus a monthly cost line in the support review: what we spent, per user, per question, and vs cap. Cost stays visible, and boring. 😄</p>
+
+<hr/>
+
+<h3>10. What's NOT in These Numbers</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Not included</th><th>Why</th></tr>
+<tr><td>The existing pipeline (Fivetran, Python, dbt, current partner's maintenance)</td><td>Already paid today; unchanged by Phase 1</td></tr>
+<tr><td>BI tool licences (Tableau or a replacement)</td><td>Separate review running in parallel (brief §3)</td></tr>
+<tr><td>Phase 2, including role-based access for the wider team</td><td>"Do not price them now" (brief §4)</td></tr>
+<tr><td>Work.Life staff time</td><td>Not cash, but real: definition owners ~3–4 hrs/week during build, ~1–2 hrs/month after</td></tr>
+<tr><td>VAT</td><td>Quote ex-VAT and say so</td></tr>
+</table>
+
+<p>Say all of this explicitly. Otherwise another supplier's "cheaper" number may simply be leaving more out. Like-for-like works both ways.</p>
+
+<p><b>Where to check current prices</b> (before sending anything): the AI provider's official API pricing page, the <a href="https://cloud.google.com/bigquery/pricing">BigQuery pricing page</a> and the <a href="https://cloud.google.com/run/pricing">Cloud Run pricing page</a>.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How do you estimate LLM running costs for a new internal tool?</b></p>
+<p><i>"Users × questions per day × working days gives questions per month. Multiply by calls per question and tokens per call, split input and output, and apply the current per-million prices. Add test runs and scheduled jobs. Show the cached and uncached figures, budget between them, and put hard caps on top."</i></p>
+
+<p><b>Q: Why is BigQuery cost so low here?</b></p>
+<p><i>"The data is small: thousands to a few million rows. The AI queries a compact, partitioned copy and selects only the needed columns, so monthly scanned data stays within or near the free tier. The real risk is a single huge scan, which a maximum-bytes-billed limit prevents."</i></p>
+
+<p><b>Q: What's usually the biggest ongoing cost of an AI analytics tool, and how do you reduce it?</b></p>
+<p><i>"People: support, definition changes and accuracy checks. You reduce it with good documentation, a stable semantic layer, automated golden tests, and clear in-house owners for definitions, so the supplier isn't needed for every small change."</i></p>
+
+<p><b>Q: A client asks, "What stops the AI bill from exploding?"</b></p>
+<p><i>"Per-user limits, a hard monthly cap at the provider with early alerts, query byte limits in BigQuery, cloud budget alerts, caching, and using cheaper models where we can. If the cap is reached, the service pauses and tells you. It can't bill more."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Estimates</b></td><td>Every number is an estimate with written assumptions. Check current pricing.</td></tr>
+<tr><td><b>Build</b></td><td>84 days ≈ £63k (made-up day rate): £48k to launch, £15k to month 6.</td></tr>
+<tr><td><b>Leadership run</b></td><td>~£21.5k/year, 84% of it support.</td></tr>
+<tr><td><b>Wider team run</b></td><td>~£45.6k/year, plus unpriced Phase 2 role-based access.</td></tr>
+<tr><td><b>Tokens</b></td><td>~£2,000/year for leadership, budgeted between cached and uncached.</td></tr>
+<tr><td><b>BigQuery</b></td><td>Near zero for queries; protect with max-bytes limits.</td></tr>
+<tr><td><b>Caps</b></td><td>6 controls. A runaway month is impossible by design.</td></tr>
+<tr><td><b>Excluded</b></td><td>Existing pipeline, BI licences, Phase 2, VAT, staff time. Say so.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Look at the cost table again: the biggest line is people. The best way to keep it small, and to satisfy the brief's "not dependent on any single person", is excellent documentation. In Chapter 36 we build the full documentation set and the handover plan.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

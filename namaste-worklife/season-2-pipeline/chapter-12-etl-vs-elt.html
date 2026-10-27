@@ -1,0 +1,314 @@
+<h2>Chapter 12 — ETL vs ELT and the Modern Data Stack</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Season 1 is done. You've run a Mini Work.Life in Excel, Nexudus, ACT, NetSuite and HubSpot, and you've seen the same 14 members show up five different ways. Now Season 2 answers the next question: <b>how does all that data get into one place, cleaned and joined, every day, without anyone rebuilding it by hand?</b></p>
+
+<p>Work.Life's brief describes their pipeline in one table: <i>Fivetran, Python → BigQuery → dbt → Tableau</i>. In this chapter we learn the idea behind that stack, called <b>ELT</b>, and why almost every modern company builds pipelines this way. Then we design the warehouse we'll build ourselves for the rest of the season, and open it for the first time.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What a data pipeline actually does</li>
+    <li>ETL: the old way</li>
+    <li>ELT: the modern way</li>
+    <li>The modern data stack, layer by layer</li>
+    <li>Work.Life's stack mapped onto it</li>
+    <li>The layers inside the warehouse: raw → staging → intermediate → marts</li>
+    <li>Batch vs real time: what Work.Life actually needs</li>
+    <li>Lab 12.1: Design the Mini Work.Life warehouse</li>
+    <li>Lab 12.2: Open the BigQuery sandbox and create the datasets</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Imagine the old way of running Work.Life's reporting (made up, but very common). Every Monday, someone:</p>
+
+<ul>
+    <li>exports contracts from Nexudus to CSV,</li>
+    <li>exports the general ledger from the finance system,</li>
+    <li>copies both into a big Excel workbook,</li>
+    <li>fixes the site names by hand ("Soho" vs "SOHO"),</li>
+    <li>runs a macro that builds the occupancy and P&amp;L tabs,</li>
+    <li>and emails a PDF to the leadership team.</li>
+</ul>
+
+<p>It takes half a day. If that person is on holiday, there's no report. If Nexudus adds a column, the macro breaks. And if a leader asks <i>"why is Soho down?"</i>, the answer is <i>"I'll look into it next week"</i>.</p>
+
+<p>That's exactly the pain in the brief: <i>"Reporting is often two dimensional, sits in spreadsheets, and depends on someone finding time to rebuild it."</i> A pipeline replaces every step in that list with something automatic, tested and repeatable.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   A DATA PIPELINE DOES 3 JOBS                               │
+│                                                             │
+│   E  EXTRACT    copy data out of each source system         │
+│   L  LOAD       put it into one central store               │
+│   T  TRANSFORM  clean, join and calculate the KPIs          │
+│                                                             │
+│   The only question is: in which ORDER?                     │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. ETL: The Old Way</h3>
+
+<p><b>ETL = Extract → Transform → Load.</b> Data is cleaned and reshaped <i>before</i> it reaches the warehouse, usually by a separate ETL server or tool.</p>
+
+<pre>
+   SOURCES             ETL SERVER                         WAREHOUSE
+   ───────             ──────────                         ─────────
+   Nexudus  ─┐         ┌──────────────────────────┐
+   NetSuite ─┼──E────► │ T: clean, join, aggregate │──L──► only the
+   Excel    ─┘         │    (in the ETL tool)      │       FINAL tables
+                       └──────────────────────────┘
+                       raw data is thrown away ✗
+</pre>
+
+<p>Why it was done this way: 15–20 years ago, warehouse storage and compute were <b>expensive</b>. You only loaded the finished tables, because you couldn't afford to keep everything.</p>
+
+<p>The problems:</p>
+<ul>
+    <li><b>Raw data is lost.</b> If the business changes a definition ("Flex members now count as 1 desk"), you can't rebuild history. You'd have to re-extract from the source, which may no longer have it.</li>
+    <li><b>Logic hides in a tool.</b> The transformations live in a GUI or custom code on a server. Few people can read them.</li>
+    <li><b>Slow to change.</b> Every new question needs the ETL job changed, tested and redeployed.</li>
+</ul>
+
+<hr/>
+
+<h3>3. ELT: The Modern Way</h3>
+
+<p><b>ELT = Extract → Load → Transform.</b> Copy the data <i>as it is</i> into the warehouse first. Then transform it <b>inside the warehouse</b>, using SQL.</p>
+
+<pre>
+   SOURCES             EXTRACT + LOAD          WAREHOUSE (BigQuery)
+   ───────             ──────────────          ────────────────────────────────────
+   Nexudus  ─┐                                 ┌───────┐   T (SQL, dbt)   ┌───────┐
+   NetSuite ─┼──E──► Fivetran / Python ──L──►  │  RAW  │ ───────────────► │ MARTS │
+   Excel    ─┘       (no business logic)       │ as-is │                  │ KPIs  │
+                                               └───────┘                  └───────┘
+                                               kept forever ✓             rebuilt any time ✓
+</pre>
+
+<p>Why this became normal: cloud warehouses like BigQuery made storage <b>cheap</b> and compute <b>elastic</b>. Keeping a full raw copy costs very little, and the warehouse is the fastest place to run the transformations anyway.</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>ETL</th><th>ELT</th></tr>
+<tr><td><b>Where transforms run</b></td><td>A separate server/tool</td><td>Inside the warehouse (SQL)</td></tr>
+<tr><td><b>Raw data</b></td><td>Usually discarded</td><td>Kept, so history can be rebuilt</td></tr>
+<tr><td><b>Who can change logic</b></td><td>ETL specialists</td><td>Anyone who knows SQL (including in-house analysts)</td></tr>
+<tr><td><b>Version control</b></td><td>Often hard</td><td>SQL files in Git (dbt)</td></tr>
+<tr><td><b>Change a definition</b></td><td>Re-extract, rebuild</td><td>Edit one SQL file, re-run</td></tr>
+<tr><td><b>Risk</b></td><td>Lost data, black-box logic</td><td>Raw data contains sensitive fields, so access must be controlled</td></tr>
+</table>
+
+<p>⚠️ That last row matters for this project. ELT means <b>everything</b>, including emails, phone numbers and door-card numbers, lands in the raw layer. The brief's <i>"safe data only"</i> principle means the AI must <b>never</b> read raw. We'll build a separate, filtered dataset for it called <code>ai_safe</code>. Keep that name in mind; Season 3 reads only from it.</p>
+
+<hr/>
+
+<h3>4. The Modern Data Stack, Layer by Layer</h3>
+
+<p>"Modern data stack" is just a name for ELT built from managed cloud tools, each doing one job:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Layer</th><th>Job</th><th>Common tools</th><th>Chapter</th></tr>
+<tr><td><b>Sources</b></td><td>Where the business works</td><td>Nexudus, NetSuite, HubSpot, Excel</td><td>Season 1</td></tr>
+<tr><td><b>Extract &amp; load</b></td><td>Copy source data into the warehouse, on a schedule</td><td>Fivetran, Airbyte, custom Python</td><td>13, 14</td></tr>
+<tr><td><b>Warehouse</b></td><td>Store everything; run SQL fast</td><td>BigQuery, Snowflake, Redshift, Databricks</td><td>15</td></tr>
+<tr><td><b>Transform</b></td><td>Clean, join, define KPIs, test</td><td>dbt</td><td>16, 17</td></tr>
+<tr><td><b>BI / reporting</b></td><td>Dashboards for people</td><td>Tableau, Metabase, Looker</td><td>18</td></tr>
+<tr><td><b>Orchestration</b></td><td>Run steps in the right order, alert on failure</td><td>Fivetran schedules, dbt Cloud, Airflow, Cloud Scheduler</td><td>14, 17</td></tr>
+<tr><td><b>AI layer</b> (new)</td><td>Natural-language questions over modelled data</td><td>LLM + semantic layer</td><td>Season 3</td></tr>
+</table>
+
+<p>The big idea: each layer can be <b>swapped</b> without rebuilding the others. That's why the brief can say <i>"please do not assume Tableau is fixed"</i>, and why the <i>"source agnostic"</i> principle is achievable at all.</p>
+
+<hr/>
+
+<h3>5. Work.Life's Stack, Mapped</h3>
+
+<p>Here's the brief's own table (Section 3) drawn as a pipeline, using its own modelling labels (<i>"raw, intermediate and modelled layers"</i>):</p>
+
+<pre>
+   SOURCES                 EXTRACT &amp; LOAD     WAREHOUSE     MODELLING (dbt)            REPORTING
+   ───────                 ──────────────     ─────────     ───────────────            ─────────
+   Nexudus  (largest)  ─┐                                  raw
+   NetSuite            ─┤   Fivetran  ─┐                    │
+   ACT                 ─┼─►            ├──►  BigQuery  ──►  intermediate  ──────────►  Tableau
+   Excel               ─┤   Python    ─┘                    │                         (under review)
+   HubSpot (incoming)  ─┘                                  models
+                                                                  │
+                                                                  └──► 🤖 Phase 1 AI layer
+                                                                       (reads a controlled copy)
+
+   "Currently kept running by an external data partner." (brief, Section 3)
+</pre>
+
+<p>That's textbook ELT. Two things we <b>don't</b> know yet, from Chapter 11's question list:</p>
+<ul>
+    <li>Which sources go through <b>Fivetran</b> and which through <b>Python</b>. A reasonable guess (Chapter 07): Fivetran for NetSuite and HubSpot (standard connectors), Python for Nexudus. Confirm before designing.</li>
+    <li>Exactly how the dbt project is organised (folder names, naming conventions, tests). We'll find out on access day.</li>
+</ul>
+
+<p>In this season we build our own version of every box, so that on access day nothing in their project surprises you.</p>
+
+<hr/>
+
+<h3>6. The Layers Inside the Warehouse</h3>
+
+<p>ELT moves the "T" into the warehouse, so the warehouse itself gets layers. The names vary between teams; the ideas don't:</p>
+
+<pre>
+   ┌──────────────┐   ┌──────────────┐   ┌────────────────┐   ┌──────────────┐   ┌──────────────┐
+   │     RAW      │──►│   STAGING    │──►│  INTERMEDIATE  │──►│    MARTS     │──►│   ai_safe    │
+   │ exactly as   │   │ 1 model per  │   │ joins, month   │   │ business-    │   │ controlled   │
+   │ the source   │   │ source table │   │ spines, logic  │   │ ready facts  │   │ copy: no PII │
+   │ sent it      │   │ rename, cast │   │ reused by      │   │ &amp; dims for  │   │ read by the  │
+   │              │   │ clean        │   │ many marts     │   │ BI &amp; AI      │   │ AI only      │
+   └──────────────┘   └──────────────┘   └────────────────┘   └──────────────┘   └──────────────┘
+    loaders write       dbt                 dbt                 dbt                 dbt (views)
+    nobody edits
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Layer</th><th>Rule</th><th>Mini Work.Life example</th></tr>
+<tr><td><b>Raw</b></td><td>Never edit by hand. Everything stays as text if needed.</td><td><code>raw_nexudus.contracts</code>: <code>end_date</code> is blank (no value) for rolling contracts, and every column is text</td></tr>
+<tr><td><b>Staging</b></td><td>One model per raw table. Rename, cast types, clean. No joins.</td><td><code>stg_nexudus__contracts</code>: <code>end_date</code> becomes a real <code>DATE</code> or <code>NULL</code></td></tr>
+<tr><td><b>Intermediate</b></td><td>Reusable building blocks. Joins and business logic.</td><td><code>int_contract_months</code>: one row per contract per month it was active</td></tr>
+<tr><td><b>Marts</b></td><td>Named for the business. Stable columns. Tested.</td><td><code>fct_site_month_kpis</code>: MRR, occupancy, revenue, contribution, budget per site × month</td></tr>
+<tr><td><b>ai_safe</b></td><td>Views over marts with sensitive columns removed.</td><td><code>ai_safe.fct_site_month_kpis</code></td></tr>
+</table>
+
+<p>Why bother with so many layers? Because of the brief's <b>source agnostic</b> principle. If Nexudus is replaced, only the <b>staging</b> models for Nexudus change. Intermediate, marts, <code>ai_safe</code> and the AI on top stay exactly the same. That's the whole answer to Section 7 Q7, in one picture. We prove it in <a href="../season-3-ai-layer/chapter-28-source-agnostic.html">Chapter 28</a>.</p>
+
+<hr/>
+
+<h3>7. Batch vs Real Time</h3>
+
+<p>Should data flow every second, or once a night?</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Style</th><th>How often</th><th>Cost &amp; complexity</th><th>Good for</th></tr>
+<tr><td><b>Daily batch</b></td><td>Once a night</td><td>Lowest</td><td>Board packs, monthly KPIs, P&amp;L</td></tr>
+<tr><td><b>Micro-batch</b></td><td>Every 15 min – few hours</td><td>Low–medium</td><td>"How many members today?", pipeline views</td></tr>
+<tr><td><b>Streaming</b></td><td>Seconds</td><td>Highest</td><td>Fraud, live door alerts (not in scope)</td></tr>
+</table>
+
+<p>Look at what leadership asks: <i>"Is a given site profitable?"</i> Profit comes from NetSuite, and finance closes a month days or weeks after it ends (Chapter 09). Data that's a few hours old is more than fresh enough. Daily or a few-times-a-day batch matches the brief's <i>"cost conscious"</i> principle. Phase 2 mentions <i>"real time"</i> member reporting, but even that usually means "updated a few times a day, automatically", not streaming.</p>
+
+<p>💡 Interview tip: when someone says "real time", ask <i>"how old can the data be before the decision changes?"</i> The answer is almost always hours, not seconds.</p>
+
+<hr/>
+
+<h3>8. Lab 12.1 — Design the Mini Work.Life Warehouse</h3>
+
+<p>Before writing code, write down where everything goes. Here's the design we'll build in Chapters 13–17. Copy it into your lab notebook.</p>
+
+<p><b>Raw datasets (one per source system):</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Dataset</th><th>Tables (from <code>lab-data/</code>)</th><th>Loaded by</th></tr>
+<tr><td><code>raw_nexudus</code></td><td>sites, plans, resources, companies, members, contracts, bookings</td><td>Python (Ch 14)</td></tr>
+<tr><td><code>raw_netsuite</code></td><td>gl_lines (from <code>netsuite_gl_sep2026.csv</code>)</td><td>Python (Ch 14); Fivetran in real life</td></tr>
+<tr><td><code>raw_excel</code></td><td>capacity_budget_2026</td><td>Fivetran Google Sheets (Ch 13) or Python</td></tr>
+<tr><td><code>raw_act</code></td><td>contacts, opportunities (Act! CRM)</td><td>Python</td></tr>
+<tr><td><code>raw_act365</code></td><td>cardholders, door_events</td><td>Python</td></tr>
+</table>
+
+<p><b>Modelled datasets (built by dbt):</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Dataset</th><th>What's in it</th></tr>
+<tr><td><code>staging</code></td><td><code>stg_&lt;source&gt;__&lt;table&gt;</code> models, one per raw table</td></tr>
+<tr><td><code>intermediate</code></td><td><code>int_contract_months</code>, <code>int_company_matching</code></td></tr>
+<tr><td><code>marts</code></td><td><code>dim_site</code>, <code>dim_company</code>, <code>dim_member</code>, <code>member_xref</code>, <code>fct_contract_month</code>, <code>fct_booking</code>, <code>fct_gl</code>, <code>fct_site_month_kpis</code></td></tr>
+<tr><td><code>ai_safe</code></td><td>Views over a chosen set of marts (<code>dim_site</code>, <code>dim_company</code>, <code>fct_site_month_kpis</code>, <code>fct_contract_month</code>, <code>fct_booking</code>, <code>fct_gl</code>) with sensitive columns dropped. People-level tables (<code>dim_member</code>, <code>member_xref</code>, door events, CRM contacts) are left out entirely. The only dataset Season 3's AI may read.</td></tr>
+</table>
+
+<p><b>The questions the marts must answer</b> (from the Chapter 05 final exam). If our design can't answer these, it's wrong:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Mart</th><th>Expected (Sep 2026)</th></tr>
+<tr><td>MRR per site</td><td><code>fct_site_month_kpis</code></td><td>Soho £3,040 · Reading £2,700</td></tr>
+<tr><td>Desk occupancy</td><td><code>fct_site_month_kpis</code></td><td>Soho 6/34 = 17.6% · Reading 6/31 = 19.4%</td></tr>
+<tr><td>Recognised revenue</td><td><code>fct_gl</code> → <code>fct_site_month_kpis</code></td><td>Soho £3,475 · Reading £2,900</td></tr>
+<tr><td>Site contribution</td><td><code>fct_site_month_kpis</code></td><td>Soho −£4,175 · Reading +£450</td></tr>
+<tr><td>Revenue vs budget</td><td><code>fct_site_month_kpis</code></td><td>Soho −£5,725 · Reading −£300</td></tr>
+<tr><td>Meeting room hours</td><td><code>fct_booking</code></td><td>Soho 13 h · Reading 5 h</td></tr>
+</table>
+
+<p>Those expected values become <b>tests</b> in Chapter 17. If a model change ever makes Soho's September revenue anything other than £3,475, the build fails. That's the start of the brief's <i>"accuracy is a launch gate"</i>.</p>
+
+<hr/>
+
+<h3>9. Lab 12.2 — Open the BigQuery Sandbox and Create the Datasets</h3>
+
+<p>The <b>BigQuery sandbox</b> lets you use BigQuery without a credit card. Google's docs describe the same free monthly limits as the free tier (10 GB of storage, 1 TB of queries processed), with one catch: tables expire automatically after <b>60 days</b>. That's fine for us: our loader script (Chapter 14) can reload everything in seconds. Check Google's current sandbox page before you start, as limits can change.</p>
+
+<ol>
+    <li>Go to the Google Cloud console and open <b>BigQuery</b>. Sign in with a personal Google account.</li>
+    <li>Create a new project, e.g. <code>mini-worklife-lab</code>. Note the <b>project ID</b> (it may get a number added).</li>
+    <li>You'll see a "Sandbox" banner. That's expected.</li>
+    <li>Open a query tab and run the SQL below. <code>CREATE SCHEMA</code> creates a dataset.</li>
+</ol>
+
+<pre>
+-- Lab 12.2 · create every dataset in one go.
+-- europe-west2 = London. UK client, UK data: keep it in the UK (more in Ch 15).
+CREATE SCHEMA IF NOT EXISTS raw_nexudus  OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS raw_netsuite OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS raw_excel    OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS raw_act      OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS raw_act365   OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS staging      OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS intermediate OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS marts        OPTIONS (location = 'europe-west2');
+CREATE SCHEMA IF NOT EXISTS ai_safe      OPTIONS (location = 'europe-west2');
+</pre>
+
+<p>Refresh the explorer on the left. You should see 9 empty datasets. 🎉</p>
+
+<p>⚠️ <b>Location must match.</b> A query can't join tables in different locations. If one dataset ends up in <code>US</code> and the rest in <code>europe-west2</code>, joins will fail with a "not found in location" error. Pick one location on day one and never mix.</p>
+
+<p>⚠️ <b>Sandbox can't run DML</b> (<code>INSERT</code>, <code>UPDATE</code>, <code>MERGE</code>, <code>DELETE</code>), according to several guides; check Google's sandbox docs for the current list. That's fine for this season: we load with <b>load jobs</b> (Chapter 14) and dbt builds tables with <code>CREATE OR REPLACE</code>. Only Fivetran (Chapter 13) needs a billing-enabled project.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What's the difference between ETL and ELT, and why is ELT more common now?</b></p>
+<p><i>"ETL transforms data before loading it, usually on a separate server, and often throws the raw data away. ELT loads raw data into the warehouse first and transforms it there with SQL. Cloud warehouses made storage cheap and compute elastic, so it's easier to keep raw data, rebuild history when definitions change, and let analysts own the transformations in version-controlled SQL."</i></p>
+
+<p><b>Q: What are the risks of ELT?</b></p>
+<p><i>"Raw data includes everything, including personal and sensitive fields, so you need strict access control on raw datasets and a filtered layer for wider use. Costs can also creep up if people query raw tables carelessly. And it's easy to end up with lots of half-finished models unless you enforce layers and tests."</i></p>
+
+<p><b>Q: Why split the warehouse into raw, staging, intermediate and marts?</b></p>
+<p><i>"Each layer has one job. Raw is an untouched copy. Staging cleans one source table at a time. Intermediate holds reusable logic. Marts are the stable, business-named tables people and tools use. If a source system changes, only its staging models change, so everything downstream, including dashboards and an AI layer, keeps working."</i></p>
+
+<p><b>Q: The client says they want 'real-time' reporting. How do you respond?</b></p>
+<p><i>"I'd ask how fresh the data must be for the decision to change. For a coworking business, member counts and occupancy updated a few times a day are usually enough, and profit only changes when finance closes the month. Micro-batch is far cheaper and simpler than streaming, which matters for a cost-conscious client."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>ETL</b></td><td>Transform before loading. Raw data often lost. The old way.</td></tr>
+<tr><td><b>ELT</b></td><td>Load raw first, transform in the warehouse with SQL. Work.Life's stack is ELT.</td></tr>
+<tr><td><b>Modern data stack</b></td><td>Managed tools, one job each: Fivetran/Python → BigQuery → dbt → BI.</td></tr>
+<tr><td><b>Layers</b></td><td>raw → staging → intermediate → marts → <code>ai_safe</code>.</td></tr>
+<tr><td><b>Source agnostic</b></td><td>A source swap changes staging only. Everything above stays.</td></tr>
+<tr><td><b>Batch</b></td><td>Daily or a few times a day fits Work.Life. Streaming is overkill.</td></tr>
+<tr><td><b>Lab warehouse</b></td><td>5 raw datasets + staging, intermediate, marts, ai_safe, all in europe-west2.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Our warehouse exists, but it's empty. In Chapter 13 we meet the "L" tool Work.Life already pays for: <b>Fivetran</b>. We'll learn how connectors and syncs work, why pricing is based on "monthly active rows", and load the Excel budget sheet with a real Fivetran connector.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

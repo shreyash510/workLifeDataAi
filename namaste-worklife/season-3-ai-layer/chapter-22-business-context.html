@@ -1,0 +1,278 @@
+<h2>Chapter 22 — Business Context: Board Pack, KPIs &amp; Definitions</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>The brief asks for more than correct numbers. It asks for <i>"awareness of business context, so answers carry meaning. It should understand our board pack, our KPIs, why those KPIs matter and their current status."</i> Chapter 21 gave us <b>what</b> each KPI is. Today we give the AI <b>why it matters, what good looks like, and what's going on right now</b>, without letting any of that context turn into a source of wrong numbers.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Numbers vs meaning: the gap context fills</li>
+    <li>The five kinds of business context</li>
+    <li>The golden rule: context explains, it never supplies figures</li>
+    <li>The KPI context card (a template)</li>
+    <li>Lab 22.1: Write context cards for Soho's KPIs</li>
+    <li>The board pack: what to load and what to leave out</li>
+    <li>How context reaches the LLM (retrieval, not "paste everything")</li>
+    <li>Keeping context fresh: owners and a monthly rhythm</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Two AI answers to the same question: <i>"How is Reading doing?"</i></p>
+
+<pre>
+   ANSWER A (numbers only)
+   ───────────────────────
+   Reading, Sep 2026: revenue £2,900, contribution £450, desk occupancy 19%.
+
+   ANSWER B (numbers + context)
+   ────────────────────────────
+   Reading is roughly on plan. Revenue was £2,900, 9% below the £3,200
+   budget, and the site covered its direct costs (+£450 contribution).
+   Occupancy (19%) is close to its 20% budget. Reading is budgeted low
+   while it fills up.
+
+   Two things to watch:
+   • Upside: Ortho Robotics wants Office 202 from November (£4,200/month
+     quoted, tour done). The capacity sheet's notes
+     already flag this.
+   • Risk: GreenRoot (Office 201, £2,700/month, Reading's only office
+     tenant) renews on 31 Dec 2026, and their weekly attendance fell from
+     73% to 23% during September.
+</pre>
+
+<p>Same data. Answer A is correct and nearly useless. Answer B is what a good Ops Director would say. The difference is <b>context</b>: the budget, the note in the Excel sheet, the pipeline, the renewal date, and knowing that "low occupancy" is <i>expected</i> at Reading.</p>
+
+<hr/>
+
+<h3>2. The Five Kinds of Business Context</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Kind</th><th>Example</th><th>Where it lives</th><th>Changes</th></tr>
+<tr><td>1</td><td><b>Definitions</b></td><td>"Site contribution = recognised revenue − direct costs"</td><td>Semantic layer (Ch 21)</td><td>Rarely</td></tr>
+<tr><td>2</td><td><b>Why it matters</b></td><td>"Occupancy is the king KPI: fixed costs mean every empty desk is lost margin"</td><td>KPI context cards</td><td>Rarely</td></tr>
+<tr><td>3</td><td><b>Targets &amp; thresholds</b></td><td>"Soho budget occupancy 85%"; "alert if &gt;10% below budget"</td><td>Excel budget → warehouse</td><td>Yearly / quarterly</td></tr>
+<tr><td>4</td><td><b>Current status</b></td><td>"Soho revenue 62% below budget"</td><td><b>Computed live</b> from marts</td><td>Daily</td></tr>
+<tr><td>5</td><td><b>Narrative &amp; glossary</b></td><td>"Reading opened 2021 and is still filling"; "resident = office member"; board priorities this quarter</td><td>Board pack summaries, glossary</td><td>Monthly</td></tr>
+</table>
+
+<p>Notice row 4. "Current status" is in the brief's list ("…and their current status"), but it is <b>never</b> written into a document. It's always calculated fresh from the warehouse. A document saying "Soho occupancy is 17.6%" is correct today and wrong next month.</p>
+
+<hr/>
+
+<h3>3. The Golden Rule of Context</h3>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   CONTEXT EXPLAINS. IT NEVER SUPPLIES THE FIGURES.          │
+│                                                             │
+│   ✅ "Occupancy matters because costs are fixed."           │
+│   ✅ "Soho's 2026 budget assumes 85% desk occupancy."       │
+│      (a target, loaded as DATA from Excel into the mart)    │
+│   ❌ "Soho's occupancy is 92%." (pasted from a board pack   │
+│      PDF. Old, unverifiable, and it'll be quoted as fact.)  │
+│                                                             │
+│   Every number in an answer must come from a query.         │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>This matters most for the <b>board pack</b>. If we feed the AI last month's board pack PDF, it will happily quote last month's numbers as if they were current. So we load the board pack's <i>structure and meaning</i>: which KPIs, in what order, what the board cares about. The numbers themselves always come from the marts.</p>
+
+<hr/>
+
+<h3>4. The KPI Context Card</h3>
+
+<p>One card per KPI. It sits in the same git repo as the semantic layer and points to the metric by name. Here's the card for desk occupancy:</p>
+
+<pre>
+# context/kpis/desk_occupancy.yml
+metric: desk_occupancy                 # must exist in the semantic layer
+owner: Operations
+board_pack:
+  section: "Site performance"
+  order: 1
+why_it_matters: &gt;
+  Work.Life's costs per site (rent, rates, service charge, staff) are
+  mostly fixed. Every unsold desk is lost margin. Occupancy is the main
+  driver of whether a site is profitable.
+how_to_read: &gt;
+  Higher is better. Compare to the site's budget, not to other sites:
+  newer sites are budgeted low while they fill.
+good_looks_like: "At or above the site's monthly budget occupancy (Excel)."
+watch_out:
+  - "This is CONTRACTED occupancy (desks under contract), not physical
+     attendance. A site can be 90% contracted and half empty on Fridays."
+  - "Ops sometimes quotes office-count occupancy. Say which one you used."
+related_metrics: [mrr, site_contribution, revenue_vs_budget_pct]
+leading_indicators: [notices_given, company_attendance_trend]
+drill_down: [resource_type, resource_code, company]
+alert_rule: "below budget by more than 10 points for 2 consecutive months"
+</pre>
+
+<p>Each field has a job in the AI pipeline:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Field</th><th>Used for</th></tr>
+<tr><td><code>why_it_matters</code>, <code>how_to_read</code></td><td>Writing answers that carry meaning (brief: "why those KPIs matter")</td></tr>
+<tr><td><code>good_looks_like</code></td><td>Saying "on plan" vs "behind", always against the <b>target from the data</b></td></tr>
+<tr><td><code>watch_out</code></td><td>Stating caveats instead of being confidently wrong</td></tr>
+<tr><td><code>related_metrics</code>, <code>drill_down</code></td><td>Answering "why?" (diagnostic): where to look next</td></tr>
+<tr><td><code>leading_indicators</code></td><td>"Foresight": early signals to mention (Ch 24)</td></tr>
+<tr><td><code>alert_rule</code></td><td>Proactive alerts (Ch 24)</td></tr>
+<tr><td><code>board_pack.order</code></td><td>"What's the state of the business?" follows the board pack's order</td></tr>
+</table>
+
+<hr/>
+
+<h3>5. Lab 22.1 — Write Context Cards</h3>
+
+<p>Write cards for <code>site_contribution</code> and <code>mrr</code>. Use only what you know from Chapters 01, 02 and 09. Then test your cards with the question <i>"Is Soho profitable, and should I worry?"</i></p>
+
+<p><b>A good <code>site_contribution</code> card includes:</b></p>
+<ul>
+    <li><b>why_it_matters:</b> it's the leadership team's "is this site profitable?" (the brief's own example question)</li>
+    <li><b>watch_out:</b> "before central costs by default; always also show after central costs, because the answer can flip from yes to no" (Chapter 02)</li>
+    <li><b>watch_out:</b> "open periods can still change: late invoices, credit memos and month-end allocations (all dated 30 Sep in the lab GL) are posted at or after month end. Label any open month PROVISIONAL."</li>
+    <li><b>drill_down:</b> revenue by account (office / coworking / meeting rooms), costs by account, occupancy by resource</li>
+</ul>
+
+<p><b>A good <code>mrr</code> card includes:</b></p>
+<ul>
+    <li><b>watch_out:</b> "MRR is contracted (Nexudus). It is not recognised revenue (NetSuite). Never add them or compare them as if equal."</li>
+    <li><b>leading_indicators:</b> notices given, renewals due in 90 days, open pipeline</li>
+</ul>
+
+<p>With those cards, the AI's answer to "should I worry?" about Soho can say <i>"Yes: contribution is −£4,175 before central costs, and the gap is revenue, not costs. No Soho deals are open in the pipeline."</i> Every figure comes from queries. The judgement framing comes from the cards.</p>
+
+<hr/>
+
+<h3>6. The Board Pack: What to Load, What to Leave Out</h3>
+
+<p>We haven't seen Work.Life's board pack yet. It's on our client question list (#14 from Chapter 03). When we get it, we process it like this:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>From the board pack…</th><th>Load?</th><th>As what</th></tr>
+<tr><td>List and order of KPIs</td><td>✅</td><td>Context cards + <code>board_pack.order</code></td></tr>
+<tr><td>KPI definitions and footnotes</td><td>✅</td><td>Semantic layer + <code>watch_out</code>, agreed with owners</td></tr>
+<tr><td>Targets and budgets</td><td>✅</td><td>As <b>data</b> (Excel budget → warehouse), never as text</td></tr>
+<tr><td>Commentary themes ("Soho fill-up is the priority")</td><td>✅</td><td>Short narrative notes, dated, with an owner</td></tr>
+<tr><td>Actual figures and charts</td><td>❌</td><td>Use them as <b>golden-question answers</b> to test the AI (Ch 25), not as context</td></tr>
+<tr><td>Anything about named staff, salaries, HR</td><td>❌</td><td>People data is excluded entirely (brief §5)</td></tr>
+<tr><td>Confidential deal or lease negotiations</td><td>❌ unless approved</td><td>Ask the leadership team; default to out</td></tr>
+</table>
+
+<p>💡 Look at row 5. The board pack's figures are the best accuracy test we'll ever get. They're the numbers leadership already trusts. Feeding them in as context would hide errors. Using them as test answers <b>finds</b> errors.</p>
+
+<hr/>
+
+<h3>7. How Context Reaches the LLM</h3>
+
+<p>Work.Life's context will be small: 14 sites, maybe 20 to 30 KPI cards, a glossary and a few narrative notes. It's tempting to paste <b>all</b> of it into every prompt. Don't:</p>
+
+<ul>
+    <li><b>Cost:</b> every token in every question is paid for (Chapter 27).</li>
+    <li><b>Accuracy:</b> irrelevant context distracts the model. The Reading budget note can leak into a Soho answer.</li>
+    <li><b>Safety:</b> less context in = less that can leak out.</li>
+</ul>
+
+<p>Instead, step ② of the pipeline calls the <code>get_business_context</code> tool (Chapter 20), which <b>retrieves</b> just what's needed:</p>
+
+<pre>
+   "Is Soho profitable, and should I worry?"
+          │
+          ▼
+   ① UNDERSTAND   metrics: site_contribution (+ after central)
+          │       entity: site = Soho        period: latest closed month
+          ▼
+   ② RETRIEVE     ┌─────────────────────────────────────────────┐
+          │       │ semantic: site_contribution, recognised_    │
+          │       │           revenue, direct_costs             │
+          │       │ cards:    site_contribution (+ related:     │
+          │       │           desk_occupancy)                   │
+          │       │ glossary: "contribution", "central costs"   │
+          │       │ notes:    any dated note tagged site=Soho   │
+          │       └─────────────────────────────────────────────┘
+          │       ~1–3k tokens, not the whole library
+          ▼
+   … plan → query → answer (numbers from BigQuery, meaning from cards)
+</pre>
+
+<p>Retrieval can be simple. With 30 cards, matching on metric names, synonyms and site tags works well. A vector search (embeddings) helps once there are hundreds of documents, which is more likely in Phase 2 with renewal context packs (Chapter 30).</p>
+
+<hr/>
+
+<h3>8. The Glossary: Work.Life's Own Words</h3>
+
+<p>Every business has words that mean something specific. A starter glossary from Seasons 0 and 1:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>At Work.Life it means</th></tr>
+<tr><td>Resident</td><td>Our working assumption: a member on a private office (or dedicated) contract, vs coworking. The brief uses it in "resident revenue projection". ⚠️ Confirm Work.Life's meaning.</td></tr>
+<tr><td>Hot desk / Unlimited Coworking</td><td>Any free desk in the coworking area, Mon–Fri (plan P-HOT)</td></tr>
+<tr><td>Upgrade</td><td>Same company moves to a bigger or higher plan. <b>Not churn.</b></td></tr>
+<tr><td>Transfer</td><td>Same company moves site. <b>Not churn.</b></td></tr>
+<tr><td>Central costs</td><td>HQ costs allocated to sites (account 6000 in NetSuite)</td></tr>
+<tr><td>Closed period</td><td>A month Finance has locked in NetSuite. Its numbers are final.</td></tr>
+<tr><td>ACT</td><td>⚠️ Unconfirmed: the Act! CRM or the ACT365 door system (client question #1)</td></tr>
+</table>
+
+<p>That last row is deliberate. When something is unknown, the glossary <b>says it's unknown</b>, so the AI says so too instead of guessing.</p>
+
+<hr/>
+
+<h3>9. Keeping Context Fresh</h3>
+
+<p>Context that goes stale is worse than none, because it's wrong with authority. So each item has an owner and a rhythm:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Item</th><th>Owner</th><th>Refresh</th><th>Stale check</th></tr>
+<tr><td>Semantic layer definitions</td><td>Finance / Ops</td><td>On change (pull request)</td><td>Golden tests re-run</td></tr>
+<tr><td>KPI context cards</td><td>Metric owner</td><td>Quarterly review</td><td>Card has <code>reviewed_on</code>; flag if older than 6 months</td></tr>
+<tr><td>Targets / budget</td><td>Finance</td><td>Each budget cycle</td><td>Pipeline test: every site × month has a budget row</td></tr>
+<tr><td>Narrative notes</td><td>Leadership, with the analytics lead</td><td>After each board meeting</td><td>Notes expire after 90 days unless renewed</td></tr>
+<tr><td>Glossary</td><td>Analytics lead (with the metric owners)</td><td>As questions reveal gaps</td><td>New 👎 reasons reviewed weekly</td></tr>
+</table>
+
+<p>This also answers the brief's principle <i>"documented and handover ready"</i>. The context library <b>is</b> documentation: readable YAML in git, with owners, that a new analyst can understand without asking anyone.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: The client wants the AI to "understand our board pack". How do you do that safely?</b></p>
+<p><i>"Load its structure and meaning, not its numbers: which KPIs, their definitions, why they matter, targets as data, and the board's current themes. The figures in past board packs become accuracy test answers instead. Every number in an answer still comes from a live warehouse query."</i></p>
+
+<p><b>Q: Why not paste all the business context into every prompt?</b></p>
+<p><i>"Cost, accuracy and safety. Every token costs money, irrelevant context distracts the model and can leak into the wrong answer, and less context means less exposure. Retrieve only the cards, definitions and notes relevant to the question."</i></p>
+
+<p><b>Q: How do you stop business context from going stale?</b></p>
+<p><i>"Every item has an owner, a review date and a refresh rhythm. Narrative notes expire unless renewed, targets are loaded as data with completeness tests, and definition changes go through review with the golden tests re-run."</i></p>
+
+<p><b>Q: What's the difference between a definition and context?</b></p>
+<p><i>"A definition says how a number is calculated, and lives in the semantic layer. Context says why it matters, what good looks like, what to watch out for and where to drill next. Definitions make answers correct; context makes them useful."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>5 kinds of context</b></td><td>Definitions, why it matters, targets, current status, narrative/glossary.</td></tr>
+<tr><td><b>Golden rule</b></td><td>Context explains; queries supply every number.</td></tr>
+<tr><td><b>Current status</b></td><td>Always computed live, never written in a document.</td></tr>
+<tr><td><b>KPI cards</b></td><td>Why, how to read, good looks like, watch-outs, drill-downs, alert rule.</td></tr>
+<tr><td><b>Board pack</b></td><td>Load structure and meaning; its figures become test answers.</td></tr>
+<tr><td><b>Retrieve, don't paste</b></td><td>Only the relevant cards per question.</td></tr>
+<tr><td><b>Freshness</b></td><td>Owners, review dates, expiring notes.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>We have all the pieces: the ladder, the text-to-SQL pipeline, the semantic layer and the context library. In <b>Chapter 23</b> ⭐ we put them together into <b>the Phase 1 architecture on BigQuery</b>, the one diagram that answers the brief's first question: "Can you build it, and how?"</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

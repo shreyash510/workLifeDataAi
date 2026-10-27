@@ -1,0 +1,332 @@
+<h2>Chapter 39 — Every Integration at Work.Life: What Flows Where, and Why</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Season 1 we opened each system one at a time. But a business doesn't run on separate systems. It runs on the <b>connections between them</b>. A HubSpot deal turns into a Nexudus contract. The contract unlocks a door in ACT365. The monthly invoice becomes revenue in NetSuite. All of it lands in BigQuery, and one day the AI reads it.</p>
+
+<p>When something breaks on this project, it will almost always break <b>between</b> two systems, not inside one. So this chapter is the complete map: every integration, what data it carries, which direction, how often, who owns it, what typically goes wrong, and, most importantly, <b>how sure we are that it even exists</b>.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>The confidence labels (confirmed, documented, inferred, unknown)</li>
+    <li>The whole picture in one diagram</li>
+    <li>The operational integrations (systems talking to each other)</li>
+    <li>The analytical integrations (systems feeding the warehouse)</li>
+    <li>The future integrations (the AI layer)</li>
+    <li>The integration that must never exist</li>
+    <li>The integration register: one table for everything</li>
+    <li>What breaks: failure modes and how you'd spot them</li>
+    <li>The questions this map leaves open</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Imagine a Monday where the leadership dashboard says Reading's revenue dropped 40% last month. Panic. 😱 Here are four completely different causes, each in a different integration:</p>
+
+<ul>
+    <li>Someone mapped a new Nexudus product to the wrong <b>financial account</b>, so revenue landed in the wrong P&amp;L line in NetSuite.</li>
+    <li>The <b>Fivetran NetSuite</b> sync failed on Friday, so the warehouse has half a month.</li>
+    <li>A <b>HubSpot ↔ Nexudus</b> sync rule renamed a team, and the warehouse matching broke, so GreenRoot's revenue now sits under "unknown company".</li>
+    <li>Nothing broke. September just isn't <b>closed</b> in NetSuite yet.</li>
+</ul>
+
+<p>Same symptom, four causes, four owners. If you know the map, you find the right one in ten minutes. If you don't, you lose a day.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   For every integration, know 6 things:                     │
+│     WHAT data · WHICH direction · HOW OFTEN ·               │
+│     WHO owns it · WHAT breaks · HOW SURE are we it exists   │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. The Confidence Labels</h3>
+
+<p>This is the most important habit in this chapter. Never present a guess as a fact. Every integration gets one label:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Label</th><th>Meaning</th><th>Where it comes from</th></tr>
+<tr><td>✅ <b>Confirmed</b></td><td>The client or their partner said so in writing</td><td>The scoping brief</td></tr>
+<tr><td>📘 <b>Documented</b></td><td>The vendor offers it, but we don't know if Work.Life uses it</td><td>Nexudus, NetSuite, HubSpot, Fivetran docs</td></tr>
+<tr><td>🟡 <b>Inferred</b></td><td>A sensible guess from the evidence</td><td>Our reasoning in Season 1</td></tr>
+<tr><td>❓ <b>Unknown</b></td><td>We can't tell. Ask.</td><td>The client questions list</td></tr>
+</table>
+
+<p>In a client call, "We believe Nexudus feeds NetSuite through a connector, but we'd like to confirm" sounds professional. "Nexudus feeds NetSuite through a connector" sounds confident, until it's wrong. 🙂</p>
+
+<hr/>
+
+<h3>3. The Whole Picture</h3>
+
+<pre>
+                         OPERATIONAL WORLD (runs the business)
+   ┌──────────┐  I1 forms   ┌──────────┐  I2 contacts↔customers   ┌──────────┐
+   │ WEBSITE  │────────────►│ HUBSPOT  │◄────────────────────────►│ NEXUDUS  │
+   │ (tours,  │             │  (CRM)   │  companies↔teams,        │ (members,│
+   │ sign-up) │─────────────┼──────────┼─ deals→opportunities ───►│ contracts│
+   └──────────┘  I3 online  └──────────┘                          │ bookings,│
+                 sign-up/booking ────────────────────────────────►│ billing) │
+                                                                  └──┬───┬───┘
+                    I4 access groups  ┌──────────┐                   │   │ I6 invoices,
+                ◄─────────────────────│  ACT365? │◄──────────────────┘   │    credit notes
+                  I5 door events →    │ (doors)  │                       ▼
+                     check-ins ──────►└──────────┘                 ┌──────────┐
+                                                                   │ NETSUITE │◄── supplier bills,
+                    ┌──────────┐                                   │ (finance)│    journals (manual)
+                    │  ACT! ?  │ legacy CRM history                └──────────┘
+                    └──────────┘                                   (older ledger history? ask)
+                    ┌──────────┐
+                    │  EXCEL   │ budgets, capacity (people maintain it)
+                    └──────────┘
+
+   ═══════════════════════════════════════════════════════════════════════════
+                         ANALYTICAL WORLD (understands the business)
+
+   Nexudus ──I7 Python / native sync──┐
+   NetSuite ──I8 Fivetran─────────────┤
+   HubSpot ──I9 Fivetran──────────────┤
+   ACT365 / Act! ──I10────────────────┼──► BIGQUERY raw ──I13 dbt──► marts ──I14──► TABLEAU
+   Excel ──I11────────────────────────┤                               │
+   Older history ──I12 (if any)───────┘                               │
+                                                                      ▼  I15 (Phase 1, to build)
+                                                          ai_safe copy ──► 🤖 AI layer ──► leadership
+                                                                                (SSO)
+
+   🚫 HR system ──── NEVER CONNECTED (brief: "out of scope entirely")
+</pre>
+
+<hr/>
+
+<h3>4. Operational Integrations (Systems Talking to Each Other)</h3>
+
+<p>These run the business day to day. They aren't Phase 1's job to build, but every number in the warehouse depends on them.</p>
+
+<h4>I1 · Website → HubSpot (enquiries)</h4>
+<table border="1" cellpadding="10">
+<tr><th>What</th><td>Tour bookings, "contact us" forms, marketing source (e.g. LinkedIn ad)</td></tr>
+<tr><th>Direction</th><td>Website → HubSpot (creates a contact, maybe a deal and a task)</td></tr>
+<tr><th>How often</th><td>Real time, per form</td></tr>
+<tr><th>Owner</th><td>Marketing / sales</td></tr>
+<tr><th>Confidence</th><td>🟡 Inferred. HubSpot "is being integrated" (brief); forms are its standard way in. How enquiries arrive today is ❓.</td></tr>
+<tr><th>Why it matters</th><td>Lead source, conversion rate, pipeline. Leading indicators for "foresight".</td></tr>
+</table>
+
+<h4>I2 · HubSpot ↔ Nexudus (members and deals)</h4>
+<table border="1" cellpadding="10">
+<tr><th>What</th><td>Contacts ↔ customers, companies ↔ teams (two-way); deals → opportunities (HubSpot → Nexudus)</td></tr>
+<tr><th>Direction</th><td>Mostly two-way, with field mapping and "only if" rules</td></tr>
+<tr><th>How often</th><td>Near real time (sync)</td></tr>
+<tr><th>Owner</th><td>Ops &amp; IT Systems / sales ops (ask)</td></tr>
+<tr><th>Confidence</th><td>📘 Documented: Nexudus offers a native HubSpot integration (listed at £50/location/month). ✅ Confirmed that HubSpot "is being integrated". Which fields and rules are live is ❓ (client question 7).</td></tr>
+<tr><th>What breaks</th><td>Duplicates (different emails), merged HubSpot IDs disappearing, edit loops when both sides change the same field, unmapped fields silently not syncing.</td></tr>
+<tr><th>Why it matters</th><td>This is the "source of truth is moving" integration. Source-agnostic design exists because of it.</td></tr>
+</table>
+
+<h4>I3 · Website / member app → Nexudus (self-serve)</h4>
+<table border="1" cellpadding="10">
+<tr><th>What</th><td>Online sign-ups, day passes, meeting room bookings, invoice payments</td></tr>
+<tr><th>Direction</th><td>Member → Nexudus member portal</td></tr>
+<tr><th>Owner</th><td>Ops / community</td></tr>
+<tr><th>Confidence</th><td>📘 Documented: Nexudus has a member portal and app. 🟡 Inferred that Work.Life's public "book online" uses it.</td></tr>
+<tr><th>Why it matters</th><td>Self-serve rows are clean; staff-entered rows are where odd cases live (Ch 07).</td></tr>
+</table>
+
+<h4>I4 · Nexudus → ACT365 (who may open which door)</h4>
+<table border="1" cellpadding="10">
+<tr><th>What</th><td>Adds/removes members to ACT365 cardholder groups when contracts, passes or bookings start and end</td></tr>
+<tr><th>Direction</th><td>Nexudus → ACT365</td></tr>
+<tr><th>How often</th><td>Event driven</td></tr>
+<tr><th>Owner</th><td>Ops / facilities / IT</td></tr>
+<tr><th>Confidence</th><td>📘 Documented by Nexudus. Whether Work.Life's "ACT" is ACT365 at all is ❓ (client question 1).</td></tr>
+<tr><th>What breaks</th><td>A leaver keeps access (security issue), or a new member can't get in on day one (service issue). Lab: Daniel's old card was correctly denied on 2 Sep.</td></tr>
+</table>
+
+<h4>I5 · ACT365 → Nexudus (door events become check-ins)</h4>
+<table border="1" cellpadding="10">
+<tr><th>What</th><td>Door taps → Nexudus check-ins (optional feature)</td></tr>
+<tr><th>Direction</th><td>ACT365 → Nexudus</td></tr>
+<tr><th>Confidence</th><td>📘 Documented as optional. Used or not: ❓ (client question 6).</td></tr>
+<tr><th>Why it matters</th><td>Physical occupancy, the best early churn signal (GreenRoot 73% → 23%). Also personal data: aggregate only.</td></tr>
+</table>
+
+<h4>I6 · Nexudus → NetSuite (invoices become revenue)</h4>
+<table border="1" cellpadding="10">
+<tr><th>What</th><td>Invoices, credit notes, maybe payments, mapped through Nexudus <b>financial accounts</b> to NetSuite GL accounts</td></tr>
+<tr><th>Direction</th><td>Nexudus → NetSuite</td></tr>
+<tr><th>Owner</th><td>Finance</td></tr>
+<tr><th>Confidence</th><td>❓ Unknown method. Nexudus's docs list accounting integrations (e.g. Xero, QuickBooks); how Work.Life links Nexudus to NetSuite is not stated. It could be a connector, middleware or a scheduled import (client question 3).</td></tr>
+<tr><th>What breaks</th><td>A product mapped to the wrong account → revenue in the wrong P&amp;L line. Timing differences → invoiced ≠ recognised. Credit notes raised directly in NetSuite (lab: CN-2609-01, −£90) never appear in Nexudus.</td></tr>
+<tr><th>Why it matters</th><td>This is the bridge between operations and money. Every "why doesn't Nexudus match finance?" question lives here.</td></tr>
+</table>
+
+<h4>I6b · Manual inputs to NetSuite</h4>
+<p>Not an integration, but treat it like one: <b>supplier bills</b> (rent, rates, cleaning, energy) and <b>journal entries</b> (accruals, allocations, corrections) are entered by finance directly. They exist only in NetSuite. That's why site costs and profit can only ever come from NetSuite.</p>
+
+<h4>I-Excel · People → Excel</h4>
+<p>Budgets, capacity and probably lease details are typed into spreadsheets by finance and ops. ✅ Excel is confirmed as a source (brief). The "integration" is a person. That makes it the least reliable feed: no history, no validation, a renamed tab breaks everything (Ch 06).</p>
+
+<h4>Act! (if it's the CRM)</h4>
+<p>If "ACT" means Act!, it's the legacy sales CRM that HubSpot is likely replacing. Its long-term role is a <b>frozen archive</b> of past deals and lost reasons, migrated once (Ch 08). ❓ Which ACT is still the first question to ask.</p>
+
+<hr/>
+
+<h3>5. Analytical Integrations (Feeding the Warehouse)</h3>
+
+<p>✅ Confirmed by the brief: data from the source systems is centralised in BigQuery through <b>Fivetran and Python</b>, modelled in <b>dbt</b> (raw → intermediate → modelled), and shown in <b>Tableau</b>. ✅ It is "kept running by an external data partner" (brief). Which tool loads which source is not written down anywhere we've seen.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Feed</th><th>Likely method</th><th>Confidence</th><th>Watch out for</th></tr>
+<tr><td>I7</td><td>Nexudus → BigQuery</td><td>Python on the REST API, or Nexudus's native BigQuery integration (listed at £100/location/month)</td><td>🟡 Inferred (client question 2)</td><td>Summary vs full records, deletes missed by incremental loads, CancelledBookings, old names, UTC times</td></tr>
+<tr><td>I8</td><td>NetSuite → BigQuery</td><td>Fivetran NetSuite connector (via SuiteAnalytics Connect)</td><td>🟡 Inferred</td><td>Posting lines only, period vs date, which segment is "site", Fivetran MAR cost</td></tr>
+<tr><td>I9</td><td>HubSpot → BigQuery</td><td>Fivetran HubSpot connector</td><td>🟡 Inferred (HubSpot is new)</td><td>Merged IDs, dropdown values vs labels, many-to-many associations</td></tr>
+<tr><td>I10</td><td>ACT → BigQuery</td><td>Depends which ACT</td><td>❓ Unknown</td><td>Door events = personal data; CRM = frozen history</td></tr>
+<tr><td>I11</td><td>Excel → BigQuery</td><td>File upload, Google Sheets, or script</td><td>❓ Unknown</td><td>Renamed columns, typed site names, no change history</td></tr>
+<tr><td>I12</td><td>Older finance history → warehouse</td><td>One-off, only if NetSuite replaced an earlier ledger</td><td>❓ Unknown (client question 5)</td><td>Different account codes and site tagging before/after cut-over</td></tr>
+<tr><td>I13</td><td>raw → marts (dbt)</td><td>dbt models: raw → intermediate → modelled</td><td>✅ Confirmed (brief)</td><td>Grain errors, missing tests, definitions hidden in SQL</td></tr>
+<tr><td>I14</td><td>marts → Tableau</td><td>Tableau dashboards</td><td>✅ Confirmed; tool under review (brief)</td><td>"Largely static and often rebuilt manually" (brief)</td></tr>
+</table>
+
+<p><b>How often does the warehouse refresh?</b> ❓ Not stated. It matters a lot: "what's the state of the business right now?" means something different if data is from last night or last week. Add it to the questions list.</p>
+
+<hr/>
+
+<h3>6. Future Integrations (The AI Layer, Phase 1)</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Integration</th><th>Design (from Season 3)</th></tr>
+<tr><td>I15</td><td>marts → <code>ai_safe</code></td><td>A controlled copy of approved, tested marts. Sensitive columns removed. Refreshed after dbt tests pass.</td></tr>
+<tr><td>I16</td><td><code>ai_safe</code> → AI layer</td><td>The AI's service account can read only <code>ai_safe</code>. Questions go through the semantic layer first, SQL second.</td></tr>
+<tr><td>I17</td><td>Business context → AI layer</td><td>Board pack, KPI definitions, targets, closed periods, loaded as documented context.</td></tr>
+<tr><td>I18</td><td>Work.Life accounts → AI layer</td><td>SSO with Work.Life's identity provider (which one is ❓, client question 15).</td></tr>
+<tr><td>I19</td><td>AI layer → leaders (push)</td><td>Proactive alerts and digests by email/Slack/Teams (channel ❓, client question 18).</td></tr>
+</table>
+
+<p>Notice what's <b>not</b> on this list: the AI never connects to Nexudus, NetSuite, HubSpot or any source directly. Every arrow into the AI comes from the warehouse copy or from documented context. That single design choice delivers three of the eight principles at once: warehouse first, source agnostic and safe data only.</p>
+
+<hr/>
+
+<h3>7. The Integration That Must Never Exist</h3>
+
+<pre>
+   HR SYSTEM  ─────✕─────  anything in this project
+
+   Brief: "Our people and HR data must not be connected to this capability.
+           It is served by a separate HR system and is out of scope entirely."
+</pre>
+
+<p>Watch for <b>indirect</b> routes too:</p>
+<ul>
+    <li><b>Staff door events</b> in ACT365 are people data. Filter staff cardholders out before anything leaves the raw layer.</li>
+    <li><b>Payroll journals</b> in NetSuite. Site staff cost as a total (account 5200 in the lab) is fine; per-person salary lines are not.</li>
+    <li><b>Staff test accounts</b> in Nexudus. Exclude them from member counts (client question 9), and never treat them as HR records.</li>
+</ul>
+
+<hr/>
+
+<h3>8. The Integration Register</h3>
+
+<p>Keep this table up to date. On the real project it becomes part of the handover documentation (Ch 36).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>From → To</th><th>Data</th><th>Dir</th><th>Owner (likely)</th><th>Confidence</th></tr>
+<tr><td>I1</td><td>Website → HubSpot</td><td>Enquiries, tours</td><td>→</td><td>Marketing</td><td>🟡</td></tr>
+<tr><td>I2</td><td>HubSpot ↔ Nexudus</td><td>Contacts, companies, deals</td><td>↔</td><td>Ops &amp; IT / sales ops</td><td>📘 / ❓ scope</td></tr>
+<tr><td>I3</td><td>Members → Nexudus</td><td>Sign-ups, bookings, payments</td><td>→</td><td>Ops</td><td>📘 🟡</td></tr>
+<tr><td>I4</td><td>Nexudus → ACT365</td><td>Access groups</td><td>→</td><td>Ops / IT</td><td>📘 ❓ which ACT</td></tr>
+<tr><td>I5</td><td>ACT365 → Nexudus</td><td>Check-ins</td><td>→</td><td>Ops / IT</td><td>📘 ❓ in use</td></tr>
+<tr><td>I6</td><td>Nexudus → NetSuite</td><td>Invoices, credit notes</td><td>→</td><td>Finance</td><td>❓ method</td></tr>
+<tr><td>I7</td><td>Nexudus → BigQuery</td><td>All operational entities</td><td>→</td><td>Data partner</td><td>🟡</td></tr>
+<tr><td>I8</td><td>NetSuite → BigQuery</td><td>GL, customers, vendors, periods</td><td>→</td><td>Data partner</td><td>🟡</td></tr>
+<tr><td>I9</td><td>HubSpot → BigQuery</td><td>CRM objects</td><td>→</td><td>Data partner?</td><td>🟡</td></tr>
+<tr><td>I10</td><td>ACT → BigQuery</td><td>Door events or CRM history</td><td>→</td><td>Data partner</td><td>✅ source / ❓ what</td></tr>
+<tr><td>I11</td><td>Excel → BigQuery</td><td>Budget, capacity</td><td>→</td><td>Finance / ops + data partner</td><td>✅ source / ❓ how</td></tr>
+<tr><td>I12</td><td>Older ledger → warehouse</td><td>Pre-NetSuite history (if any)</td><td>→</td><td>Finance + data partner</td><td>❓</td></tr>
+<tr><td>I13</td><td>raw → marts</td><td>dbt models</td><td>→</td><td>Data partner (+ client analysts)</td><td>✅</td></tr>
+<tr><td>I14</td><td>marts → Tableau</td><td>Dashboards</td><td>→</td><td>Client reporting team (ask)</td><td>✅ (under review)</td></tr>
+<tr><td>I15–19</td><td>AI layer</td><td>See section 6</td><td>→</td><td>Us (to build)</td><td>Design</td></tr>
+<tr><td>✕</td><td>HR → anything</td><td>People data</td><td>✕</td><td>n/a</td><td>✅ never</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. What Breaks: Failure Modes and How You'd Spot Them</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Symptom</th><th>Likely integration</th><th>How to spot it</th></tr>
+<tr><td>A whole day/week missing in the warehouse</td><td>I7–I9 (sync failure)</td><td>dbt source freshness test; row counts per day</td></tr>
+<tr><td>Revenue in the wrong P&amp;L line</td><td>I6 (financial account mapping)</td><td>Monthly Nexudus vs NetSuite reconciliation by account</td></tr>
+<tr><td>Nexudus revenue ≠ NetSuite revenue</td><td>I6 + manual NetSuite entries</td><td>Reconciliation that explains every difference (Ch 09)</td></tr>
+<tr><td>Duplicate members</td><td>I2 (sync), I9 (merges)</td><td>Uniqueness test on member_key; duplicate emails per domain</td></tr>
+<tr><td>A company's revenue under "unknown"</td><td>I2 renames, crosswalk gaps</td><td>Relationship test: every fact row has a company_key</td></tr>
+<tr><td>Member count too high</td><td>Test/staff accounts; lifecycle stage used instead of contracts</td><td>Exclusion list; derive status from contracts</td></tr>
+<tr><td>Cancelled bookings counted as revenue/usage</td><td>I7 (CancelledBookings not loaded)</td><td>Compare to Nexudus booking report</td></tr>
+<tr><td>Morning peak at 7am instead of 8am</td><td>Any feed with UTC times</td><td>Convert once in staging; test a known event</td></tr>
+<tr><td>Leaver still opens doors</td><td>I4</td><td>Access-denied/granted report vs ended contracts</td></tr>
+<tr><td>3-year trend has a cliff</td><td>I12 (a ledger change, if there was one)</td><td>Mark the cut-over; map old accounts to new</td></tr>
+<tr><td>Numbers changed after the AI answered</td><td>Nothing broke: open period</td><td>Closed-period flag; "provisional" labels</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. The Questions This Map Leaves Open</h3>
+
+<p>Most of these are already on the list from Chapters 03 and 11 (numbers in brackets). Three are new:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Question</th><th>Integration</th></tr>
+<tr><td>(1)</td><td>Which ACT is it, and what flows from it?</td><td>I4, I5, I10</td></tr>
+<tr><td>(2)</td><td>Python API or native BigQuery sync for Nexudus?</td><td>I7</td></tr>
+<tr><td>(3)</td><td>How do Nexudus invoices reach NetSuite?</td><td>I6</td></tr>
+<tr><td>(5)</td><td>Was there an earlier finance system before NetSuite, and where does that history live?</td><td>I12</td></tr>
+<tr><td>(6)</td><td>Check-ins or raw door events for physical occupancy?</td><td>I5, I10</td></tr>
+<tr><td>(7)</td><td>Which HubSpot ↔ Nexudus fields sync, which way, who owns them?</td><td>I2</td></tr>
+<tr><td>23 (new)</td><td>How often does each feed refresh, and is there a freshness alert today?</td><td>I7–I13</td></tr>
+<tr><td>24 (new)</td><td>How do website enquiries reach the CRM today?</td><td>I1</td></tr>
+<tr><td>25 (new)</td><td>Who gets told when a sync fails, and who fixes it?</td><td>All</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: The finance and membership systems disagree on revenue. Where do you look first?</b></p>
+<p><i>"At the integration between them: how invoices flow from Nexudus to NetSuite and how products map to GL accounts. Then at entries that exist only in finance (credit memos, journals, deferrals) and at period timing. I'd build a reconciliation that explains every pound of difference."</i></p>
+
+<p><b>Q: How do you document integrations you didn't build and can't fully see?</b></p>
+<p><i>"An integration register: source, target, data, direction, frequency, owner, failure modes, and a confidence label for each fact (confirmed, vendor-documented, inferred or unknown). The unknowns become client questions. Never present an inference as a fact."</i></p>
+
+<p><b>Q: Why shouldn't the AI layer connect to source systems directly?</b></p>
+<p><i>"It would break warehouse-first, safe-data and source-agnostic all at once. Sources have personal data, unmodelled data and different definitions. The AI should only read a tested, controlled copy of business-shaped models, so swapping a source doesn't touch it."</i></p>
+
+<p><b>Q: How would you notice a broken sync before the leadership team does?</b></p>
+<p><i>"Freshness tests on every source in dbt, row-count checks per day, a monthly reconciliation between systems, and alerts to a named owner. The AI should also refuse or warn when the data it needs is stale."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Breaks happen between systems</b></td><td>Know every arrow, not just every box.</td></tr>
+<tr><td><b>Confidence labels</b></td><td>Confirmed / documented / inferred / unknown. Never blur them.</td></tr>
+<tr><td><b>HubSpot ↔ Nexudus</b></td><td>The integration that moves the source of truth.</td></tr>
+<tr><td><b>Nexudus → NetSuite</b></td><td>The money bridge. Method unknown. Financial accounts matter.</td></tr>
+<tr><td><b>Warehouse feeds</b></td><td>Fivetran + Python into BigQuery, dbt, Tableau. Which tool per source: ask.</td></tr>
+<tr><td><b>AI layer</b></td><td>Reads only <code>ai_safe</code> and documented context.</td></tr>
+<tr><td><b>HR</b></td><td>Never connected, including indirect routes.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>You know the words and the wiring. In Chapter 40 we put it all in motion: we follow <b>one month at Work.Life</b>, day by day, from a new enquiry to the board pack, and watch every system and integration do its job.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

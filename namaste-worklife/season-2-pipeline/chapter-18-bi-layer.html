@@ -1,0 +1,265 @@
+<h2>Chapter 18 — The BI Layer: Tableau vs Metabase vs Looker</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>We've reached the last box of the pipeline: <b>reporting</b>. Work.Life's brief says their descriptive reporting runs on <b>Tableau</b>, and adds one important line: <i>"A separate review of our BI and reporting tooling is running in parallel, so please do not assume Tableau is fixed."</i></p>
+
+<p>So in this chapter we do two things. First, we compare the main BI options <b>on their merits</b> against what this client actually needs: Tableau, Metabase, and Google's Looker family. Second, and more important for our project, we design things so that <b>whatever the BI review decides, the AI layer doesn't care</b>. Then we connect a free BI tool to our marts and build a small leadership dashboard.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What a BI tool actually does</li>
+    <li>The options: Tableau, Metabase, Looker, Looker Studio</li>
+    <li>Comparing them against the brief</li>
+    <li>Where definitions should live</li>
+    <li>The ratio trap: why occupancy belongs in the model</li>
+    <li>Lab 18.1: A leadership dashboard in Looker Studio</li>
+    <li>Lab 18.2 (optional): Metabase on your laptop</li>
+    <li>BI and AI side by side</li>
+    <li>If the review decides to switch: a migration checklist</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>A leadership meeting (made-up scenario). One director shows a dashboard: <i>"Group desk occupancy is 18.5%."</i> Another has a different report: <i>"It's 18.46%."</i> Small difference, big argument. Who's wrong?</p>
+
+<p>Both used our lab's September numbers. The first dashboard <b>averaged</b> the two sites' percentages: (17.6% + 19.4%) ÷ 2. The second divided total desks by total capacity: (6 + 6) ÷ (34 + 31). Same data, different formula, written inside two different BI tools by two different people.</p>
+
+<p>Here the gap is tiny. With 14 sites of very different sizes, it can be many points, and the conversation stops being about the business. Chapter 02's rule #1 again: <b>every KPI needs ONE definition</b>. This chapter is about making sure the BI tool <b>uses</b> that definition instead of inventing its own.</p>
+
+<hr/>
+
+<h3>2. What a BI Tool Actually Does</h3>
+
+<pre>
+   ┌───────────────┐      ┌──────────────────────────────────────┐      ┌─────────────┐
+   │   BIGQUERY    │      │               BI TOOL                │      │   PEOPLE    │
+   │   marts       │─────►│ 1. connection (service account)      │─────►│ dashboards  │
+   │               │ SQL  │ 2. data model / semantic layer       │      │ scheduled   │
+   │               │◄─────│ 3. questions, charts, dashboards     │      │ emails,     │
+   └───────────────┘      │ 4. permissions, sharing, schedules   │      │ alerts      │
+                          └──────────────────────────────────────┘      └─────────────┘
+</pre>
+
+<p>Step 2 is the one people forget. Most BI tools let you define calculated fields, joins and metrics <b>inside the tool</b>. That's convenient, and it's exactly how the same KPI ends up with three definitions. Keep it in mind for every option below.</p>
+
+<hr/>
+
+<h3>3. The Options</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Tool</th><th>Who makes it</th><th>In one line</th><th>How it's sold (check current pricing)</th></tr>
+<tr><td><b>Tableau</b></td><td>Salesforce</td><td>Powerful visual analytics; great for analysts building rich, interactive dashboards</td><td>Per-user licences by role (e.g. creators, explorers, viewers); cloud or self-hosted server</td></tr>
+<tr><td><b>Metabase</b></td><td>Metabase (open source core)</td><td>Simple "ask a question" interface aimed at non-technical users; SQL when you need it</td><td>Open-source edition free to self-host; paid cloud and enterprise plans</td></tr>
+<tr><td><b>Looker</b></td><td>Google Cloud</td><td>Enterprise BI built around <b>LookML</b>, a code-based semantic layer where metrics are defined once</td><td>Enterprise contracts, quote-based</td></tr>
+<tr><td><b>Looker Studio</b></td><td>Google</td><td>Free, browser-based dashboards with a native BigQuery connector (formerly Data Studio)</td><td>Free; a paid Pro tier adds team management</td></tr>
+</table>
+
+<p>Others exist (Power BI, Superset, Lightdash, Hex...). The comparison method below works for any of them.</p>
+
+<hr/>
+
+<h3>4. Comparing Them Against the Brief</h3>
+
+<p>Don't compare BI tools on feature lists. Compare them on <b>this client's</b> principles. Here's how the four look against what Work.Life told us (simplified, and your own trial should confirm each cell):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>What the brief cares about</th><th>Tableau</th><th>Metabase</th><th>Looker</th><th>Looker Studio</th></tr>
+<tr><td><b>"Not a data business"</b>: easy for non-analysts</td><td>Viewers fine; building needs skill</td><td>Designed for self-serve questions</td><td>Users explore governed models; building needs LookML skills</td><td>Easy to build simple dashboards</td></tr>
+<tr><td><b>"Cost conscious"</b></td><td>Per-user licences add up across a team</td><td>Free self-hosted (you run it) or paid cloud</td><td>Typically the most expensive of the four</td><td>Free</td></tr>
+<tr><td><b>One definition per KPI</b></td><td>Calculated fields per workbook (risk of drift); has semantic features</td><td>Saved models/metrics; SQL questions can drift</td><td>Strongest: LookML is a central, version-controlled semantic layer</td><td>Calculated fields per report (risk of drift)</td></tr>
+<tr><td><b>BigQuery fit</b></td><td>Good connector</td><td>Good connector</td><td>Native Google Cloud product</td><td>Native, simplest setup</td></tr>
+<tr><td><b>"Secure by design"</b>: Work.Life accounts only</td><td>SSO available</td><td>SSO on paid tiers; self-hosting means you secure the server</td><td>Google Cloud identity, SSO</td><td>Google accounts; sharing is easy (sometimes too easy)</td></tr>
+<tr><td><b>"Documented, handover ready"</b></td><td>Workbooks in a server, not in Git by default</td><td>Config in the app; some features export as code</td><td>LookML lives in Git</td><td>Reports in Google Drive</td></tr>
+<tr><td><b>Phase 2 "wider team" access</b></td><td>More licences</td><td>Cheap to widen</td><td>Strong row-level permissions</td><td>Fine for simple sharing</td></tr>
+</table>
+
+<p>No tool wins every row. And notice: the brief didn't ask <b>us</b> to choose the BI tool. It's a separate review. Our job is to make sure the AI layer works whatever they choose, and to offer honest input to the review if asked.</p>
+
+<hr/>
+
+<h3>5. Where Definitions Should Live</h3>
+
+<p>There are three places a KPI definition could live:</p>
+
+<pre>
+   OPTION 1: in the BI tool          OPTION 2: in dbt marts           OPTION 3: in a semantic layer
+   ────────────────────────          ──────────────────────           ─────────────────────────────
+   Tableau calc field:               fct_site_month_kpis has          metric "desk_occupancy" =
+   desk occupancy =                  desks_contracted and             sum(desks_contracted) /
+   SUM(desks)/SUM(capacity)          sellable_desks columns           sum(sellable_desks)
+                                                                      defined once, served to
+   ✗ AI can't see it                 ✓ BI and AI read the same        BI tools AND the AI
+   ✗ lost if you switch tools          columns                        ✓ the best of both
+   ✗ copied per workbook             ~ ratios still need care         (Season 3, Ch 21)
+</pre>
+
+<p>For Work.Life, the rule we'll follow:</p>
+<ul>
+    <li><b>Business logic lives in dbt</b> (Chapters 16–17): what counts as active, desks per plan, which accounts are site costs. Tested, documented, in Git.</li>
+    <li><b>Metric formulas</b> (ratios, sums over time) live in a <b>semantic layer</b> that both the BI tool and the AI can read. That's <a href="../season-3-ai-layer/chapter-21-semantic-layer.html">Chapter 21</a>.</li>
+    <li><b>The BI tool stays thin</b>: charts and layout, minimal calculated fields. Then switching BI tools is a rebuild of visuals, not of definitions.</li>
+</ul>
+
+<hr/>
+
+<h3>6. The Ratio Trap: Why Occupancy Belongs in the Model</h3>
+
+<p>The story in section 1 is the classic <b>ratio trap</b>: you can't add or average percentages. You must add the <b>numerator and denominator</b> separately, then divide. That's why our mart stores <code>desks_contracted</code> and <code>sellable_desks</code>, not just <code>desk_occupancy</code>.</p>
+
+<pre>
+-- WRONG: average of site percentages
+select avg(desk_occupancy) as group_occupancy
+from marts.fct_site_month_kpis
+where month_start = '2026-09-01';                 -- (0.1765 + 0.1935) / 2 = 0.1850
+
+-- RIGHT: total desks / total capacity
+select safe_divide(sum(desks_contracted), sum(sellable_desks)) as group_occupancy
+from marts.fct_site_month_kpis
+where month_start = '2026-09-01';                 -- 12 / 65 = 0.1846
+</pre>
+
+<p>With two similar-sized lab sites the difference is tiny. Here's a <b>made-up</b> example of how bad it gets with uneven sites: a big site with 300 desks at 90% plus a small one with 20 desks at 20%. Average of percentages: 55%. True occupancy: (270 + 4) ÷ 320 = <b>85.6%</b>. A thirty-point error from one innocent <code>AVG</code>.</p>
+
+<p>An AI writing SQL makes this exact mistake easily. In Season 3 the semantic layer defines <code>desk_occupancy</code> once, as sum ÷ sum, so neither the BI tool nor the AI ever writes <code>AVG(desk_occupancy)</code>.</p>
+
+<hr/>
+
+<h3>7. Lab 18.1 — A Leadership Dashboard in Looker Studio</h3>
+
+<p>We use Looker Studio for the lab because it's free and connects straight to BigQuery, including the sandbox. This is about the <b>method</b>, not a tool recommendation.</p>
+
+<ol>
+    <li>Open <b>Looker Studio</b> with the same Google account as your BigQuery project. Create a blank report.</li>
+    <li><b>Add data → BigQuery</b> → your project → <code>marts</code> → <code>fct_site_month_kpis</code>.</li>
+    <li>Add a <b>date range control</b> on <code>month_start</code>, and a <b>drop-down control</b> on <code>site_code</code>.</li>
+    <li>Add <b>scorecards</b> for <code>mrr_gbp</code>, <code>revenue_gbp</code>, <code>contribution_gbp</code> (aggregation: Sum).</li>
+    <li>For occupancy, <b>don't</b> drag in <code>desk_occupancy</code>. Create a calculated field <code>SUM(desks_contracted) / SUM(sellable_desks)</code> and format it as a percentage. (Yes, this is a BI-side formula. That's the gap Chapter 21's semantic layer closes.)</li>
+    <li>Add a <b>bar chart</b>: dimension <code>site_code</code>, metrics <code>revenue_gbp</code> and <code>budget_revenue_gbp</code>.</li>
+    <li>Add a <b>table</b>: <code>site_code</code>, <code>month_start</code>, <code>mrr_gbp</code>, <code>desks_contracted</code>, <code>sellable_desks</code>, <code>contribution_gbp</code>, <code>has_finance_actuals</code>.</li>
+</ol>
+
+<p><b>Check your dashboard against the golden numbers</b>, filtered to September 2026:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Tile</th><th>All sites</th><th>SOHO only</th></tr>
+<tr><td>MRR</td><td>£5,740</td><td>£3,040</td></tr>
+<tr><td>Revenue</td><td>£6,375</td><td>£3,475</td></tr>
+<tr><td>Contribution</td><td>−£3,725</td><td>−£4,175</td></tr>
+<tr><td>Desk occupancy</td><td>18.5% (12 / 65)</td><td>17.6%</td></tr>
+<tr><td>Revenue vs budget</td><td>£6,375 vs £12,400</td><td>£3,475 vs £9,200</td></tr>
+</table>
+
+<p>Now widen the date range to July–September and look at the revenue tiles. July and August have <b>no</b> finance actuals in our lab, so they're <code>NULL</code>, and the scorecard sums only September. A careless reader might think the quarter's revenue was £6,375. Add <code>has_finance_actuals</code> to the table, or a note on the dashboard. Dashboards have to be honest about missing data too.</p>
+
+<hr/>
+
+<h3>8. Lab 18.2 (Optional) — Metabase on Your Laptop</h3>
+
+<p>If you have Docker, you can try a self-hosted, open-source BI tool in a few minutes. Check Metabase's docs for the current image name and BigQuery setup steps.</p>
+
+<pre>
+docker run -d -p 3000:3000 --name metabase metabase/metabase
+# open http://localhost:3000 and create the admin user
+</pre>
+
+<p>Connecting to BigQuery needs a <b>service account key</b>:</p>
+<ol>
+    <li>In Google Cloud: <i>IAM → Service accounts → Create</i> a <code>bi-reader</code> account.</li>
+    <li>Grant it <b>BigQuery Data Viewer</b> on the <code>marts</code> dataset only, plus <b>BigQuery Job User</b> on the project. Nothing on <code>raw_*</code>. This is the permission plan from Chapter 15.</li>
+    <li>Create a JSON key, upload it in Metabase's BigQuery connection form, and limit the connection to the <code>marts</code> dataset if the form offers it.</li>
+    <li>Ask a question with the query builder: <code>fct_site_month_kpis</code>, filter month = September 2026, sum of <code>revenue_gbp</code> by <code>site_code</code>. Check: SOHO 3,475 and RDG 2,900.</li>
+</ol>
+
+<p>⚠️ A JSON key is a password. Never commit it, and <b>delete the key</b> in Google Cloud when the lab is done. In production you'd use the platform's managed identity features where possible.</p>
+
+<p>Notice how the same mart gives the same answers in two different tools. That's the point: <b>the marts are the product</b>; the BI tool is a window onto them.</p>
+
+<hr/>
+
+<h3>9. BI and AI Side by Side</h3>
+
+<pre>
+                                 ┌──────────────────────────────┐
+                                 │   dbt: marts + definitions   │
+                                 │   tested every night (Ch 17) │
+                                 └──────┬────────────────┬──────┘
+                                        │                │
+                         marts (BI service account)   ai_safe (AI service account)
+                                        │                │
+                                        ▼                ▼
+                             ┌──────────────────┐  ┌──────────────────────┐
+                             │  BI TOOL         │  │  AI LAYER (Phase 1)  │
+                             │  Tableau today;  │  │  questions in plain  │
+                             │  review ongoing  │  │  English (Season 3)  │
+                             └──────────────────┘  └──────────────────────┘
+                              the BI review can swap this box
+                              without touching the AI box
+</pre>
+
+<p>This picture is our answer to the brief's <i>"do not assume Tableau is fixed"</i>:</p>
+<ul>
+    <li>The BI tool and the AI layer are <b>siblings</b>, both reading from tested dbt models. Neither depends on the other.</li>
+    <li>Whatever the BI review picks, the AI keeps working, and both give the <b>same numbers</b> because they share definitions.</li>
+    <li>The AI is <b>not</b> a replacement for dashboards. Dashboards are good for "the same view every Monday"; the AI is good for "why?" and one-off questions. The brief wants to <i>"fix the source"</i> of slow insight, not <i>"add another dashboard on top"</i>.</li>
+</ul>
+
+<hr/>
+
+<h3>10. If the Review Decides to Switch: A Migration Checklist</h3>
+
+<p>Not our decision, but a good partner can help. If Work.Life moves away from Tableau, here's what a safe migration looks like:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>What</th><th>Why</th></tr>
+<tr><td>1. Inventory</td><td>List every dashboard, its owner, and how often it's actually viewed</td><td>Many dashboards are never opened. Don't migrate those.</td></tr>
+<tr><td>2. Extract definitions</td><td>Find every calculated field in the old workbooks</td><td>Each one is a definition that should move into dbt or the semantic layer, not into the new tool</td></tr>
+<tr><td>3. Rebuild the top few</td><td>Start with the board pack and the most-used views</td><td>Most value, least effort</td></tr>
+<tr><td>4. Parallel run</td><td>Old and new side by side for a month or two</td><td>People trust what they can compare</td></tr>
+<tr><td>5. Reconcile</td><td>Golden numbers must match in both (Ch 17)</td><td>"The new tool says something different" kills adoption</td></tr>
+<tr><td>6. Switch off</td><td>Retire old dashboards and licences on a date</td><td>Otherwise you pay for both forever</td></tr>
+</table>
+
+<p>Step 2 is where the real value is, whichever tool wins: moving definitions <b>out</b> of the BI tool makes the next switch easy and gives the AI the same definitions.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How would you choose a BI tool for a small company without a data team?</b></p>
+<p><i>"Start from their constraints, not features: who builds dashboards, who only views them, budget per user, SSO, and how definitions are governed. Shortlist two or three, run a short trial on their real marts with their most important dashboard, and check the numbers match the tested models. Ease of use and adoption usually matter more than advanced features."</i></p>
+
+<p><b>Q: Why shouldn't KPI definitions live inside the BI tool?</b></p>
+<p><i>"They get copied per workbook and drift, other consumers like an AI layer or Excel can't see them, and switching BI tools means re-creating them. I'd keep business logic in dbt, metric formulas in a semantic layer shared by BI and AI, and keep the BI layer mostly visual."</i></p>
+
+<p><b>Q: A dashboard averages occupancy percentages across sites. What's wrong?</b></p>
+<p><i>"You can't average ratios when the denominators differ. Group occupancy is total desks contracted divided by total sellable desks. Averaging gives small sites the same weight as big ones and can be badly wrong. The fix is to store numerator and denominator and compute the ratio after aggregating."</i></p>
+
+<p><b>Q: The client is reviewing its BI tool at the same time as building an AI layer. How do you design for that?</b></p>
+<p><i>"Make the BI tool and the AI siblings that both read tested dbt models and shared metric definitions. The AI reads a controlled dataset and never depends on the BI tool. Then the BI review can choose anything, and both still give the same numbers."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Brief</b></td><td>Tableau in use; BI review running in parallel; "do not assume Tableau is fixed".</td></tr>
+<tr><td><b>The options</b></td><td>Tableau (rich visuals, per-user), Metabase (simple, open-source core), Looker (LookML semantic layer, enterprise), Looker Studio (free, simple).</td></tr>
+<tr><td><b>Compare on the brief</b></td><td>Ease, cost, one definition per KPI, security, handover. No tool wins every row.</td></tr>
+<tr><td><b>Definitions</b></td><td>Logic in dbt; metric formulas in a shared semantic layer; BI stays thin.</td></tr>
+<tr><td><b>Ratio trap</b></td><td>Sum numerator and denominator, then divide. Never average percentages.</td></tr>
+<tr><td><b>BI ⟂ AI</b></td><td>Siblings on the same tested models. Swap the BI tool without touching the AI.</td></tr>
+<tr><td><b>Golden numbers</b></td><td>Sep 2026: MRR £5,740, revenue £6,375, contribution −£3,725 across both sites.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Season 2 done! 🎉 You've built a real ELT pipeline: raw data loaded with Python (and Fivetran), modelled and tested in dbt on BigQuery, with a dashboard on top and a controlled <code>ai_safe</code> dataset ready for what comes next. In Season 3 we finally build the thing the brief is about: the <b>AI layer</b>. We start in <a href="../season-3-ai-layer/chapter-19-analytics-maturity-ladder.html">Chapter 19</a> with the analytics maturity ladder, and why answering <i>"why?"</i> is so much harder than answering <i>"what?"</i>.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

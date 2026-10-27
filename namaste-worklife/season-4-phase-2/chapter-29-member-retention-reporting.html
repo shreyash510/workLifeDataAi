@@ -1,0 +1,380 @@
+<h2>Chapter 29 — Automating Member &amp; Retention Reporting</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Welcome to <b>Season 4: Phase 2</b>. Before we start, one important reminder. The brief says Phase 2 is <i>"for context only, not in this scope"</i>: <i>"Please keep them in mind for architecture, but do not price them now."</i> So this season is not a list of extra things to sell. It answers Section 7, Question 10: <b>"How would Phase 1 extend to the Phase 2 use cases without a significant rebuild?"</b> Every chapter in this season shows the same thing: what we <i>add</i> on top of Phase 1, and what we <i>reuse</i>.</p>
+
+<p>The first Phase 2 item in the brief is: <i>"Automating recurring member and retention reporting so it is real time rather than rebuilt by hand each week."</i> That's this chapter.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Why this report gets rebuilt by hand every week</li>
+    <li>What "real time" should actually mean here</li>
+    <li>The hard part: classifying every contract change</li>
+    <li>Building <code>fct_contract_events</code> in dbt (with the lab data)</li>
+    <li>Member movements and retention, worked on the lab</li>
+    <li>Logo retention vs net revenue retention: the lab tells two stories</li>
+    <li>The MRR bridge, and why a naive report gets it wrong</li>
+    <li>The automated weekly report</li>
+    <li>Tests that stop a wrong report going out</li>
+    <li>What Phase 1 gives us for free</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>It's Monday morning (made up, but you'll recognise it). Someone exports active contracts from Nexudus into Excel, then last week's export, then lines them up with VLOOKUPs. They spot that a team "left" Reading and "joined" Soho, and fix it by hand because it was a move, not a loss. They notice a company "left" but then started a bigger contract the next day, and fix that too. Two hours later the leadership team gets a table that says <b>"+3 members this week"</b>.</p>
+
+<p>Next Monday, a different person does it, and makes a slightly different call on the moves. The number isn't comparable to last week. Nobody can say why. 😩</p>
+
+<p>That's what the brief means by <i>"often rebuilt manually"</i> and <i>"depends on someone finding time to rebuild it"</i>. The pain isn't the SQL. It's that the <b>judgement calls</b> (was that a move? an upgrade? a loss?) live in someone's head, not in code.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   Automating a report = writing down the judgement calls.   │
+│                                                             │
+│   Every contract change gets ONE label, by ONE rule,        │
+│   in ONE dbt model. Then the report, the dashboard and      │
+│   the AI all read that model. No VLOOKUPs, no opinions.     │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. What Does "Real Time" Mean Here?</h3>
+
+<p>The brief says <i>"real time rather than rebuilt by hand each week."</i> Be careful with "real time". To an engineer it means seconds. To a leadership team it usually means <b>"always up to date when I look, without anyone doing anything"</b>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Freshness</th><th>What it takes</th><th>Fits member reporting?</th></tr>
+<tr><td><b>Streaming</b> (seconds)</td><td>Event streams, always-on infrastructure, much higher cost</td><td>No. Contracts change a few times a day.</td></tr>
+<tr><td><b>Hourly</b></td><td>More frequent extract syncs; more Fivetran usage or API calls</td><td>Rarely needed</td></tr>
+<tr><td><b>Daily</b> (overnight)</td><td>The existing pipeline, scheduled</td><td>✅ Yes. "This morning's numbers" for every meeting.</td></tr>
+<tr><td><b>Weekly by hand</b></td><td>A person and a spreadsheet</td><td>❌ What they have today</td></tr>
+</table>
+
+<p>Contracts, notices and joins happen slowly. A <b>daily refresh</b> that nobody has to touch will feel "real time" to a leader, and it keeps to the <i>"cost conscious"</i> principle. We should say this plainly to the client and agree it, rather than promise streaming. Freshness is also limited by how often each source syncs into BigQuery today, which is one of our open questions (Chapter 11, question 2).</p>
+
+<hr/>
+
+<h3>3. The Hard Part: Classifying Every Contract Change</h3>
+
+<p>In Chapter 02 we learned that <b>moves inside the business are not churn</b>. Now we turn that idea into rules. Every time a contract starts or ends, we give it exactly one label:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Event</th><th>Rule (per company)</th><th>Counts as</th></tr>
+<tr><td><b>New</b></td><td>A contract starts and the company had no active contract before</td><td>+ joined</td></tr>
+<tr><td><b>Upgrade</b></td><td>A contract ends and a <i>more expensive</i> one starts at the <i>same site</i> within the gap window</td><td>Not churn. MRR up.</td></tr>
+<tr><td><b>Downgrade</b></td><td>Same, but cheaper</td><td>Not churn. MRR down.</td></tr>
+<tr><td><b>Transfer</b></td><td>A contract ends and a new one starts at a <i>different site</i> within the gap window</td><td>Not churn for the business. A site-level move.</td></tr>
+<tr><td><b>Renewal</b></td><td>Same resource, new term, within the gap window</td><td>Not churn</td></tr>
+<tr><td><b>Churn</b></td><td>A contract ends and the company has nothing active after the gap window</td><td>− left</td></tr>
+</table>
+
+<p>The <b>gap window</b> is a business decision, not a technical one. If a team leaves on 31 March and comes back on 15 May, is that churn and a new join, or a pause? Finance and the membership team must decide the number of days (say 30, made up), and it goes in the KPI dictionary from Chapter 22.</p>
+
+<p>⚠️ Which ID do we group by? The <b>company</b>, using the matched IDs from Chapter 11 (<code>member_xref</code>). If the same company has one ID in Nexudus and another in HubSpot, a naive model will see a "churn" and a "new" that are really the same customer.</p>
+
+<hr/>
+
+<h3>4. Building <code>fct_contract_events</code> on the Lab Data</h3>
+
+<p>Let's run the rules on our Mini Work.Life <code>contracts.csv</code>. There are 7 contracts:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Contract</th><th>Company</th><th>Site</th><th>Start → End</th><th>£/month</th><th>Notice given</th></tr>
+<tr><td>K001</td><td>C001 Pixel Chai</td><td>SOHO hot desk</td><td>2025-10-01 → 2026-03-31</td><td>320</td><td></td></tr>
+<tr><td>K002</td><td>C001 Pixel Chai</td><td>SOHO Office 101</td><td>2026-04-01 → 2027-03-31</td><td>2,400</td><td></td></tr>
+<tr><td>K003</td><td>C002 Brightline Legal</td><td>SOHO Office 103</td><td>2025-07-01 → 2026-06-30</td><td>1,400</td><td>2026-04-30</td></tr>
+<tr><td>K004</td><td>C003 Nomad Analytics</td><td>SOHO hot desk</td><td>2025-01-15 → (rolling)</td><td>320</td><td></td></tr>
+<tr><td>K005</td><td>C004 GreenRoot Foods</td><td>RDG Office 201</td><td>2026-01-01 → 2026-12-31</td><td>2,700</td><td></td></tr>
+<tr><td>K006</td><td>C005 Kite &amp; Key</td><td>RDG Flex 10</td><td>2026-02-01 → 2026-07-31</td><td>180</td><td></td></tr>
+<tr><td>K007</td><td>C005 Kite &amp; Key</td><td>SOHO hot desk</td><td>2026-08-01 → (rolling)</td><td>320</td><td></td></tr>
+</table>
+
+<p>The core of the model is a window function: for each contract end, look at the <b>next contract for the same company</b>.</p>
+
+<pre>
+-- models/marts/fct_contract_events.sql  (simplified)
+with c as (
+  select
+    company_id, contract_id, site_code, start_date, end_date, monthly_price_gbp,
+    lead(contract_id)        over w as next_contract_id,
+    lead(start_date)         over w as next_start,
+    lead(site_code)          over w as next_site,
+    lead(monthly_price_gbp)  over w as next_price
+  from {{ ref('int_contracts') }}   -- contract-grain intermediate model (one row per contract)
+  window w as (partition by company_id order by start_date)
+)
+select
+  company_id, contract_id, end_date as event_date,
+  case
+    when end_date is null                                         then null   -- still running
+    when next_start is null
+      or date_diff(next_start, end_date, day) > {{ var('gap_days') }} then 'churn'
+    when next_site != site_code                                   then 'transfer'
+    when next_price  > monthly_price_gbp                          then 'upgrade'
+    when next_price  < monthly_price_gbp                          then 'downgrade'
+    else 'renewal'
+  end as event_type,
+  coalesce(next_price, 0) - monthly_price_gbp as mrr_change_gbp,
+  date_trunc(date_add(end_date, interval 1 day), month) as effective_month   -- end 31 Mar → shows in April
+from c
+</pre>
+
+<p>(A matching part of the model labels <b>new</b> starts: any contract whose company had nothing active the day before.)</p>
+
+<p>Run it on the lab and you get:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Date</th><th>Company</th><th>Event</th><th>MRR change</th><th>Why</th></tr>
+<tr><td>2025-01-15</td><td>Nomad Analytics</td><td><b>new</b></td><td>+320</td><td>First contract</td></tr>
+<tr><td>2025-07-01</td><td>Brightline Legal</td><td><b>new</b></td><td>+1,400</td><td>First contract</td></tr>
+<tr><td>2025-10-01</td><td>Pixel Chai</td><td><b>new</b></td><td>+320</td><td>First contract</td></tr>
+<tr><td>2026-01-01</td><td>GreenRoot Foods</td><td><b>new</b></td><td>+2,700</td><td>First contract</td></tr>
+<tr><td>2026-02-01</td><td>Kite &amp; Key</td><td><b>new</b></td><td>+180</td><td>First contract</td></tr>
+<tr><td>2026-03-31</td><td>Pixel Chai</td><td><b>upgrade</b></td><td>+2,080</td><td>Hot desk → Office 101 next day, same site</td></tr>
+<tr><td>2026-06-30</td><td>Brightline Legal</td><td><b>churn</b></td><td>−1,400</td><td>Nothing after; notice given 61 days before</td></tr>
+<tr><td>2026-07-31</td><td>Kite &amp; Key</td><td><b>transfer</b></td><td>+140</td><td>Reading Flex → Soho hot desk next day</td></tr>
+</table>
+
+<p>Notice the Kite &amp; Key row. For the <b>business</b> it's a transfer (no one left). For <b>Reading</b> it's a loss and for <b>Soho</b> it's a gain. So the report needs both views: company level for "how many members did we lose?" and site level for "how is Reading doing?". Same events, two lenses.</p>
+
+<p>And the notice date matters: Brightline gave notice on 30 April, two months before leaving. That's the earliest point the business <i>knew</i>. A good retention report shows <b>"notices received this week"</b> as well as "contracts ended", because notices are the leading indicator (Chapter 02).</p>
+
+<hr/>
+
+<h3>5. Member Movements on the Lab</h3>
+
+<p>Now count <b>people</b> (from <code>members.csv</code>), month by month in 2026:</p>
+
+<pre>
+   MINI WORK.LIFE · MEMBER MOVEMENTS 2026 (lab data)
+
+   Members at 1 Jan 2026                         4   (Priya, Daniel, Sara, Ravi)
+   Jan   + 6   GreenRoot Foods team joins (Reading)
+   Feb   + 1   Fatima (Kite &amp; Key) joins (Reading)
+   Apr   + 3   Pixel Chai hires Arjun, Leah, Tom
+   Jun   − 2   Brightline Legal leaves (Daniel, Sara)
+   Aug     0   Fatima moves Reading → Soho  (transfer, not a movement)
+                                             ─────
+   Members at 30 Sep 2026                       12
+
+   NET MEMBER MOVEMENT (Jan–Sep) = +10 − 2 = +8
+</pre>
+
+<p>"Net member movements" is named in the brief itself, in the Phase 2 forecasting item (<i>"resident revenue projection, net member movements, seasonality and meeting room demand"</i>). You can't forecast it until you can count it consistently. With <code>fct_contract_events</code> in place, it stops being a Monday spreadsheet and becomes a single metric in the semantic layer:</p>
+
+<pre>
+   metric: net_member_movements
+     = count(joined) − count(left)
+     where event_type in ('new', 'churn')         ← transfers, upgrades,
+     grain: month · dimensions: site, plan type      renewals excluded by rule
+</pre>
+
+<hr/>
+
+<h3>6. Two Kinds of Retention: The Lab Tells Two Stories</h3>
+
+<p>Take the companies we had on <b>1 January 2026</b> and see where they are on <b>30 September 2026</b>:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Company</th><th>MRR on 1 Jan 2026</th><th>MRR on 30 Sep 2026</th><th>Story</th></tr>
+<tr><td>Pixel Chai</td><td>£320</td><td>£2,400</td><td>Upgraded to an office</td></tr>
+<tr><td>Brightline Legal</td><td>£1,400</td><td>£0</td><td>Churned</td></tr>
+<tr><td>Nomad Analytics</td><td>£320</td><td>£320</td><td>Stayed</td></tr>
+<tr><td><b>Total</b></td><td><b>£2,040</b></td><td><b>£2,720</b></td><td></td></tr>
+</table>
+
+<pre>
+   LOGO RETENTION          = companies still here / companies at start
+                           = 2 / 3  =  67%      😟 "we lost a third of our customers!"
+
+   NET REVENUE RETENTION   = their MRR now / their MRR at start
+                           = 2,720 / 2,040  =  133%   😀 "existing customers grew a third!"
+</pre>
+
+<p>Both are true. Which one is "retention"? <b>That's the client's call</b>, and it must be written in the KPI dictionary. If it isn't, the AI will pick one, and someone in the board meeting will be holding the other. This is the Chapter 02 occupancy argument all over again.</p>
+
+<p>Our recommendation: report <b>both</b>, always labelled, plus <b>revenue churn</b> (MRR lost from churned companies / starting MRR = 1,400 / 2,040 = 69% here, because the lab is tiny and Brightline was the biggest customer at the start). In a real 14-site, 8,000-member business these numbers will be much steadier.</p>
+
+<hr/>
+
+<h3>7. The MRR Bridge, and Why a Naive Report Gets It Wrong</h3>
+
+<p>A <b>bridge</b> (or waterfall) explains how you got from the start number to the end number. Sum the 2026 rows of <code>fct_contract_events</code> by event type. At <b>company</b> level the Kite &amp; Key transfer is +£140; at <b>site</b> level it is Reading −£180 and Soho +£320 (the two lenses from Section 4):</p>
+
+<pre>
+   MRR BRIDGE, Dec 2025 → Sep 2026 (lab data)
+
+                       SOHO        READING       COMPANY TOTAL
+   ─────────────────  ────────    ─────────     ─────────────
+   MRR in Dec 2025     £2,040        £0             £2,040     (K001 320 + K003 1,400 + K004 320)
+   + New                   £0    +£2,880           +£2,880     (GreenRoot 2,700 + Kite &amp; Key 180)
+   + Upgrade           +£2,080        £0           +£2,080     (Pixel Chai)
+   − Churn             −£1,400        £0           −£1,400     (Brightline)
+   ± Transfers           +£320     −£180             +£140     (Kite &amp; Key)
+   ─────────────────  ────────    ─────────     ─────────────
+   MRR in Sep 2026     £3,040    £2,700            £5,740
+</pre>
+
+<p>Now compare with the naive "contract ended = churn, contract started = new" report that a rushed Monday spreadsheet produces:</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Naive</th><th>Correct</th><th>Why</th></tr>
+<tr><td>Churned MRR 2026</td><td>£1,900 (K001 + K003 + K006)</td><td><b>£1,400</b> (Brightline only)</td><td>The upgrade and the transfer aren't losses</td></tr>
+<tr><td>New MRR 2026</td><td>£5,600 (K002 + K005 + K006 + K007)</td><td><b>£2,880</b></td><td>Pixel Chai's office and Kite &amp; Key's Soho plan aren't new customers</td></tr>
+<tr><td>Companies churned</td><td>3</td><td><b>1</b></td><td>Same answer as Chapter 11, exam question 7</td></tr>
+</table>
+
+<p>Both reports end at the same £5,740. Only the explanation differs, and the explanation is what leadership acts on. ⚠️ Two edge cases to agree with the client, not guess: (1) a company that leaves and returns after the gap window is "new" here, but they may prefer "reactivated"; (2) a short gap between contracts (end 31 Jul, start 3 Aug) is hidden by the gap window, which is usually what you want. Both belong to the board-pack definitions (Chapter 11, question 10).</p>
+
+<hr/>
+
+<h3>8. The Automated Weekly Report</h3>
+
+<p>Once the model exists, the report builds itself. Here's a design (layout made up):</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────┐
+│  MEMBER &amp; RETENTION · week ending Fri 2 Oct 2026  (made up)      │
+│  data as of 06:00 today · source: fct_contract_events            │
+├──────────────────────────────────────────────────────────────────┤
+│  MEMBERS        12   ▲ 0 vs last week                            │
+│  NET MOVEMENT   +8 year to date                                  │
+│  NOTICES IN      0 this week   ·  open notices: 0                │
+│  ENDING ≤90d     1 contract  (GreenRoot, RDG, £2,700, 31 Dec)    │
+│                                                                  │
+│  BY SITE      members   joined  left  transfers in/out   MRR     │
+│  SOHO            6        0      0        0 / 0         £3,040   │
+│  RDG             6        0      0        0 / 0         £2,700   │
+│                                                                  │
+│  RETENTION (YTD)  logo 67% · net revenue 133% · revenue churn 69%│
+│                                                                  │
+│  ATTENDANCE (company level, w/c 21 Sep)                          │
+│  SOHO   60% (18 of 30 member-days)                               │
+│  RDG    🚨 23% (7 of 30) · GreenRoot · renewal due 31 Dec         │
+│  ⓘ definitions: KPI dictionary v3, signed off by Finance         │
+└──────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Workings for the attendance line: person-days with at least one main-entrance "Access Granted" event in ACT365, divided by members × 5 working days, for Mon 21 – Fri 25 Sep (see Chapter 08). Read the Reading line out loud: <i>"one company, contract ends in three months, nobody has given notice, but attendance has collapsed."</i> A hand-built report usually shows only members and MRR. The automated one puts the warning <b>next to</b> the revenue it threatens. That's the bridge into Chapter 30.</p>
+
+<p>🔒 Attendance is published at <b>company × site × week</b>, never per person, and only for companies at or above an agreed minimum group size (a one-person company's "rate" is really one person's attendance). The Chapter 08 privacy rule applies to every Phase 2 model. Phase 1's <code>ai_safe</code> has no attendance at all; adding this company-level aggregate to it is a Phase 2 decision for the client. Member and retention counts reach the AI as company- and site-level aggregates; <code>dim_member</code> and <code>member_xref</code> stay in the marts.</p>
+
+<p>Three ways to deliver it, all reusing Phase 1:</p>
+<ul>
+    <li><b>Pushed:</b> the proactive digest from Chapter 24 sends it every Monday at 07:00. No one rebuilds anything.</li>
+    <li><b>Asked:</b> a leader types <i>"how many members did Reading lose this quarter, excluding transfers?"</i> and the AI answers from the same model.</li>
+    <li><b>Browsed:</b> the BI tool (whichever wins the review in Chapter 18) shows the same model as a dashboard.</li>
+</ul>
+
+<p>One model, three doors. If the numbers ever differ between the email, the AI and the dashboard, something is wrong, and our tests should catch it.</p>
+
+<hr/>
+
+<h3>9. Tests That Stop a Wrong Report Going Out</h3>
+
+<p>An automated report that's wrong is worse than a manual one, because it's wrong every week and nobody checks. dbt tests are the safety net. The most useful one checks that the bridge reconciles:</p>
+
+<pre>
+-- tests/assert_mrr_bridge_reconciles.sql
+-- Fails if, for any month, last month's MRR + this month's events ≠ this month's MRR.
+with mrr as (
+  select month, sum(mrr_gbp) as mrr
+  from {{ ref('fct_contract_month') }}
+  group by 1
+),
+moves as (
+  select effective_month as month,      -- first month the change shows in MRR:
+                                        -- the start month for 'new', the month after the end otherwise
+         sum(mrr_change_gbp) as change
+  from {{ ref('fct_contract_events') }}
+  group by 1
+)
+select cur.month
+from mrr cur
+left join mrr   prv on prv.month = date_sub(cur.month, interval 1 month)
+left join moves mv  on mv.month  = cur.month
+where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Test</th><th>Catches</th></tr>
+<tr><td>Bridge reconciles (above)</td><td>A classification rule that drops or double-counts money</td></tr>
+<tr><td><code>accepted_values</code> on <code>event_type</code></td><td>A new kind of change nobody classified</td></tr>
+<tr><td>Source freshness on Nexudus</td><td>A stalled sync. The report would show "no change" when really there's no data.</td></tr>
+<tr><td>MRR vs NetSuite within tolerance</td><td>Drift between contracted and recognised revenue (a small gap is expected, e.g. Soho's −£90 credit memo, but not a big one)</td></tr>
+<tr><td>No test/staff accounts</td><td>Inflated member counts (Chapter 11, question 9)</td></tr>
+</table>
+
+<p>If a test fails, the report <b>doesn't publish</b> and the support owner is alerted. Leadership sees last week's verified report with a "data delayed" note, never a silently wrong one. This is the "accuracy is a launch gate" principle from Chapter 25, applied every week.</p>
+
+<hr/>
+
+<h3>10. What Phase 1 Gives Us for Free</h3>
+
+<p>This is the answer to the "Scalability" question. Here's what we <b>reuse</b> and what we <b>add</b>:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Piece</th><th>Built in Phase 1</th><th>Added in Phase 2</th></tr>
+<tr><td>Pipeline &amp; warehouse</td><td>✅ Already there (Season 2)</td><td>Nothing</td></tr>
+<tr><td>Contract &amp; member marts</td><td>✅ <code>fct_contract_month</code>, <code>dim_member</code>, <code>member_xref</code></td><td><code>fct_contract_events</code> (one new model)</td></tr>
+<tr><td>Controlled copy <code>ai_safe</code></td><td>✅</td><td>Add the new model to the copy</td></tr>
+<tr><td>Semantic layer</td><td>✅ Metric definitions</td><td>Add <code>net_member_movements</code>, <code>logo_retention</code>, <code>nrr</code>, <code>revenue_churn</code></td></tr>
+<tr><td>KPI dictionary &amp; business context</td><td>✅</td><td>Add the gap-window rule and retention definitions</td></tr>
+<tr><td>Proactive digests</td><td>✅ Chapter 24</td><td>One new digest template</td></tr>
+<tr><td>Golden-question tests</td><td>✅ Chapter 25</td><td>Add retention questions with hand-checked answers, e.g. "MRR churned in 2026 = £1,400, not £1,900"</td></tr>
+<tr><td>Security &amp; SSO</td><td>✅</td><td>Nothing (still leadership only)</td></tr>
+</table>
+
+<p>That's a few models, a few metric definitions and a template. No new infrastructure. <b>That's what "without a significant rebuild" looks like.</b> And it only works because Phase 1 kept the AI on business-shaped models in a semantic layer, instead of raw Nexudus tables (Chapter 28). If the member source moves to HubSpot, <code>fct_contract_events</code> keeps the same shape and everything above it keeps working.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: A client wants member reporting "in real time". How do you respond?</b></p>
+<p><i>"I'd ask what decisions they make with it and how often. For contracts and memberships, a reliable overnight refresh that needs no manual work almost always meets the need, at a fraction of the cost of streaming. I'd agree the freshness in writing and show the 'data as of' time on every report."</i></p>
+
+<p><b>Q: How do you stop upgrades and site transfers from being counted as churn?</b></p>
+<p><i>"Classify every contract end at company level using a window function: look at the company's next contract. If it starts within an agreed gap window, it's an upgrade, downgrade, renewal or transfer depending on price and site. Only if there's nothing after the window is it churn. The gap window is a business-owned setting."</i></p>
+
+<p><b>Q: Logo retention is 67% but net revenue retention is 133%. Which do you report?</b></p>
+<p><i>"Both, clearly labelled, because they answer different questions: how many customers we keep vs how much revenue we keep and grow. The client decides which one is the headline 'retention' KPI and it goes in the KPI dictionary, so dashboards and the AI always use the same one."</i></p>
+
+<p><b>Q: What's an MRR bridge and why is it useful?</b></p>
+<p><i>"It explains how MRR moved from the start to the end of a period: start, plus new, plus upgrades, minus downgrades, minus churn, plus or minus transfers. It turns 'MRR is up' into 'why it's up', and because it has to reconcile exactly, it doubles as an automated test."</i></p>
+
+<p><b>Q: Why show notices received, not just contracts ended?</b></p>
+<p><i>"A notice is the earliest moment the business knows a customer is leaving, often months before the end date. It's a leading indicator, so it gives the team time to act. Contract ends are a lagging indicator."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Phase 2 scope</b></td><td>Context only. Show how it extends Phase 1; don't price it.</td></tr>
+<tr><td><b>Automation</b></td><td>Write the judgement calls down as rules in one dbt model.</td></tr>
+<tr><td><b>"Real time"</b></td><td>For contracts, a hands-free daily refresh is usually enough. Agree it.</td></tr>
+<tr><td><b>Contract events</b></td><td>new · upgrade · downgrade · transfer · renewal · churn, at company level.</td></tr>
+<tr><td><b>Gap window</b></td><td>A business decision, recorded in the KPI dictionary.</td></tr>
+<tr><td><b>Two lenses</b></td><td>A transfer is neutral for the business, a loss for one site and a gain for another.</td></tr>
+<tr><td><b>Retention</b></td><td>Logo vs net revenue retention can tell opposite stories. Report both, labelled.</td></tr>
+<tr><td><b>Lab bridge</b></td><td>£2,040 → £5,740. Real churn £1,400, not the naive £1,900.</td></tr>
+<tr><td><b>Tests gate publishing</b></td><td>The bridge must reconcile and sources must be fresh, or the report doesn't go out.</td></tr>
+<tr><td><b>Reuse</b></td><td>One new model + metrics + a digest template. No new infrastructure.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Retention reporting tells us who <b>has</b> left. In Chapter 30 we look ahead: <b>who is likely to leave next</b>, and how to give an account manager a one-page <b>context pack</b> to take into the renewal conversation, starting with GreenRoot Foods, whose Reading office contract ends on 31 December.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

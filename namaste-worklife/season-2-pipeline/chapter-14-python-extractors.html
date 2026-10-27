@@ -1,0 +1,529 @@
+<h2>Chapter 14 — Python Extractors: Pulling Nexudus into BigQuery</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 13 we saw that Fivetran covers sources that have a ready-made connector. Work.Life's brief also lists <b>Python</b> in the extract layer, and our best guess (Chapter 07) is that it's there for <b>Nexudus</b>, their largest source. Today we write that kind of extractor properly, the way you'd run it in production: pagination, incremental loads, retries, safe secrets, and loading into BigQuery.</p>
+
+<p>We also use Python for the most important practical step of the season: loading <b>every Mini Work.Life CSV</b> into the raw datasets we created in Lab 12.2. By the end of this chapter your warehouse has real data in it.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Anatomy of a production extractor</li>
+    <li>Lab 14.1: Load all lab files into raw datasets</li>
+    <li>Why raw is all STRING</li>
+    <li>The Nexudus extractor, upgraded</li>
+    <li>Incremental loads and the "watermark"</li>
+    <li>Duplicates and deletes</li>
+    <li>Retries, rate limits and failing loudly</li>
+    <li>Secrets and least privilege</li>
+    <li>Scheduling it in the cloud</li>
+    <li>Lab 14.2: Simulate an incremental run and de-duplicate</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>The Chapter 07 extractor was 30 lines. It worked on your laptop. Now imagine it in production for a year (made-up scenario):</p>
+
+<ul>
+    <li><b>Week 3:</b> the API returns a <code>429 Too Many Requests</code> at 2am. The script crashes. Nobody notices. The dashboard shows yesterday's numbers for 4 days.</li>
+    <li><b>Week 9:</b> a network blip makes the script run twice. Every new contract is loaded twice. MRR jumps 3% overnight. 😱</li>
+    <li><b>Week 20:</b> a member is deleted in Nexudus. The incremental load never sees it. They're still counted as active.</li>
+    <li><b>Week 40:</b> the person who wrote the script leaves. The API token is in the code, on their laptop.</li>
+</ul>
+
+<p>Every one of these really does happen on data teams. The difference between a script and an <b>extractor</b> is handling all of them. It's also part of what the brief means by a pipeline <i>"kept running by an external data partner"</i>: someone has to notice and fix these things when source APIs change.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   A PRODUCTION EXTRACTOR MUST BE                            │
+│                                                             │
+│   • INCREMENTAL   only fetch what changed                   │
+│   • IDEMPOTENT    running it twice gives the same result    │
+│   • RESILIENT     retries on 429/5xx, then fails LOUDLY     │
+│   • COMPLETE      catches deletes, not just changes         │
+│   • SAFE          secrets outside code, minimal access      │
+│   • DUMB          no business logic (that's dbt's job)      │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Anatomy of a Production Extractor</h3>
+
+<pre>
+   ┌──────────┐  1. read watermark   ┌──────────────┐
+   │ BigQuery │ ───────────────────► │              │  2. GET pages since watermark
+   │ raw_*    │                      │   PYTHON     │ ◄──────────────────────────── Nexudus API
+   │          │ ◄─────────────────── │   EXTRACTOR  │     (retry on 429 / 5xx)
+   └──────────┘  4. LOAD JOB         │              │
+       ▲          (append)           │ 3. write     │
+       │                             │    JSONL     │
+       │                             └──────────────┘
+       │  5. dbt staging de-duplicates: latest version of each Id wins
+</pre>
+
+<p>Notice step 1: the <b>warehouse itself</b> remembers how far we got. No separate state file to lose.</p>
+
+<hr/>
+
+<h3>3. Lab 14.1 — Load All Lab Files Into Raw Datasets</h3>
+
+<p>First, the practical part. This script reads every file in <code>lab-data/</code> and loads it into the right raw dataset using BigQuery <b>load jobs</b>, which work in the sandbox.</p>
+
+<p><b>Setup (once):</b></p>
+
+<pre>
+# 1. Python 3.10+ and the Google Cloud CLI installed
+python -m venv .venv
+# Windows: .venv\Scripts\activate     macOS/Linux: source .venv/bin/activate
+pip install google-cloud-bigquery requests
+
+# 2. Let Python use your Google login (opens a browser)
+gcloud auth application-default login
+gcloud config set project mini-worklife-lab      # your project ID from Lab 12.2
+</pre>
+
+<p><b>The loader</b> (save as <code>load_lab.py</code> next to the <code>lab-data</code> folder):</p>
+
+<pre>
+"""Load every Mini Work.Life CSV into its raw_* dataset in BigQuery.
+
+Raw = exactly what the source sent, so every column is loaded as STRING.
+Types are fixed later, in dbt staging (Chapter 16).
+"""
+import csv
+import io
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+from google.cloud import bigquery
+
+PROJECT = "mini-worklife-lab"          # your project ID
+LOCATION = "europe-west2"              # must match the datasets (Lab 12.2)
+LAB = Path(__file__).parent / "lab-data"
+
+# file in lab-data/  ->  (dataset, table)
+FILES = {
+    "sites.csv":                          ("raw_nexudus", "sites"),
+    "plans.csv":                          ("raw_nexudus", "plans"),
+    "resources.csv":                      ("raw_nexudus", "resources"),
+    "companies.csv":                      ("raw_nexudus", "companies"),
+    "members.csv":                        ("raw_nexudus", "members"),
+    "contracts.csv":                      ("raw_nexudus", "contracts"),
+    "bookings_sep2026.csv":               ("raw_nexudus", "bookings"),
+    "netsuite_gl_sep2026.csv":            ("raw_netsuite", "gl_lines"),
+    "excel_capacity_budget_2026.csv":     ("raw_excel", "capacity_budget_2026"),
+    "act_contacts.csv":                   ("raw_act", "contacts"),
+    "act_opportunities.csv":              ("raw_act", "opportunities"),
+    "act365_cardholders.csv":             ("raw_act365", "cardholders"),
+    "act365_door_events_sep2026.csv":     ("raw_act365", "door_events"),
+}
+
+
+def clean(name: str) -> str:
+    """'ID/Status' -> 'id_status', 'E-mail' -> 'e_mail' (BigQuery-safe names)."""
+    return re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
+
+
+def load(client, path, dataset, table, loaded_at):
+    with open(path, newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    header = [clean(h) for h in rows[0]]
+    body = [r for r in rows[1:] if any(cell.strip() for cell in r)]
+
+    # Re-write the CSV with clean headers + two audit columns
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(header + ["_source_file", "_loaded_at"])
+    for r in body:
+        writer.writerow(r + [path.name, loaded_at])
+
+    schema = [bigquery.SchemaField(h, "STRING") for h in header] + [
+        bigquery.SchemaField("_source_file", "STRING"),
+        bigquery.SchemaField("_loaded_at", "TIMESTAMP"),
+    ]
+    job_config = bigquery.LoadJobConfig(
+        schema=schema,
+        source_format=bigquery.SourceFormat.CSV,
+        skip_leading_rows=1,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,  # re-runnable
+    )
+    job = client.load_table_from_file(
+        io.BytesIO(out.getvalue().encode("utf-8")),
+        f"{PROJECT}.{dataset}.{table}",
+        job_config=job_config,
+        location=LOCATION,
+    )
+    job.result()                       # wait; raises if the load failed
+    print(f"{dataset}.{table:&lt;24} {len(body):&gt;4} rows")
+
+
+def main():
+    client = bigquery.Client(project=PROJECT)
+    loaded_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    for file_name, (dataset, table) in FILES.items():
+        load(client, LAB / file_name, dataset, table, loaded_at)
+
+
+if __name__ == "__main__":
+    main()
+</pre>
+
+<p>Run it:</p>
+
+<pre>
+python load_lab.py
+
+raw_nexudus.sites                       2 rows
+raw_nexudus.plans                       3 rows
+raw_nexudus.resources                  10 rows
+raw_nexudus.companies                   5 rows
+raw_nexudus.members                    14 rows
+raw_nexudus.contracts                   7 rows
+raw_nexudus.bookings                   10 rows
+raw_netsuite.gl_lines                  23 rows
+raw_excel.capacity_budget_2026          6 rows
+raw_act.contacts                        7 rows
+raw_act.opportunities                   7 rows
+raw_act365.cardholders                 15 rows
+raw_act365.door_events                276 rows
+</pre>
+
+<p>If your counts match, your warehouse holds the whole Mini Work.Life. 🎉 Because we use <code>WRITE_TRUNCATE</code>, you can run it as many times as you like and always get the same result. That's <b>idempotent</b>. And when the sandbox expires your tables after 60 days, just run it again.</p>
+
+<hr/>
+
+<h3>4. Why Raw Is All STRING</h3>
+
+<p>We could have let BigQuery guess the types ("autodetect"). We deliberately didn't. Look at <code>plans.csv</code>:</p>
+
+<pre>
+plan_code,plan_name,type,monthly_price_gbp,...
+P-HOT,Unlimited Coworking,coworking,320,...
+P-FLEX10,Flex 10 Days,coworking,180,...
+P-OFFICE,Private Office,office,priced per office,...     ← text in a price column!
+</pre>
+
+<p>And <code>contracts.csv</code> has blank <code>end_date</code> values for rolling contracts. Autodetect might call a column a number today and fail tomorrow when someone types text. A raw layer that <b>never rejects data</b> is safer. The rule:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Layer</th><th>Job</th><th>Example</th></tr>
+<tr><td>Raw</td><td>Accept anything, change nothing</td><td><code>monthly_price_gbp = 'priced per office'</code> (STRING)</td></tr>
+<tr><td>Staging</td><td>Cast with <code>SAFE_CAST</code>, turn junk into <code>NULL</code>, and <b>test</b> it</td><td><code>SAFE_CAST(monthly_price_gbp AS NUMERIC)</code> → <code>NULL</code> for P-OFFICE</td></tr>
+</table>
+
+<p>Check what landed:</p>
+
+<pre>
+-- Every column should be STRING (except _loaded_at)
+SELECT table_name, column_name, data_type
+FROM raw_nexudus.INFORMATION_SCHEMA.COLUMNS
+WHERE table_name = 'contracts'
+ORDER BY ordinal_position;
+
+-- Rolling contracts: end_date is blank in the CSV. BigQuery's CSV loader stores a blank
+-- field as NULL by default (its default null marker is the empty string). Other loaders
+-- (APIs, Fivetran, sheets) may hand you '' instead, so staging must handle both.
+SELECT contract_id, end_date, end_date IS NULL AS is_null, end_date = '' AS is_empty_string
+FROM raw_nexudus.contracts;
+</pre>
+
+<hr/>
+
+<h3>5. The Nexudus Extractor, Upgraded</h3>
+
+<p>Now the real thing. This builds on the Chapter 07 script, which used Nexudus's documented pattern: bearer token, <code>page</code>/<code>size</code>, and a <code>Records</code> + <code>HasNextPage</code> response. The endpoint paths below follow that pattern; <b>check the Nexudus API reference for exact names</b> before you rely on them.</p>
+
+<pre>
+"""nexudus_to_bq.py: incremental Nexudus -> BigQuery raw extractor.
+
+Each record is stored whole, as JSON text, with its Id and UpdatedOn.
+dbt staging picks fields out and keeps the latest version of each Id.
+"""
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+import requests
+from google.cloud import bigquery
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+PROJECT = os.environ.get("GCP_PROJECT", "mini-worklife-lab")
+DATASET = "raw_nexudus_api"
+BASE = "https://spaces.nexudus.com/api"
+TOKEN = os.environ["NEXUDUS_TOKEN"]             # from env / Secret Manager, never in code
+
+# raw table -> (API path, name of the "updated since" filter). Check paths in the API docs.
+ENTITIES = {
+    "coworkers":         ("spaces/coworkers",          "from_Coworker_UpdatedOn"),
+    "coworker_contracts": ("billing/coworkercontracts", "from_CoworkerContract_UpdatedOn"),
+    "bookings":          ("spaces/bookings",           "from_Booking_UpdatedOn"),
+}
+
+SCHEMA = [
+    bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("updated_on", "TIMESTAMP"),
+    bigquery.SchemaField("payload", "STRING"),      # the whole record, as JSON text
+    bigquery.SchemaField("_loaded_at", "TIMESTAMP"),
+]
+
+
+def http_session():
+    """Retry 429 and 5xx with exponential backoff, honouring Retry-After."""
+    retry = Retry(total=6, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504],
+                  allowed_methods=["GET"], respect_retry_after_header=True)
+    s = requests.Session()
+    s.mount("https://", HTTPAdapter(max_retries=retry))
+    s.headers["Authorization"] = f"Bearer {TOKEN}"
+    return s
+
+
+def watermark(bq, table):
+    """How far did we get last time? Ask the warehouse."""
+    sql = f"SELECT MAX(updated_on) AS wm FROM `{PROJECT}.{DATASET}.{table}`"
+    try:
+        wm = list(bq.query(sql).result())[0].wm
+    except Exception:                                # first run: table doesn't exist yet
+        wm = None
+    return wm.strftime("%Y-%m-%dT%H:%M") if wm else "2000-01-01T00:00"
+
+
+def fetch_since(session, path, filter_name, since):
+    params = {"page": 1, "size": 100, "orderBy": "UpdatedOn", "dir": 0, filter_name: since}
+    while True:
+        r = session.get(f"{BASE}/{path}", params=params, timeout=60)
+        r.raise_for_status()                         # after retries: fail loudly
+        body = r.json()
+        yield from body["Records"]
+        if not body["HasNextPage"]:
+            break
+        params["page"] += 1
+
+
+def load_rows(bq, table, records):
+    loaded_at = datetime.now(timezone.utc).isoformat()
+    rows = [{"id": str(rec["Id"]),
+             "updated_on": rec.get("UpdatedOn"),
+             "payload": json.dumps(rec),
+             "_loaded_at": loaded_at} for rec in records]
+    if not rows:
+        return 0
+    job = bq.load_table_from_json(
+        rows, f"{PROJECT}.{DATASET}.{table}",
+        job_config=bigquery.LoadJobConfig(
+            schema=SCHEMA,
+            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+        ),
+    )
+    job.result()
+    return len(rows)
+
+
+def main():
+    bq = bigquery.Client(project=PROJECT)
+    session = http_session()
+    for table, (path, filter_name) in ENTITIES.items():
+        since = watermark(bq, table)
+        n = load_rows(bq, table, fetch_since(session, path, filter_name, since))
+        print(f"{table}: {n} records changed since {since}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as exc:                         # non-zero exit = the scheduler alerts
+        print(f"EXTRACT FAILED: {exc}", file=sys.stderr)
+        sys.exit(1)
+</pre>
+
+<p>Design choices worth saying out loud in an interview:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Choice</th><th>Why</th><th>Trade-off</th></tr>
+<tr><td>Store the <b>whole record as JSON</b> in <code>payload</code></td><td>Nexudus adds a field? Nothing breaks. It's already in the JSON.</td><td>Staging must parse JSON (<code>JSON_VALUE</code>). Slightly more SQL.</td></tr>
+<tr><td><b>Append</b>, never update</td><td>Load jobs work everywhere (even the sandbox). Full history of every version.</td><td>Duplicates by design; staging must de-duplicate.</td></tr>
+<tr><td>Watermark from <code>MAX(updated_on)</code></td><td>No state file to lose; the warehouse is the truth.</td><td>Re-fetches the boundary row each run (harmless after de-dup).</td></tr>
+<tr><td>Retries, then <code>sys.exit(1)</code></td><td>Survives blips; real failures alert someone.</td><td>Needs a scheduler that alerts on failure.</td></tr>
+</table>
+
+<p>Got a Nexudus trial from Chapter 07? Create an API user, put its token in an environment variable (<code>NEXUDUS_TOKEN</code>), create a <code>raw_nexudus_api</code> dataset in <code>europe-west2</code>, and run it against your trial space. If not, Lab 14.2 simulates the same behaviour with plain SQL.</p>
+
+<hr/>
+
+<h3>6. Incremental Loads and the Watermark</h3>
+
+<pre>
+   RUN 1 (Mon 02:00)   watermark = 2000-01-01   → fetch ALL           → max UpdatedOn = Mon 01:55
+   RUN 2 (Tue 02:00)   watermark = Mon 01:55    → fetch Mon 01:55 →   → max UpdatedOn = Tue 01:40
+   RUN 3 (Wed 02:00)   watermark = Tue 01:40    → fetch Tue 01:40 →   ...
+</pre>
+
+<p>Two classic traps:</p>
+<ul>
+    <li><b>Use <code>&gt;=</code>, not <code>&gt;</code>.</b> Two records updated in the same minute: if run 1 picked up only the first, a strict <code>&gt;</code> skips the second forever. Fetching the boundary again is safe because staging de-duplicates.</li>
+    <li><b>Time zones.</b> The API may return local UK time while BigQuery stores UTC. One hour off in summer means one hour of changes skipped. Always check what zone the API's timestamps use, and test across the clock change in late October.</li>
+</ul>
+
+<hr/>
+
+<h3>7. Duplicates and Deletes</h3>
+
+<p><b>Duplicates</b> are expected with append + <code>&gt;=</code>. The fix lives in staging: keep the latest version of each record.</p>
+
+<pre>
+-- staging pattern for an append-only API table
+SELECT
+  id                                             AS contract_id,
+  JSON_VALUE(payload, '$.CoworkerId')            AS member_id,
+  SAFE_CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC) AS monthly_price_gbp,
+  updated_on
+FROM raw_nexudus_api.coworker_contracts
+WHERE TRUE
+QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_on DESC, _loaded_at DESC) = 1
+</pre>
+
+<p>(Field names in <code>JSON_VALUE</code> are illustrative; read them from a real payload.)</p>
+
+<p><b>Deletes</b> never appear in an "updated since" query. Options:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Approach</th><th>How</th><th>When</th></tr>
+<tr><td><b>Periodic full ID scan</b></td><td>Weekly, fetch only the list of current Ids; anything in raw but not in the list is deleted</td><td>Small tables (Work.Life's member and contract tables are small)</td></tr>
+<tr><td><b>Full reload</b></td><td>Weekly <code>WRITE_TRUNCATE</code> of the whole entity</td><td>Simplest, if the API allows it</td></tr>
+<tr><td><b>Deleted-records endpoint / webhooks</b></td><td>If the API offers them</td><td>Check the Nexudus API docs</td></tr>
+</table>
+
+<p>For a business with about 8,000 members, a nightly incremental plus a weekly full ID scan is cheap and catches everything.</p>
+
+<hr/>
+
+<h3>8. Retries, Rate Limits and Failing Loudly</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Response</th><th>Meaning</th><th>Do</th></tr>
+<tr><td><code>429</code></td><td>Too many requests</td><td>Wait (respect <code>Retry-After</code>), retry with backoff</td></tr>
+<tr><td><code>500/502/503/504</code></td><td>Server problem</td><td>Retry with backoff</td></tr>
+<tr><td><code>401/403</code></td><td>Token wrong, expired or missing permission</td><td><b>Don't retry.</b> Fail and alert.</td></tr>
+<tr><td><code>400/404</code></td><td>Bad request or endpoint renamed</td><td><b>Don't retry.</b> Fail and alert. API probably changed.</td></tr>
+</table>
+
+<p>The worst extractor is one that <b>fails silently</b>: it exits "successfully" with zero rows, and nobody notices the dashboard is stale. Two defences: a non-zero exit code on error (above), and a <b>freshness test</b> in dbt that fails if <code>_loaded_at</code> is too old (Chapter 17). Belt and braces.</p>
+
+<hr/>
+
+<h3>9. Secrets and Least Privilege</h3>
+
+<p>That Nexudus token can read the personal details of every member. Treat it like the keys to the building.</p>
+
+<ul>
+    <li><b>Never in code or Git.</b> Read it from an environment variable locally, and from <b>Secret Manager</b> in the cloud.</li>
+    <li><b>Its own API user</b> in Nexudus, with read-only rights to only the modules needed. Not a staff member's login.</li>
+    <li><b>Its own service account</b> in Google Cloud with the smallest roles: write to <code>raw_nexudus_api</code> only, plus permission to run jobs. It must not be able to read <code>marts</code> or <code>ai_safe</code>.</li>
+    <li><b>Rotate</b> the token on a schedule and whenever someone with access leaves.</li>
+</ul>
+
+<p>This is the brief's <i>"secure by design"</i> principle at the very first step of the pipeline. We do the full security design in <a href="../season-3-ai-layer/chapter-26-security.html">Chapter 26</a>.</p>
+
+<hr/>
+
+<h3>10. Scheduling It in the Cloud</h3>
+
+<pre>
+   Cloud Scheduler ──(02:00 daily)──► Cloud Run job: nexudus_to_bq.py ──► BigQuery raw_nexudus_api
+         │                                   │  reads NEXUDUS_TOKEN
+         │                                   └─ from Secret Manager
+         │                                   │  exit 1 on failure
+         └──────────────────────────────────►└─► Cloud Monitoring alert ─► email / Slack
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Option</th><th>Good for</th><th>Note</th></tr>
+<tr><td><b>Cloud Run job + Cloud Scheduler</b></td><td>Small scripts, pay only while running</td><td>Same cloud as BigQuery. A natural fit.</td></tr>
+<tr><td>GitHub Actions on a schedule</td><td>Very small teams, already on GitHub</td><td>Secrets live in GitHub; data leaves via GitHub's runners</td></tr>
+<tr><td>Airflow / Cloud Composer</td><td>Many pipelines with dependencies</td><td>Overkill for Work.Life's size</td></tr>
+</table>
+
+<p>For a cost-conscious client with a handful of scripts, a scheduled Cloud Run job is the simple answer. Whatever runs it, the order matters: <b>extract → load → dbt build → tests</b>. If the extract fails, dbt shouldn't publish half-fresh numbers.</p>
+
+<hr/>
+
+<h3>11. Lab 14.2 — Simulate an Incremental Run and De-duplicate</h3>
+
+<p>No Nexudus trial? Fake one with SQL. We'll pretend Pixel Chai's office contract was loaded twice: once at signing, then again after the price was edited (made-up edit).</p>
+
+<pre>
+-- 1. A pretend append-only table: 3 loads, 2 versions of K002, 1 of K004
+CREATE OR REPLACE TABLE raw_nexudus.contracts_api_sim AS
+SELECT 'K002' AS id, TIMESTAMP '2026-03-14 10:00:00' AS updated_on,
+       '{"Id":"K002","CoworkerId":"M001","Price":2600}' AS payload,
+       TIMESTAMP '2026-03-15 02:00:00' AS _loaded_at
+UNION ALL SELECT 'K002', TIMESTAMP '2026-03-20 16:30:00',
+       '{"Id":"K002","CoworkerId":"M001","Price":2400}',          -- discount agreed (made up timing)
+       TIMESTAMP '2026-03-21 02:00:00'
+UNION ALL SELECT 'K002', TIMESTAMP '2026-03-20 16:30:00',          -- same version again (>= boundary)
+       '{"Id":"K002","CoworkerId":"M001","Price":2400}',
+       TIMESTAMP '2026-03-22 02:00:00'
+UNION ALL SELECT 'K004', TIMESTAMP '2025-01-15 09:00:00',
+       '{"Id":"K004","CoworkerId":"M007","Price":320}',
+       TIMESTAMP '2026-03-15 02:00:00';
+
+-- 2. Naive sum: WRONG (counts K002 three times)
+SELECT SUM(CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC)) AS naive_mrr
+FROM raw_nexudus.contracts_api_sim;                                -- 7,720
+
+-- 3. De-duplicated: latest version per id. RIGHT
+SELECT SUM(CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC)) AS mrr
+FROM (
+  SELECT *
+  FROM raw_nexudus.contracts_api_sim
+  WHERE TRUE
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_on DESC, _loaded_at DESC) = 1
+);                                                                  -- 2,720 = 2,400 + 320
+</pre>
+
+<p><code>CREATE OR REPLACE TABLE ... AS SELECT</code> is DDL, so it runs in the sandbox. Notice how easy it is to be wrong by £5,000 a month with one missing line. That <code>QUALIFY</code> belongs in every staging model on append-only data.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What makes an extractor idempotent, and why does it matter?</b></p>
+<p><i>"Running it twice gives the same final result as running it once. Either it truncates and reloads, or it appends and the next layer de-duplicates on a key and timestamp. It matters because schedulers retry and people re-run jobs; without idempotency every re-run inflates the numbers."</i></p>
+
+<p><b>Q: How do you handle records deleted in the source when you load incrementally?</b></p>
+<p><i>"An 'updated since' query never returns deleted records, so I add a separate check: a periodic scan of all current IDs, a weekly full reload for small tables, or a deletes endpoint or webhook if the API offers one. Then staging marks or drops records that no longer exist."</i></p>
+
+<p><b>Q: Why would you store the raw API record as JSON instead of flattening it into columns?</b></p>
+<p><i>"So the load never breaks when the API adds or renames fields, and so we keep everything the source sent. Flattening happens in staging with JSON functions, where it's version-controlled and tested. The cost is slightly more SQL."</i></p>
+
+<p><b>Q: Where do you keep an API token for a scheduled job?</b></p>
+<p><i>"In a secret manager, read at runtime, never in code or Git. The token belongs to a dedicated read-only API user, the job runs as its own service account with write access only to its raw dataset, and the token is rotated regularly and when people leave."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Lab warehouse</b></td><td><code>load_lab.py</code> loads all 13 lab files into raw datasets with load jobs. Re-run any time.</td></tr>
+<tr><td><b>Raw = STRING</b></td><td>Never reject data at load. Cast and test in staging.</td></tr>
+<tr><td><b>Incremental</b></td><td>Watermark from <code>MAX(updated_on)</code>; fetch with <code>&gt;=</code>; mind time zones.</td></tr>
+<tr><td><b>Duplicates</b></td><td>Expected with append. <code>QUALIFY ROW_NUMBER() ... = 1</code> in staging.</td></tr>
+<tr><td><b>Deletes</b></td><td>Invisible to "updated since". Add a periodic ID scan or full reload.</td></tr>
+<tr><td><b>Failures</b></td><td>Retry 429/5xx with backoff; fail loudly on everything else.</td></tr>
+<tr><td><b>Secrets</b></td><td>Secret Manager, dedicated read-only API user, least-privilege service account.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Our raw datasets are full. Before we model anything, we need to understand the engine underneath. In Chapter 15 we go deep on <b>BigQuery</b>: how it stores and charges for data, why <code>SELECT *</code> can cost money, partitioning, locations, permissions, and how the "controlled copy" the brief asks for actually works.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

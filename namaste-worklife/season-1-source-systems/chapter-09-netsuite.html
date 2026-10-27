@@ -16,10 +16,10 @@
     <li>Getting access to learn (NetSuite is hard; plan B)</li>
     <li>Lab 9.1: Turn our GL file into proper double entry</li>
     <li>Lab 9.2: Build the site P&amp;L and reconcile with Nexudus</li>
-    <li>Lab 9.3: Practise in a real accounting tool (Xero demo)</li>
+    <li>Lab 9.3: Practise in a real accounting tool (Xero's demo company, as a free practice ledger)</li>
     <li>How data leaves NetSuite (SuiteAnalytics Connect, SuiteQL, Fivetran)</li>
     <li>SQL: a P&amp;L by site from NetSuite tables</li>
-    <li>The Xero → NetSuite migration and what it means for history</li>
+    <li>Was there a ledger before NetSuite? Stitching history across a ledger change</li>
     <li>Interview Questions</li>
 </ul>
 
@@ -27,7 +27,7 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>It's 1 October. The CEO opens the AI and asks <i>"what was Soho's revenue in September?"</i>.</p>
+<p>It's 1 October. A leader opens the AI and asks <i>"what was Soho's revenue in September?"</i>.</p>
 
 <ul>
     <li>Nexudus says <b>£3,565</b> (everything invoiced).</li>
@@ -44,15 +44,15 @@
 <p><b>NetSuite</b> (Oracle NetSuite) is a cloud <b>ERP</b>: Enterprise Resource Planning. In plain words: <b>the company's official accounting system</b>, plus purchasing, billing, budgets and reporting.</p>
 
 <table border="1" cellpadding="10">
-<tr><th>At Work.Life, NetSuite is used for</th><th>By</th></tr>
+<tr><th>At Work.Life, NetSuite is most likely used for (typical ERP use; confirm)</th><th>By</th></tr>
 <tr><td>The general ledger (every £ in and out)</td><td>Finance</td></tr>
 <tr><td>Supplier bills (rent, rates, cleaning, energy) and paying them</td><td>Accounts payable</td></tr>
 <tr><td>Customer invoices/receipts (likely fed from Nexudus)</td><td>Accounts receivable</td></tr>
 <tr><td>Month-end close, P&amp;L, balance sheet</td><td>Finance lead</td></tr>
-<tr><td>Board pack financials</td><td>CFO / FD</td></tr>
+<tr><td>Board pack financials</td><td>Finance leadership</td></tr>
 </table>
 
-<p>From the 173tech deck: Work.Life <b>migrated from Xero to NetSuite</b> last year, and 173tech added NetSuite into the reporting layer. Remember this; it matters at the end.</p>
+<p>What the brief tells us: NetSuite is one of the four source systems feeding BigQuery today. What it doesn't tell us: how long Work.Life has used NetSuite, or whether older finance history sits in a different ledger. Remember this; it matters at the end (section 15).</p>
 
 <hr/>
 
@@ -98,7 +98,7 @@
 <tr><td>4000</td><td>Office Revenue</td><td>Income</td><td>Revenue</td></tr>
 <tr><td>4010</td><td>Coworking Revenue</td><td>Income</td><td>Revenue</td></tr>
 <tr><td>4100</td><td>Meeting Room Revenue</td><td>Income</td><td>Revenue</td></tr>
-<tr><td>4200</td><td>Event Revenue</td><td>Income</td><td>Revenue</td></tr>
+<tr><td>4200</td><td>Event Revenue</td><td>Income</td><td>Revenue (no rows in our September file; shown for completeness)</td></tr>
 <tr><td>5000–5300</td><td>Rent, Rates, Service Charge, Utilities, Site Staff, Cleaning</td><td>Expense</td><td>Site direct costs</td></tr>
 <tr><td>6000</td><td>Central Overheads</td><td>Expense</td><td>Central costs (allocated)</td></tr>
 </table>
@@ -144,7 +144,7 @@
 
 <h3>7. Accrual Accounting and the Prepaid Trap</h3>
 
-<p>Accountants record revenue when it's <b>earned</b>, not when cash arrives. Imagine GreenRoot <b>prepays the full year</b> on 1 January: £32,400.</p>
+<p>Accountants record revenue when it's <b>earned</b>, not when cash arrives. Imagine (made up: in the lab GreenRoot pays monthly) that GreenRoot <b>prepays the full year</b> on 1 January: £32,400.</p>
 
 <pre>
                       NEXUDUS (invoice)        NETSUITE (revenue recognised)
@@ -187,7 +187,7 @@
 <tr><th>Option</th><th>What you learn</th></tr>
 <tr><td>NetSuite's public <b>Help Center</b> and product tours</td><td>Screens, record types, the "NetSuite2.com" analytics data source</td></tr>
 <tr><td><b>Lab 9.1 / 9.2</b> below (Excel)</td><td>Double entry, P&amp;L by site, reconciliation. Exactly what the warehouse does.</td></tr>
-<tr><td><b>Xero demo company</b> (Lab 9.3)</td><td>A real accounting tool with invoices, bills, tracking categories and P&amp;L. Work.Life used Xero before NetSuite!</td></tr>
+<tr><td><b>Xero demo company</b> (Lab 9.3)</td><td>A real accounting tool with invoices, bills, tracking categories and P&amp;L. Used here only as a free practice ledger; it says nothing about Work.Life's own systems.</td></tr>
 <tr><td>In the real project</td><td>Work.Life gives you a <b>read-only role</b> in their NetSuite (or the warehouse copy). Ask for it on day 1.</td></tr>
 </table>
 
@@ -301,21 +301,28 @@ ORDER BY site, account_number;
 
 <hr/>
 
-<h3>15. The Xero → NetSuite Migration</h3>
+<h3>15. Was There a Ledger Before NetSuite? (An Unknown)</h3>
+
+<p>The brief doesn't say how long Work.Life has run NetSuite. Growing companies often start on a small-business ledger (Nexudus's own docs list Xero and QuickBooks integrations, for example) and move to an ERP like NetSuite later. Whether that happened here is <b>unknown</b>. Ask: <i>"Was there an earlier finance system before NetSuite, and where does that history live?"</i> (Chapter 11, question #5.)</p>
+
+<p>Why it matters: if there was a ledger change, the picture looks like this (generic, no dates):</p>
 
 <pre>
-   ──────── XERO ────────┤ migration ├──────── NETSUITE ────────►
-   2021 ... 2024/25      │  (last yr) │  2025/26 ... today
+   ──────── OLD LEDGER ────────┤ cut-over ├──────── NETSUITE ────────►
+   older history               │          │  newer history ... today
+   old account codes,                        new account codes,
+   old site tagging, old IDs                 locations/classes, new IDs
 </pre>
 
-<p>Two years of history in two different systems, with different account codes, different site tagging and different IDs. When the CEO asks <i>"how has Soho's profit changed over 3 years?"</i>, the warehouse must <b>stitch</b> both. Questions for the client and 173tech:</p>
+<p>When a leader asks <i>"how has Soho's profit changed over 3 years?"</i>, the warehouse must <b>stitch</b> both sides into one <code>fct_gl</code>. That needs:</p>
 <ul>
-    <li>Was history migrated into NetSuite, or does it only live in Xero (or the warehouse)?</li>
-    <li>Is there a mapping from old Xero accounts to new NetSuite accounts?</li>
-    <li>What's the cut-over date? Any months double counted or missing?</li>
+    <li><b>Where the old history lives</b>: migrated into NetSuite (often only as opening balances or monthly summary journals), still in the old system, or only in the warehouse or spreadsheets.</li>
+    <li><b>An account mapping</b>: old account code → new NetSuite account → P&amp;L section. Without it, "Rent" in one system and "Premises costs" in the other become two lines.</li>
+    <li><b>A site mapping</b>: the old ledger may tag sites differently (or not at all), so <code>dim_site</code> needs a column for each.</li>
+    <li><b>A cut-over date</b>, and a check for months that are double counted (in both systems) or missing (in neither).</li>
 </ul>
 
-<p>Until these are answered, the AI should only answer trend questions from the cut-over date onwards, or clearly say where the data changes source.</p>
+<p>Until these are answered, the AI should only answer trend questions over the period it can verify, and clearly say where the data source changes. The same pattern applies to any system swap, which is exactly what the brief's "source agnostic" principle is about.</p>
 
 <hr/>
 
@@ -346,7 +353,7 @@ ORDER BY site, account_number;
 <tr><td><b>Accrual</b></td><td>Revenue when earned. Prepaid → deferred revenue.</td></tr>
 <tr><td><b>Close</b></td><td>Open periods are provisional. The AI must say so.</td></tr>
 <tr><td><b>Data out</b></td><td>SuiteAnalytics Connect (Fivetran), SuiteQL, saved searches.</td></tr>
-<tr><td><b>History</b></td><td>Xero before, NetSuite after. Stitch carefully.</td></tr>
+<tr><td><b>History</b></td><td>Was there a ledger before NetSuite? Ask. If yes, stitch with an account mapping and a cut-over date.</td></tr>
 </table>
 
 <hr/>

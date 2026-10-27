@@ -1,0 +1,216 @@
+<h2>Chapter 37 — Client Call &amp; Interview Questions</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>This is the last chapter of Season 5. Section 8 of the brief says the written response is <i>"followed by a call to talk it through"</i>. That call is really a test of one thing: <b>do we understand how Work.Life's business and systems work?</b> So this chapter is mostly about the hard questions and the answers behind them, with a question bank from every season. Season 6 then pulls the whole series together.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What the call tests, and how to answer anything</li>
+    <li>The 10 hardest questions they might ask</li>
+    <li>Questions we ask them (and why each one matters)</li>
+    <li>The question bank: Seasons 0 to 5</li>
+    <li>The whole series in one picture</li>
+    <li>Interview Questions: the final round</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Two engineers join the same call.</p>
+
+<ul>
+    <li><b>Engineer A</b> shares their screen and presents 30 slides for 40 minutes. With 5 minutes left, a leader asks: <i>"What happens if it gives us a wrong number in a board meeting?"</i> Engineer A says <i>"Our AI is very accurate."</i> The call ends. 😬</li>
+    <li><b>Engineer B</b> talks for 5 minutes, then asks: <i>"What would you most like to test us on?"</i> The same leader asks the same question. Engineer B answers: <i>"Then trust is lost, which is why it can't happen silently. Core numbers come from definitions your Finance team signs off. Before go-live we test against your closed months, and Finance signs the result. Every answer shows its definition, and unclosed months are marked provisional. If someone finds an error, it becomes a permanent test."</i></li>
+</ul>
+
+<p>Engineer B didn't say anything new. It's all in Chapters 25, 33 and 36. They just <b>knew it well enough to say it simply</b>.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   The call is not a presentation. It's a conversation       │
+│   where the client tests whether they can TRUST you.        │
+│   Talk less. Listen more. Answer simply. Admit unknowns.    │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. What the Call Tests, and How to Answer Anything</h3>
+
+<p>The client wants to find out whether we understand <i>their</i> business, not just AI: sites, residents, net member movements, the board pack, where each number comes from. Two things to know without notes: the estimates from Chapters 33–35 (build <b>~£63k</b>; running <b>~£21.5k/year</b> leadership only, <b>~£45.6k/year</b> wider team; all estimates on a made-up day rate) and the plan dates from Chapter 34 (start early Oct, trusted go-live mid-Dec 2026, handover end Mar 2027). Any demo uses the <b>Mini Work.Life lab</b>, clearly labelled, because we don't have client data.</p>
+
+<p>Every answer follows the same pattern:</p>
+
+<pre>
+   1. ANSWER       Yes / no / a number, first.
+   2. WHY / HOW    One or two plain sentences about the mechanism.
+   3. EXAMPLE      From THEIR business ("e.g. Soho occupancy").
+   4. CAVEAT       What depends on them, or what we don't know yet.
+</pre>
+
+<p>Example. <b>They ask:</b> <i>"Could we swap Nexudus next year without breaking this?"</i></p>
+<p><b>Answer:</b> "Yes. <b>(1)</b> The AI only reads business tables like contracts by month and sites in the controlled copy, never Nexudus itself, so only the staging step of the pipeline changes. <b>(2)</b> For example, as member data moves to HubSpot, the staging models switch source and the crosswalk (<code>member_xref</code>, kept in the marts) keeps one ID per company and member across both, so <code>fct_contract_month</code> and <code>dim_company</code> keep the same shape. <b>(3)</b> We'd prove it by re-running the golden questions after the switch. What we'd need is a field mapping for the new system, from whoever owns reporting and from the data partner that runs the pipeline. <b>(4)</b>"</p>
+
+<p>And when you don't know: <b>"I don't know yet. Here's how we'd find out, and when."</b></p>
+
+<hr/>
+
+<h3>3. The 10 Hardest Questions They Might Ask</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>They ask</th><th>Short answer</th><th>Ch</th></tr>
+<tr><td>1</td><td>"What if it gives a wrong number in a board meeting?"</td><td>Definitions signed off by Finance, golden tests before go-live, definitions and provisional flags on every answer, every error becomes a test. And the AI says "I can't answer reliably" instead of guessing.</td><td>25</td></tr>
+<tr><td>2</td><td>"Why not just use ChatGPT/Copilot with our spreadsheets?"</td><td>No controlled copy, no shared definitions, no accuracy gate, and data leaves your control. It'd break 4 of your 8 principles.</td><td>26</td></tr>
+<tr><td>3</td><td>"Can you really be live by Christmas?"</td><td>On a narrow, tested set of board-pack questions, yes, if definitions and access happen in October. Broad coverage, no. That's months 4–6.</td><td>34</td></tr>
+<tr><td>4</td><td>"Why is support the biggest cost?"</td><td>The data is small and tokens are cheap. What costs money is keeping definitions and answers right as the business changes. Good docs keep it small.</td><td>35</td></tr>
+<tr><td>5</td><td>"Do we need to hire a data person?"</td><td>No data engineer. You need owners for definitions (existing roles) and someone who owns reporting today to review answers. (Whether Work.Life has an in-house data role is unknown: ask.)</td><td>33</td></tr>
+<tr><td>6</td><td>"Does our member data go to the AI company?"</td><td>Only the question and a small aggregated result. Personal details aren't in the safe copy at all. Provider terms must exclude training on your data.</td><td>26</td></tr>
+<tr><td>7</td><td>"Can it tell us what to do?"</td><td>It can show drivers and options, e.g. which offices drove a drop. Recommendations should stay with you in Phase 1. We won't over-promise prescriptive AI.</td><td>19</td></tr>
+<tr><td>8</td><td>"What if we change BI tools?"</td><td>Nothing breaks. The AI and any BI tool read the same models and definitions. Ideally they share one semantic layer.</td><td>21</td></tr>
+<tr><td>9</td><td>"What happens if you go away?"</td><td>Everything is in your accounts, documented, and your team has run the runbooks in a drill. That's the handover test.</td><td>36</td></tr>
+<tr><td>10</td><td>"How does Phase 1 lead to churn prediction?"</td><td>Same contract history and company-level marts. Phase 2 adds a contract-events model, agreed company-level usage aggregates (with a minimum group size), a score and a renewal pack on top. No rebuild.</td><td>30</td></tr>
+</table>
+
+<hr/>
+
+<h3>4. Questions We Ask Them</h3>
+
+<p>From our client question list (#1–12 in Chapter 11, #13–22 in Chapter 03), pick the 5 that change the plan most. Each one exists because a decision depends on it:</p>
+
+<ol>
+    <li><b>"Who exactly would use it first, and could we see a recent board pack?"</b> (users + business context)</li>
+    <li><b>"Who would own definitions like occupancy and contribution, and can they give us a few hours a week in October?"</b> (critical path)</li>
+    <li><b>"Is 'ACT' your door-access system or the Act! CRM?"</b> (data and privacy)</li>
+    <li><b>"What accuracy bar would leadership need before relying on it?"</b> (launch gate)</li>
+    <li><b>"Where does the BI tool review stand, and is there a budget range in mind?"</b> (architecture + cost)</li>
+</ol>
+
+<hr/>
+
+<h3>5. The Question Bank: Seasons 0 to 5</h3>
+
+<p>Use this for interview prep, client prep or self-testing. Cover the answer column and see how many you can explain simply.</p>
+
+<p><b>Season 0 · The Business &amp; The Brief</b></p>
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Model answer</th></tr>
+<tr><td>How does a coworking business make money?</td><td>Recurring memberships and private-office contracts, plus one-off income like meeting rooms, day passes and events. Costs are mostly fixed (rent, rates, staff), so occupancy drives profit.</td></tr>
+<tr><td>Why can two people report different occupancy for the same site?</td><td>Different definitions: by offices, desks or area, or snapshot vs average. Fix with one written definition used everywhere.</td></tr>
+<tr><td>MRR vs recognised revenue?</td><td>MRR is contracted monthly value; recognised revenue is what Finance posts, including credits and adjustments. Finance wins on profit; the membership system wins on member counts.</td></tr>
+<tr><td>What kind of document is Work.Life's brief?</td><td>A scoping brief / RFI: a request for thinking, not a commitment. Short, honest, comparable answers win.</td></tr>
+<tr><td>Name the 8 principles.</td><td>Warehouse first on a copy; source agnostic; safe data only; people data excluded; accuracy is a launch gate; cost conscious; secure by design; documented and handover ready.</td></tr>
+<tr><td>Who owns KPI definitions?</td><td>The business: Finance for money, commercial leads for members and sales. The data team writes them down and implements them once.</td></tr>
+</table>
+
+<p><b>Season 1 · Source Systems</b></p>
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Model answer</th></tr>
+<tr><td>Why do the Excel sheets matter?</td><td>They often hold the truth no system has: capacity and budgets. If they're not modelled, the AI can't calculate occupancy or variance to target.</td></tr>
+<tr><td>What does Nexudus hold?</td><td>Members, companies, plans, contracts, bookings, invoices and check-ins. The operational heart and the largest source.</td></tr>
+<tr><td>Why is "ACT" a mystery?</td><td>The brief never says if it's the Act! CRM or ACT365 door access. Different data and very different privacy rules. Ask.</td></tr>
+<tr><td>Why is NetSuite history tricky?</td><td>We don't know how far back NetSuite history goes or whether older years sit in an earlier ledger (Nexudus docs list Xero and QuickBooks integrations, but that tells us nothing about Work.Life). Multi-year trends depend on the answer, so ask (Chapter 11, question 5).</td></tr>
+<tr><td>How do you match one member across five systems?</td><td>A crosswalk table (<code>member_xref</code>) keyed on stable IDs, with careful email normalisation as a fallback and a review queue for uncertain matches.</td></tr>
+</table>
+
+<p><b>Season 2 · The Pipeline</b></p>
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Model answer</th></tr>
+<tr><td>ETL vs ELT?</td><td>ETL transforms before loading; ELT loads raw data into the warehouse first and transforms there (with dbt). ELT keeps raw history and makes changes cheaper.</td></tr>
+<tr><td>When Fivetran vs a Python extractor?</td><td>Fivetran for standard connectors you don't want to maintain; Python where no good connector exists or cost is better. Trade-off: licence cost vs maintenance effort.</td></tr>
+<tr><td>What are dbt's layers for?</td><td>Raw/staging cleans and renames each source; intermediate joins and applies logic; marts are business-ready tables like <code>fct_site_month_kpis</code>. Swapping a source only touches staging.</td></tr>
+<tr><td>Why do dbt tests matter for AI?</td><td>The AI trusts the marts. Tests (unique, not null, relationships, accepted values) catch broken data before it becomes a confident wrong answer.</td></tr>
+<tr><td>Should the AI depend on the BI tool?</td><td>No. Both read the same models and definitions, so either can change independently.</td></tr>
+</table>
+
+<p><b>Season 3 · The AI Layer</b></p>
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Model answer</th></tr>
+<tr><td>How does text-to-SQL work?</td><td>The model gets the question plus schema and definitions, writes a query, the system runs it read-only, and the model explains the result. Each step can be checked.</td></tr>
+<tr><td>Why a semantic layer?</td><td>So "revenue" means one thing everywhere. Core KPIs come from reviewed definitions instead of fresh SQL each time, which makes answers consistent and testable.</td></tr>
+<tr><td>What is <code>ai_safe</code>?</td><td>The controlled copy: approved modelled tables only, no personal or HR data, readable by the AI's service account and nothing else.</td></tr>
+<tr><td>What is a golden question set?</td><td>Real business questions with answers verified by hand from actuals. The launch gate and the regression test after every change.</td></tr>
+<tr><td>How do you control AI cost?</td><td>Per-user limits, provider spending caps, BigQuery byte limits, caching, cheaper models for simple steps, and budget alerts.</td></tr>
+<tr><td>What should never be connected?</td><td>HR/people data, payroll, bank and card details, door-access numbers, member contact details, and free-text notes with personal information.</td></tr>
+</table>
+
+<p><b>Season 4 · Phase 2</b></p>
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Model answer</th></tr>
+<tr><td>What signals predict churn in coworking?</td><td>Falling physical usage, fewer bookings, a contract end date with no renewal conversation, complaints, and downsizing requests.</td></tr>
+<tr><td>What's a renewal context pack?</td><td>A one-page summary for a renewal conversation: tenure, company-level usage trend, spend, history and risk signals. Facts come from fixed queries; no contact details or person-level data.</td></tr>
+<tr><td>What would you forecast first?</td><td>The brief's list: resident revenue projection (signed contracts plus expected renewals, with pipeline on a separate line), net member movements, seasonality and meeting room demand. Signed revenue is arithmetic on contracts; only usage gets a time-series model.</td></tr>
+<tr><td>How does role-based access extend Phase 1?</td><td>Same sign-in and logging, plus row-level rules (e.g. a site manager sees their site) defined in one place.</td></tr>
+</table>
+
+<p><b>Season 5 · Delivery</b></p>
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Model answer</th></tr>
+<tr><td>What's on the critical path?</td><td>Access → definitions → golden answers → sign-off. Mostly client people, so start them on day one.</td></tr>
+<tr><td>What's the biggest running cost?</td><td>Support people, not tokens or BigQuery. Documentation and clear owners keep it small.</td></tr>
+<tr><td>What proves a handover worked?</td><td>A fire drill: the client fixes a staged failure using only the docs.</td></tr>
+<tr><td>What do you do if the accuracy gate fails close to go-live?</td><td>Go live only on what passes, or move the date. Never lower the bar.</td></tr>
+</table>
+
+<hr/>
+
+<h3>6. The Series So Far in One Picture</h3>
+
+<pre>
+   SEASON 0              SEASON 1             SEASON 2              SEASON 3              SEASON 4         SEASON 5
+   THE BUSINESS          THE SOURCES          THE PIPELINE          THE AI LAYER          PHASE 2          DELIVERY
+   ────────────          ───────────          ────────────          ────────────          ───────          ────────
+   how WL makes money    Excel · Nexudus      ELT · Fivetran        maturity ladder       retention        response
+   KPIs & definitions    ACT · NetSuite  ───► Python · BigQuery ──► text-to-SQL      ───► churn       ───► 3/6-month plan
+   the brief             HubSpot              dbt layers & tests    semantic layer        forecasting      cost
+   who's who             one member,          BI layer              context · alerts      RBAC & agents    handover
+                         five systems                               accuracy · security                    THE CALL 🏆
+                                                                    cost · source agnostic
+
+   ─────────────────────────────── one idea underneath all of it ───────────────────────────────
+         Understand the business first. Define every number once. Prove it's right.
+                       Keep it safe, cheap and documented.
+</pre>
+
+<hr/>
+
+<h3>Interview Questions: The Final Round</h3>
+
+<p><b>Q: Explain this whole project in 60 seconds.</b></p>
+<p><i>"Work.Life is a UK coworking company with 14 sites and about 8,000 members. Their data from Nexudus, NetSuite, ACT, Excel and soon HubSpot already flows into BigQuery and is modelled with dbt. They want the leadership team to ask business questions in plain English and trust the answers. We build a controlled, safe copy of the modelled data, one agreed set of KPI definitions, and an AI layer that answers from those definitions and shows its working. It doesn't go live until a test against their real results passes with Finance's sign-off. It's cheap to run, secure, documented, and ready to extend to churn and forecasting later."</i></p>
+
+<p><b>Q: What's the single biggest risk, and how do you manage it?</b></p>
+<p><i>"Confidently wrong answers, because one bad number in a board meeting loses trust for good. I manage it with agreed definitions, a golden-question launch gate signed off by Finance, transparent answers, provisional flags, a refusal mode, and turning every reported error into a permanent test."</i></p>
+
+<p><b>Q: What did you learn from this project that applies to any data project?</b></p>
+<p><i>"Business first, tools second. Most data problems are definition problems. Critical paths run through people. Cost is mostly people, not compute. And you can't design any of it until you know how the business actually runs: what a resident is, when a move is not churn, which system wins for which number."</i></p>
+
+<p><b>Q: If you could ask the client only one question, what would it be?</b></p>
+<p><i>"Can we see your board pack and meet whoever owns its definitions? That gives us the users' real questions, the business context, the definitions and the accuracy test, all at once."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>The call</b></td><td>A test of whether we understand their business and systems.</td></tr>
+<tr><td><b>Preparation</b></td><td>Know the principles, the 10 questions, the estimates and the dates without notes.</td></tr>
+<tr><td><b>4-step answer</b></td><td>Answer → why/how → their example → caveat.</td></tr>
+<tr><td><b>Unknowns</b></td><td>"I don't know yet. Here's how we'll find out, and when."</td></tr>
+<tr><td><b>Our questions</b></td><td>Users and board pack, definition owners, ACT, accuracy bar, BI review and budget.</td></tr>
+<tr><td><b>The series</b></td><td>Business → sources → pipeline → AI → Phase 2 → delivery.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>That's the end of Season 5. Thirty-seven chapters ago we started with Priya booking a day pass in Farringdon. Since then we've learned how a coworking business makes money, defined the numbers that run it, read the brief closely, run five source systems by hand, built a pipeline, designed an AI layer, planned Phase 2 and worked through delivery.</p>
+
+<p>In <b>Season 6</b> we step back and make sure it all fits together: Chapter 38 is the glossary of every term, Chapter 39 maps every integration end to end, and Chapter 40 walks through a month in the life of the business and its data.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

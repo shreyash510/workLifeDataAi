@@ -1,0 +1,281 @@
+<h2>Chapter 36 — Documentation &amp; Handover</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>The last of the brief's 8 principles reads: <i>"Setup, data flows and operation must be documented so the capability does not depend on any single person, on your side or ours."</i> Read the last four words again: <b>on your side or ours</b>. Work.Life is telling every supplier, politely: <i>we don't want to be stuck with you.</i> That's what a well-run business should ask for.</p>
+
+<p>In this chapter we build the complete documentation set, write the runbooks, and plan a handover that we can actually prove worked.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Why Work.Life cares so much</li>
+    <li>The bus factor test</li>
+    <li>The documentation set: 10 documents</li>
+    <li>Where docs live (hint: not with the supplier)</li>
+    <li>Docs as code: generated, not typed</li>
+    <li>The runbooks, with a full example</li>
+    <li>The handover plan: tell, show, do, prove</li>
+    <li>Who owns what after handover</li>
+    <li>Keeping docs alive</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Look at what the brief tells us about today. The pipeline <i>"is currently kept running by an external data partner"</i>. Reporting is <i>"often rebuilt manually"</i> and <i>"depends on someone finding time to rebuild it."</i> So knowledge of how the numbers are made already sits with a small number of people, some inside Work.Life and some outside. Who exactly holds it in house (is there a data or reporting role, or is it spread across Finance and Ops?) is unknown. Ask.</p>
+
+<p>Now imagine a Monday morning, one year after our go-live (made up):</p>
+<ul>
+    <li>The leadership digest didn't arrive.</li>
+    <li>The person who built the AI layer has moved to another project.</li>
+    <li>The one person at Work.Life who knows how the reporting works is on holiday.</li>
+    <li>A leader asks Operations &amp; IT Systems: <i>"Is the AI broken? Can we trust last week's numbers?"</i></li>
+</ul>
+
+<p>With good documentation, anyone on the Ops team opens the runbook <b>"Digest did not arrive"</b>, follows six steps, finds the refresh failed because a source API changed overnight, and knows the numbers from last week are fine. Twenty minutes. Without documentation: a week of panic, and trust gone. 😟</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   Documentation is done when someone who has never met us   │
+│   can RUN, FIX and CHANGE the system using only the docs.   │
+│   Not when the docs "exist".                                │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. The Bus Factor Test</h3>
+
+<p>The <b>bus factor</b> is the number of people who would have to disappear (win the lottery, go on a long holiday) before a project stops. A bus factor of 1 means one person holds critical knowledge alone. That's what the brief wants to avoid.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Knowledge</th><th>Without docs: who knows?</th><th>Bus factor</th><th>After handover</th></tr>
+<tr><td>How the <code>ai_safe</code> copy refreshes</td><td>The engineer who built it</td><td>1</td><td>Runbook + architecture doc</td></tr>
+<tr><td>Why "occupancy" is calculated by desks</td><td>Whoever was in the workshop</td><td>1–2</td><td>KPI dictionary with decision log</td></tr>
+<tr><td>Which columns are excluded and why</td><td>The engineer + one Ops person</td><td>2</td><td>Safe-data inventory</td></tr>
+<tr><td>How to add a new leader</td><td>The supplier</td><td>1</td><td>Runbook, done by Ops</td></tr>
+<tr><td>What the AI costs and where the caps are</td><td>The supplier</td><td>1</td><td>Cost &amp; access register</td></tr>
+</table>
+
+<p>Our goal: <b>bus factor ≥ 3</b> for everything critical, with at least one of those people inside Work.Life.</p>
+
+<hr/>
+
+<h3>3. The Documentation Set: 10 Documents</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Document</th><th>Answers</th><th>Reader</th><th>Format</th></tr>
+<tr><td>1</td><td><b>Overview</b> (2 pages)</td><td>What is this, who uses it, what it can and can't do</td><td>Leadership, new joiners</td><td>Plain-English doc</td></tr>
+<tr><td>2</td><td><b>Architecture</b></td><td>Components, where they run, how they connect</td><td>Ops &amp; IT, any engineer</td><td>Doc + diagram</td></tr>
+<tr><td>3</td><td><b>Data flow</b></td><td>Source → raw → marts → <code>ai_safe</code> → AI → user; refresh times</td><td>Reporting owner, engineers</td><td>Diagram + dbt lineage</td></tr>
+<tr><td>4</td><td><b>KPI dictionary</b></td><td>Every metric: formula, source mart, grain, owner, decision history</td><td>Finance, leadership, reporting owner</td><td>Generated from semantic layer</td></tr>
+<tr><td>5</td><td><b>Safe-data inventory</b></td><td>Every table/column in <code>ai_safe</code>: allowed / dropped / aggregated, and why. The never-connect list.</td><td>Ops &amp; IT, security review</td><td>Table, signed off</td></tr>
+<tr><td>6</td><td><b>Access &amp; security</b></td><td>Who can sign in, service accounts, IAM roles, logging, how to remove access</td><td>Ops &amp; IT</td><td>Doc + IAM export</td></tr>
+<tr><td>7</td><td><b>Accuracy &amp; testing</b></td><td>Golden question set, how to run it, how to add questions, the go-live bar</td><td>Reporting owner, Finance</td><td>Repo + doc</td></tr>
+<tr><td>8</td><td><b>Runbooks</b></td><td>Step-by-step fixes and changes (section 6)</td><td>Ops &amp; IT, reporting owner</td><td>One page each</td></tr>
+<tr><td>9</td><td><b>Cost &amp; access register</b></td><td>Monthly cost, caps, vendor accounts, renewals, who has admin</td><td>Ops &amp; IT, Finance</td><td>Spreadsheet</td></tr>
+<tr><td>10</td><td><b>User guide</b></td><td>How to ask good questions, how to read an answer, what "provisional" means, how to report a wrong answer</td><td>Leadership</td><td>2-page guide + short video</td></tr>
+</table>
+
+<p>Plus one living file: the <b>decision log</b>. Every important choice (why desks not offices for occupancy, whether and why "ACT" data is excluded, why model X) with date, who decided, and why. Future readers need the <i>why</i> more than the <i>what</i>.</p>
+
+<hr/>
+
+<h3>4. Where Docs Live</h3>
+
+<pre>
+   WORK.LIFE OWNS EVERYTHING
+   ─────────────────────────
+   Work.Life Git repository                 Work.Life shared drive
+   ├── dbt/ (models, tests, docs)           ├── 01 Overview.pdf
+   ├── semantic/ (metric definitions)       ├── 05 Safe-data inventory (signed)
+   ├── ai_app/ (code, prompts, config)      ├── 09 Cost &amp; access register
+   ├── golden/ (questions + answers)        ├── 10 User guide + video
+   ├── infra/ (IaC: datasets, IAM, jobs)    └── Decision log
+   └── docs/ (architecture, data flow,
+              runbooks, testing)
+
+   Work.Life Google Cloud project: all running services, logs, billing
+</pre>
+
+<p>Three rules:</p>
+<ol>
+    <li><b>Work.Life's accounts, from day one.</b> Repos, cloud project, AI provider account, all in their name, with us as invited users. Moving later is painful and risky.</li>
+    <li><b>Infrastructure as code.</b> Datasets, IAM roles and scheduled jobs are defined in files (for example Terraform) in the repo, so the setup can be rebuilt, not just described.</li>
+    <li><b>No secrets in docs.</b> Docs say <i>where</i> a key lives (a secret manager) and <i>who</i> can access it, never the key itself.</li>
+</ol>
+
+<hr/>
+
+<h3>5. Docs as Code: Generated, Not Typed</h3>
+
+<p>Typed documentation goes stale the day after it's written. Wherever possible, generate it from the real system:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Doc</th><th>Generated from</th><th>Stays correct because</th></tr>
+<tr><td>Data flow / lineage</td><td>dbt docs (Chapter 17)</td><td>Built from the actual models</td></tr>
+<tr><td>KPI dictionary</td><td>Semantic layer definitions (Chapter 21)</td><td>The AI uses the same file</td></tr>
+<tr><td>Safe-data inventory</td><td>Schema of <code>ai_safe</code> + a column allow-list file</td><td>A test fails if a column appears that isn't on the list</td></tr>
+<tr><td>Accuracy report</td><td>Golden test run output (Chapter 25)</td><td>Re-run on every change</td></tr>
+<tr><td>IAM / access</td><td>Export of IAM policy + IaC files</td><td>It <i>is</i> the config</td></tr>
+</table>
+
+<p>That third row is powerful: if someone adds a new column to <code>ai_safe</code> without updating the allow-list, the build fails. The "safe data only" principle is enforced by a test, not by memory. 🔒</p>
+
+<hr/>
+
+<h3>6. The Runbooks</h3>
+
+<p>A runbook is a one-page, step-by-step guide for one task. The minimum set:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Runbook</th><th>Type</th><th>Who should be able to do it</th></tr>
+<tr><td>Add or remove a user</td><td>Change</td><td>Ops &amp; IT</td></tr>
+<tr><td>Daily refresh failed</td><td>Fix</td><td>Ops &amp; IT, reporting owner</td></tr>
+<tr><td>Digest or alert did not arrive</td><td>Fix</td><td>Ops &amp; IT</td></tr>
+<tr><td>A leader reports a wrong answer</td><td>Fix</td><td>Reporting owner (+ Finance)</td></tr>
+<tr><td>Add a new KPI</td><td>Change</td><td>Reporting owner</td></tr>
+<tr><td>Change a KPI definition</td><td>Change</td><td>Reporting owner + definition owner</td></tr>
+<tr><td>Cost cap reached / cost alert</td><td>Fix</td><td>Ops &amp; IT</td></tr>
+<tr><td>Run the golden tests</td><td>Check</td><td>Reporting owner</td></tr>
+<tr><td>A source system is replaced</td><td>Change</td><td>Reporting owner + pipeline partner</td></tr>
+<tr><td>Rotate keys / suspected leak</td><td>Security</td><td>Ops &amp; IT</td></tr>
+</table>
+
+<p>Here's a full example. Every runbook follows the same shape:</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────┐
+│ RUNBOOK · A leader reports a wrong answer                         │
+├──────────────────────────────────────────────────────────────────┤
+│ WHEN      A user says an answer is wrong or doesn't match a report│
+│ WHO       Reporting owner; Finance owner if it's a money KPI       │
+│ TIME      30–60 min                                               │
+│                                                                   │
+│ 1. Find the question in the answer log (user, time). Copy the     │
+│    answer, the metric/definition used and the query.              │
+│ 2. Check the period: was the month closed? If not, the answer     │
+│    should say "provisional". If it didn't → bug, go to step 6.    │
+│ 3. Run the query yourself on ai_safe. Same result?                │
+│      No  → AI layer issue → step 6.                               │
+│      Yes → continue.                                              │
+│ 4. Compare with the KPI dictionary: did the AI pick the right     │
+│    metric? Wrong metric → add a clarification example, step 6.    │
+│ 5. Right metric, right query, still disagrees with the report?    │
+│    → the definitions differ. Ask the definition owner which is    │
+│    correct. Update the dictionary OR the report. Log the decision.│
+│ 6. Fix, add this question to the golden set, run the full golden  │
+│    tests, confirm pass.                                           │
+│ 7. Reply to the user with what happened and what changed.         │
+│                                                                   │
+│ ESCALATE  Money KPI wrong in a board paper → tell Finance owner   │
+│           the same day.                                           │
+└──────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Step 6 is the most important habit in the whole project: <b>every reported error becomes a new golden test</b>. The system can't make the same mistake twice without someone noticing.</p>
+
+<hr/>
+
+<h3>7. The Handover Plan: Tell, Show, Do, Prove</h3>
+
+<pre>
+   MONTH 5 ───────────────────────────────► MONTH 6 ──────────────►
+   ┌─────────┐   ┌─────────┐   ┌──────────────┐   ┌────────────────┐
+   │ 1. TELL │──►│ 2. SHOW │──►│ 3. DO        │──►│ 4. PROVE       │
+   │ walk-   │   │ we run  │   │ WL runs the  │   │ "fire drill":  │
+   │ throughs│   │ runbooks│   │ runbooks, we │   │ break something│
+   │ recorded│   │ while WL│   │ only watch   │   │ in test; WL    │
+   │         │   │ watches │   │              │   │ fixes it alone │
+   └─────────┘   └─────────┘   └──────────────┘   └────────────────┘
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>What happens</th><th>Done when</th></tr>
+<tr><td>1. Tell</td><td>Recorded sessions: architecture, data flow, KPI dictionary, security, costs</td><td>Recordings stored in the shared drive</td></tr>
+<tr><td>2. Show</td><td>We perform each runbook live</td><td>Every runbook demonstrated once</td></tr>
+<tr><td>3. Do</td><td>Work.Life staff perform each runbook; we only answer questions</td><td>Each runbook done by at least 2 Work.Life people</td></tr>
+<tr><td>4. Prove</td><td>Work.Life's team runs the live service for two weeks from the documents alone, with us only observing (as promised in the Chapter 33 response). During those weeks, in a test environment, we break things (failed refresh, a wrong definition, a cost alert) without warning. Work.Life fixes them using only the docs.</td><td>Two weeks run solo; drills passed; gaps in docs fixed</td></tr>
+</table>
+
+<p><b>Handover sign-off checklist</b> (6-month milestone, Chapter 34):</p>
+<ul>
+    <li>☐ All 10 documents complete, reviewed and stored in Work.Life's systems</li>
+    <li>☐ All accounts, repos and cloud resources owned by Work.Life</li>
+    <li>☐ Every runbook performed by at least two Work.Life people</li>
+    <li>☐ Two weeks run by Work.Life from the docs alone; fire drill passed</li>
+    <li>☐ Golden tests passing; Work.Life can run and extend them</li>
+    <li>☐ Supplier access reduced to what the support agreement needs</li>
+</ul>
+
+<hr/>
+
+<h3>8. Who Owns What After Handover</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Area</th><th>Owner</th><th>Backup</th></tr>
+<tr><td>The service overall (users, costs, vendors)</td><td>Operations &amp; IT Systems</td><td>Reporting owner</td></tr>
+<tr><td>KPI definitions: money</td><td>Finance</td><td>Reporting owner</td></tr>
+<tr><td>KPI definitions: members, occupancy, sales</td><td>Membership / Ops leads</td><td>Reporting owner</td></tr>
+<tr><td>Golden tests and answer quality</td><td>Reporting owner</td><td>Supplier (support)</td></tr>
+<tr><td>Source pipeline to the marts</td><td>Pipeline partner</td><td>Reporting owner</td></tr>
+<tr><td>AI layer code and infrastructure</td><td>Supplier (support agreement)</td><td>Any engineer, using the docs</td></tr>
+</table>
+
+<p>Every row has a <b>backup</b>. That's the bus factor fix in one table.</p>
+
+<p>⚠️ "Reporting owner" is a role, not a known person. We don't know whether Work.Life has an in-house analyst, or whether reporting is shared between Finance, Operations &amp; IT Systems and the external data partner. Naming this person (and their backup) is one of the first things to agree, because the golden tests and the "wrong answer" runbook depend on them. Note also the boundary in the "source pipeline" row: the data partner owns sources → marts; whoever supports the AI layer owns the controlled copy and everything above it. Agree that line in writing so a broken refresh never falls between two suppliers.</p>
+
+<hr/>
+
+<h3>9. Keeping Docs Alive</h3>
+
+<ul>
+    <li><b>Definition of done includes docs.</b> A change isn't finished until its runbook, dictionary entry or diagram is updated.</li>
+    <li><b>Monthly review</b> (part of support, Chapter 35): any runbook used this month? Did it work? Fix it.</li>
+    <li><b>Quarterly fire drill</b>: 30 minutes, one random runbook, someone new does it.</li>
+    <li><b>Last-reviewed date</b> on every document. Anything older than 6 months gets checked.</li>
+</ul>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What does "handover ready" mean to you?</b></p>
+<p><i>"Someone who wasn't involved can run, fix and change the system using only the documentation, and we've proved it with drills. All accounts and code belong to the client, critical knowledge has a bus factor of at least three, and owners and backups are named."</i></p>
+
+<p><b>Q: How do you stop documentation going out of date?</b></p>
+<p><i>"Generate as much as possible from the system itself: dbt docs for lineage, the semantic layer for the KPI dictionary, IAM exports for access, test reports for accuracy. For the rest, make docs part of the definition of done, review them monthly and run regular drills."</i></p>
+
+<p><b>Q: What's in a good runbook?</b></p>
+<p><i>"When to use it, who does it, how long it takes, numbered steps with clear decision points, how to escalate, and what to record afterwards. One page, tested by someone who didn't write it."</i></p>
+
+<p><b>Q: The data partner runs the pipeline and another supplier runs the AI layer. Where's the risk?</b></p>
+<p><i>"At the boundary. If the marts change shape or a refresh fails, the AI answers wrongly or not at all, and each side can say it's the other's problem. Fix it with a written boundary (partner owns sources to marts, AI support owns the copy and above), dbt tests and freshness checks on the marts the copy reads, and a runbook that says who is called first."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>The principle</b></td><td>No dependence on any single person, "on your side or ours".</td></tr>
+<tr><td><b>Bus factor</b></td><td>≥ 3 for critical knowledge, with someone inside Work.Life.</td></tr>
+<tr><td><b>10 documents</b></td><td>Overview, architecture, data flow, KPI dictionary, safe-data inventory, access, testing, runbooks, cost register, user guide. Plus a decision log.</td></tr>
+<tr><td><b>Ownership</b></td><td>Everything in Work.Life's accounts from day one.</td></tr>
+<tr><td><b>Docs as code</b></td><td>Generate from dbt, semantic layer, IAM and tests.</td></tr>
+<tr><td><b>Runbooks</b></td><td>One page, same shape. Every wrong answer becomes a golden test.</td></tr>
+<tr><td><b>Handover</b></td><td>Tell → show → do → prove (fire drill).</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>One chapter left. In Chapter 37 we walk into the follow-up call: how to run it, what Work.Life is likely to ask, and a big bank of interview and client questions from the whole series, with model answers. It's the final exam of Namaste Work.Life. 🏆</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

@@ -1,0 +1,315 @@
+<h2>Chapter 13 — Fivetran: Connectors, Syncs &amp; MAR Pricing</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 12 we learned that a modern pipeline is <b>ELT</b>: extract and load raw data first, transform later. The brief says Work.Life's "extract &amp; load" layer is <i>"Fivetran, Python"</i>. Today we meet the first half: <b>Fivetran</b>, a managed service that copies data from hundreds of tools into a warehouse with no code.</p>
+
+<p>This chapter matters for three reasons. First, Fivetran is already in Work.Life's stack, so you'll be reading its tables from day one. Second, its pricing model (<b>Monthly Active Rows</b>) is a real line in the running cost the brief asks about. Third, how Fivetran handles changes and deletes affects whether the AI's answers are correct.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>What Fivetran does (and doesn't do)</li>
+    <li>Connectors, destinations and syncs</li>
+    <li>What Fivetran adds to your tables</li>
+    <li>Incremental syncs, re-syncs and deletes</li>
+    <li>Schema changes: when the source adds a column</li>
+    <li>MAR pricing, explained with our lab data</li>
+    <li>Which Work.Life sources fit Fivetran</li>
+    <li>Lab 13.1: Load the Excel budget with a Fivetran connector</li>
+    <li>Lab 13.2: Estimate MAR for Mini Work.Life</li>
+    <li>Fivetran vs Python: the decision table</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Imagine you have to copy NetSuite into BigQuery by hand-written code (made-up scenario, but realistic). You'd need to:</p>
+<ul>
+    <li>learn NetSuite's APIs and authentication,</li>
+    <li>work out which of hundreds of tables you need,</li>
+    <li>fetch only rows that changed since last time,</li>
+    <li>handle deleted rows, retries, rate limits and timeouts,</li>
+    <li>notice when NetSuite adds a field and add the column in BigQuery,</li>
+    <li>and fix it at 7am when it breaks before the board meeting.</li>
+</ul>
+
+<p>Now multiply that by HubSpot, Google Sheets and every other source. That's weeks of work and a permanent maintenance job. Fivetran's pitch is simple: <b>someone else already wrote and maintains all of that</b>. You click "add connector", sign in to the source, pick a destination, and data starts arriving.</p>
+
+<p>Remember the brief: <i>"We are not a data business, and we do not want to become one."</i> Managed connectors are exactly how a small company avoids hiring data engineers. The trade-off is cost, which is why we spend half this chapter on pricing.</p>
+
+<hr/>
+
+<h3>2. What Fivetran Does (and Doesn't Do)</h3>
+
+<pre>
+   ┌───────────┐   connector    ┌────────────────────┐   destination   ┌──────────────┐
+   │  SOURCE   │ ─────────────► │      FIVETRAN      │ ──────────────► │   BIGQUERY   │
+   │ NetSuite, │   reads via    │ • schedule         │   writes into   │ raw dataset  │
+   │ HubSpot,  │   the source's │ • change detection │   one dataset   │ per          │
+   │ Sheets... │   API / ODBC   │ • schema handling  │   per connector │ connector    │
+   └───────────┘                │ • retries, alerts  │                 └──────────────┘
+                                └────────────────────┘
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Fivetran does</th><th>Fivetran does NOT do</th></tr>
+<tr><td>Copy source tables into the warehouse, close to the source's own shape</td><td>Business logic (MRR, occupancy, contribution). That's dbt.</td></tr>
+<tr><td>Only fetch what changed (incremental syncs)</td><td>Match the same company across systems (that's our crosswalk, Ch 11)</td></tr>
+<tr><td>Add new columns when the source adds fields</td><td>Decide what's safe for the AI to see</td></tr>
+<tr><td>Track deletes</td><td>Fix bad data in the source</td></tr>
+<tr><td>Retry, alert and log every sync</td><td>Explain why a number looks wrong</td></tr>
+</table>
+
+<p>So Fivetran is the <b>E</b> and the <b>L</b> of ELT. Everything with a business meaning happens later.</p>
+
+<hr/>
+
+<h3>3. Connectors, Destinations and Syncs</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life example</th></tr>
+<tr><td><b>Connector</b> (also called a "connection")</td><td>One configured link from one source account</td><td>"NetSuite production"</td></tr>
+<tr><td><b>Destination</b></td><td>Where data lands</td><td>Their BigQuery project</td></tr>
+<tr><td><b>Schema / dataset</b></td><td>Each connector writes into its own dataset</td><td>A dataset like <code>netsuite</code> holding <code>transaction</code>, <code>account</code>, ...</td></tr>
+<tr><td><b>Sync</b></td><td>One run of the connector</td><td>Every 6 hours</td></tr>
+<tr><td><b>Sync frequency</b></td><td>How often it runs. More often = fresher, may cost more.</td><td>Daily is enough for a P&amp;L</td></tr>
+<tr><td><b>Historical sync</b></td><td>The first full copy of everything</td><td>All of NetSuite since go-live</td></tr>
+<tr><td><b>Incremental sync</b></td><td>Every run after that: only changes</td><td>Today's new invoices</td></tr>
+</table>
+
+<p>💡 Fivetran can also <b>trigger dbt</b> after a sync finishes, so models rebuild on fresh data. Check how Work.Life's runs are scheduled today: by Fivetran, by dbt Cloud, or by something else. That's an access-day question.</p>
+
+<hr/>
+
+<h3>4. What Fivetran Adds to Your Tables</h3>
+
+<p>Open any Fivetran table and you'll see extra columns that start with <code>_fivetran</code>. The two you'll meet everywhere:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Column</th><th>Meaning</th><th>Why you care</th></tr>
+<tr><td><code>_fivetran_synced</code></td><td>When Fivetran last wrote this row</td><td>Freshness checks: "is this data from today?" (Ch 17)</td></tr>
+<tr><td><code>_fivetran_deleted</code></td><td><code>TRUE</code> if the row was deleted in the source (a "soft delete")</td><td>Forget to filter it and you count deleted invoices. 💥</td></tr>
+</table>
+
+<p>Rule for every staging model on a Fivetran table:</p>
+
+<pre>
+-- every staging model reading a Fivetran table starts like this
+SELECT ...
+FROM {{ source('netsuite', 'transaction') }}
+WHERE NOT COALESCE(_fivetran_deleted, FALSE)     -- drop rows deleted in the source
+</pre>
+
+<p>Some connectors also offer <b>history mode</b>, which keeps every version of a row with start and end timestamps instead of overwriting it. That's useful for questions like <i>"which plan was this member on in March?"</i>. Check whether Work.Life's connectors have it switched on; it changes how you query them.</p>
+
+<hr/>
+
+<h3>5. Incremental Syncs, Re-syncs and Deletes</h3>
+
+<pre>
+   DAY 1 (historical sync)          DAY 2 (incremental)            DAY 3 (incremental)
+   ───────────────────────          ───────────────────            ───────────────────
+   copy ALL rows                    copy rows changed since         copy rows changed
+                                    the last sync                   since Day 2
+   INV-2609-01 ... -08              CN-2609-01 (new credit memo)    INV-2609-05 (amount
+                                                                    edited) → row UPDATED
+                                                                    in place
+</pre>
+
+<p>How does the connector know what changed? Each source is different: an "updated at" timestamp, a change log, or a cursor from the API. This is why some sources are easier than others. A source <b>without</b> a reliable "updated at" field may need full reloads, which are slower and can cost more.</p>
+
+<p><b>Deletes</b> are the tricky part. If a finance user deletes a wrong invoice in NetSuite, an "updated since" query will never see it, because deleted rows don't come back in the results. Good connectors detect deletes separately and set <code>_fivetran_deleted = TRUE</code>.</p>
+
+<p><b>Re-syncs</b>: sometimes you have to throw a table away and copy it again (connector bug, schema mess, a mistake). Plan for it: since the raw layer is just a copy, a re-sync should never lose business logic. That's another reason the logic lives in dbt, not in the raw tables.</p>
+
+<hr/>
+
+<h3>6. Schema Changes: When the Source Adds a Column</h3>
+
+<p>Sources change all the time. Someone adds a <code>nexudus_team_id</code> custom property in HubSpot (Chapter 10). What happens?</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Change in the source</th><th>What Fivetran typically does</th><th>What you do in dbt</th></tr>
+<tr><td>New column</td><td>Adds it to the raw table (depending on your schema settings)</td><td>Nothing breaks. Add it to staging when you need it.</td></tr>
+<tr><td>New table</td><td>Can add it automatically, or wait for approval</td><td>Decide if it's needed. Is it safe?</td></tr>
+<tr><td>Column renamed</td><td>Often looks like "old column stops, new column starts"</td><td>Staging breaks or goes NULL. <b>Tests catch this.</b></td></tr>
+<tr><td>Data type change</td><td>May widen the type (e.g. number → string)</td><td>Casts in staging may fail. <b>Tests catch this.</b></td></tr>
+</table>
+
+<p>⚠️ <b>Security setting to check:</b> many teams let connectors add new tables and columns automatically. Convenient, but if HR or payroll fields suddenly appear in a finance connector, they'd land in raw. The brief says <i>"Our people and HR data must not be connected to this capability."</i> So for Work.Life we'd recommend: block new tables by default, review them, and keep the AI on <code>ai_safe</code> only. More in <a href="../season-3-ai-layer/chapter-26-security.html">Chapter 26</a>.</p>
+
+<hr/>
+
+<h3>7. MAR Pricing, Explained</h3>
+
+<p>Fivetran charges by <b>Monthly Active Rows (MAR)</b>. Fivetran's docs define it like this: a row (identified by its primary key) counts as "active" the first time it's inserted, updated or deleted in a calendar month. After that, more changes to the same row in the same month <b>don't count again</b>.</p>
+
+<pre>
+   SEPTEMBER, NetSuite transactions (our lab, 23 lines)
+
+   INV-2609-01  created 1 Sep          → active   (1)
+   INV-2609-01  edited  5 Sep          → same row, same month → not counted again
+   INV-2609-01  edited 20 Sep          → not counted again
+   CN-2609-01   created 30 Sep         → active   (1)
+   ... 21 other lines created          → active   (21)
+                                       ────────────
+                                       MAR = 23
+
+   OCTOBER: if nobody touches September's lines, they cost 0 MAR in October.
+</pre>
+
+<p>What this means in practice:</p>
+<ul>
+    <li><b>Big but quiet tables are cheap.</b> 10 years of closed invoices that never change cost almost nothing after the first load.</li>
+    <li><b>Busy tables cost the most.</b> A table where every row is touched daily (e.g. a "last seen" field on every member) counts every row, every month.</li>
+    <li><b>Initial syncs</b> have historically been excluded from MAR. Recent third-party write-ups also say <b>deletes count</b> toward MAR from 2026. Pricing rules change often: <b>always check Fivetran's current pricing page</b> before putting a number in a proposal.</li>
+    <li>Fivetran has offered a <b>free plan</b> with a MAR cap and a free trial. Check the current limits and trial length on their site.</li>
+</ul>
+
+<p>💡 We don't quote prices in this series, because they change. What you <i>must</i> be able to do is <b>estimate MAR</b>, then look up today's price. That's Lab 13.2.</p>
+
+<hr/>
+
+<h3>8. Which Work.Life Sources Fit Fivetran?</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Source</th><th>Fivetran connector?</th><th>Likely route at Work.Life</th><th>Notes</th></tr>
+<tr><td><b>NetSuite</b></td><td>Yes (SuiteAnalytics Connect, Ch 09)</td><td>Probably Fivetran</td><td>Mostly closed periods → low MAR after month-end</td></tr>
+<tr><td><b>HubSpot</b></td><td>Yes</td><td>Probably Fivetran</td><td>Contacts/companies change often (emails, lifecycle stage)</td></tr>
+<tr><td><b>Excel / Google Sheets</b></td><td>Yes (Google Sheets, file connectors for cloud drives)</td><td>Fivetran or Python</td><td>Tiny row counts. Template changes are the risk, not cost.</td></tr>
+<tr><td><b>Nexudus</b></td><td>Check Fivetran's connector list; don't assume</td><td>Python, per Ch 07's guess</td><td>Nexudus also sells a native BigQuery sync (Ch 07)</td></tr>
+<tr><td><b>ACT</b></td><td>Depends which ACT it is (Ch 08). Check.</td><td>Unknown</td><td>Door events are personal data: aggregate before AI</td></tr>
+</table>
+
+<p>❓ The brief only says "Fivetran, Python". Which source uses which is an open question (Chapter 11 question #2 asks it for Nexudus; ask the same for every source). Don't design around a guess.</p>
+
+<hr/>
+
+<h3>9. Lab 13.1 — Load the Excel Budget With a Fivetran Connector</h3>
+
+<p>We'll load <code>excel_capacity_budget_2026.csv</code> through Fivetran's <b>Google Sheets</b> connector, because it's the closest thing in our lab to "the finance team's spreadsheet".</p>
+
+<p>⚠️ <b>Billing note:</b> Fivetran typically writes to BigQuery with DML such as <code>MERGE</code>, which the sandbox doesn't allow (Chapter 12; check both vendors' current docs). To do this lab you need a BigQuery project <b>with billing enabled</b>. At lab sizes the cost should be zero or pennies within the free tier, but <b>set a budget alert</b> first (Billing → Budgets &amp; alerts → £1). If you'd rather not enable billing, read along and load the file with Python in Chapter 14 instead. You lose nothing.</p>
+
+<ol>
+    <li><b>Make the sheet.</b> In Google Sheets, <i>File → Import</i> the CSV. Name the tab <code>budget</code>.</li>
+    <li><b>Make a named range.</b> Select the data including headers (A1:G7) → <i>Data → Named ranges</i> → name it <code>capacity_budget_2026</code>. Fivetran's Sheets connector syncs a named range, which also stops someone's notes in column K from being loaded.</li>
+    <li><b>Start a Fivetran trial</b> (check the current trial terms) and add <b>BigQuery</b> as a destination. Fivetran shows you a service account to grant access to: give it the role Fivetran's BigQuery setup guide asks for (at the time of writing, <i>BigQuery User</i>; check the current guide). Choose location <code>europe-west2</code>.</li>
+    <li><b>Add the connector:</b> choose Google Sheets, set the destination schema to <code>raw_excel_fivetran</code>, paste the sheet URL, pick the named range, share the sheet with the address Fivetran shows you.</li>
+    <li><b>Run the first sync</b> and open BigQuery.</li>
+</ol>
+
+<pre>
+-- What landed? Note the extra Fivetran columns, and that the
+-- spreadsheet header "month" stays text like '2026-07'.
+SELECT *
+FROM raw_excel_fivetran.capacity_budget_2026
+ORDER BY site_code, month;
+</pre>
+
+<p>Now <b>break it on purpose</b> (like Lab 6.7):</p>
+<ul>
+    <li>Change RDG's September budget from 3200 to 3300 → sync → the row updates. That row is now "active" for MAR this month.</li>
+    <li>Rename the column <code>budget_revenue_gbp</code> to <code>Budget Revenue</code> → sync → look at the table. The old column stops getting values and a new one appears. This is exactly the silent breakage that dbt tests must catch (Chapter 17).</li>
+    <li>Put the name back when you're done.</li>
+</ul>
+
+<hr/>
+
+<h3>10. Lab 13.2 — Estimate MAR for Mini Work.Life</h3>
+
+<p>Pretend every lab file came through Fivetran. How many MAR in <b>September 2026</b>? Use the actual files and think about which rows were created or changed that month:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Table</th><th>Rows in file</th><th>Active in Sep? (our assumption)</th><th>Sep MAR</th></tr>
+<tr><td>netsuite_gl_sep2026</td><td>23</td><td>All created in Sep</td><td>23</td></tr>
+<tr><td>bookings_sep2026</td><td>10</td><td>All created in Sep</td><td>10</td></tr>
+<tr><td>act365_door_events_sep2026</td><td>276</td><td>All created in Sep</td><td>276</td></tr>
+<tr><td>act_opportunities</td><td>7</td><td>Ortho Robotics deal opened 2 Sep</td><td>1</td></tr>
+<tr><td>act_contacts</td><td>7</td><td>Ben Carter created 2 Sep</td><td>1</td></tr>
+<tr><td>contracts</td><td>7</td><td>None started or ended in Sep</td><td>0</td></tr>
+<tr><td>members, companies, sites, plans, resources</td><td>14 + 5 + 2 + 3 + 10</td><td>No changes in Sep</td><td>0</td></tr>
+<tr><td>capacity_budget_2026</td><td>6</td><td>Unchanged</td><td>0</td></tr>
+<tr><td colspan="3"><b>Total</b></td><td><b>311</b></td></tr>
+</table>
+
+<p>Look at that table. <b>89% of the MAR is door events.</b> One busy table dominates everything. That's the general lesson: event and log tables (door taps, page views, emails sent) drive cost far more than "business" tables like contracts.</p>
+
+<p>Now scale it up. Here's a <b>made-up</b> sizing for the real Work.Life, just to practise the method. Replace every number with real ones on access day:</p>
+
+<pre>
+   (MADE UP — method only)
+
+   Members ~8,000 (brief). Assume 5% change in a month (moves, status, details)   ≈    400
+   Contracts: assume ~1 per member company, ~5% start/end/change a month         ≈    200
+   Bookings: assume ~3 per member per month                                       ≈ 24,000
+   Invoice lines: assume ~2 per member per month                                  ≈ 16,000
+   GL lines: assume similar to invoice lines + bills and journals                 ≈ 20,000
+   HubSpot contacts/companies/deals touched                                       ≈  2,000
+                                                                                  ─────────
+                                                                                  ≈ 62,600 MAR/month
+   + door events, IF they went through Fivetran: 14 sites × hundreds of taps a day
+     could be far bigger than everything else combined.
+</pre>
+
+<p>Two conclusions you can take into the supplier response (Section 7, Q4, cost):</p>
+<ul>
+    <li>Work.Life is <b>small data</b>. Even generous guesses give tens of thousands of MAR a month, not millions.</li>
+    <li>The cost risk is in <b>event-like tables</b>. Bring door data in aggregated (company × site × day), or through a cheap Python job, never as raw taps through a per-row-priced tool.</li>
+</ul>
+
+<hr/>
+
+<h3>11. Fivetran vs Python: The Decision Table</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Question</th><th>Lean Fivetran</th><th>Lean Python</th></tr>
+<tr><td>Is there a maintained connector?</td><td>Yes</td><td>No, or it's missing what you need</td></tr>
+<tr><td>Row volume and change rate?</td><td>Low/medium</td><td>Very high (events, logs)</td></tr>
+<tr><td>Who maintains it?</td><td>Nobody in-house (fits "not a data business")</td><td>A partner or engineer is on the hook for API changes</td></tr>
+<tr><td>Need custom logic at extract time?</td><td>No</td><td>Yes (e.g. aggregate door events before loading)</td></tr>
+<tr><td>Cost shape</td><td>Pay per active row</td><td>Pay for a little compute + maintenance time</td></tr>
+</table>
+
+<p>Neither is "better". Work.Life's mix of Fivetran <b>and</b> Python is the normal answer: managed connectors where they exist, a small script where they don't. Chapter 14 builds that script.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What is a Monthly Active Row?</b></p>
+<p><i>"A row, identified by its primary key, that is inserted, updated or deleted at least once in a calendar month. It's counted once per month no matter how many times it changes. So large historical tables that don't change are cheap, and busy tables that change every day are expensive. I'd always check the vendor's current rules, because details such as whether deletes count have changed."</i></p>
+
+<p><b>Q: What is <code>_fivetran_deleted</code> and what happens if you ignore it?</b></p>
+<p><i>"It marks rows that were deleted in the source. Fivetran keeps them as soft deletes. If staging models don't filter them out, you count deleted invoices, deals or contacts, and totals won't match the source system."</i></p>
+
+<p><b>Q: A Fivetran connector suddenly adds a new column. Is that a problem?</b></p>
+<p><i>"Usually not for the pipeline, because staging models select named columns. But it can be a governance problem: a new column might hold sensitive data. I'd review schema changes, block new tables by default for sensitive sources, and make sure only a filtered dataset is exposed to wider users or an AI."</i></p>
+
+<p><b>Q: How would you decide between Fivetran and a custom Python extractor for a source?</b></p>
+<p><i>"Fivetran if there's a maintained connector and the change volume is modest, because it removes maintenance. Python if there's no good connector, the volume is high, like event logs, or I need to transform at extract time, for example aggregating door events for privacy. Then I'd compare yearly cost including the time to maintain the script."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Fivetran</b></td><td>Managed E + L. No business logic.</td></tr>
+<tr><td><b>Connector → dataset</b></td><td>Each connector writes its own raw dataset, close to the source's shape.</td></tr>
+<tr><td><b>_fivetran_deleted</b></td><td>Always filter soft deletes in staging.</td></tr>
+<tr><td><b>Schema changes</b></td><td>New columns are easy. Renames and type changes break things silently. Test.</td></tr>
+<tr><td><b>MAR</b></td><td>Rows touched per month. Event tables dominate. Check current pricing rules.</td></tr>
+<tr><td><b>Mini Work.Life</b></td><td>311 MAR in September, 276 of them door events.</td></tr>
+<tr><td><b>Fivetran + Python</b></td><td>Connectors where they exist, scripts where they don't. Work.Life uses both.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Fivetran handles the sources with ready-made connectors. For the rest, like Nexudus, someone writes code. In Chapter 14 we build a proper <b>Python extractor</b>: pagination, incremental watermarks, retries, and loading JSON into BigQuery. And we use the same script to load every lab CSV into our raw datasets, so dbt has something to work with.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

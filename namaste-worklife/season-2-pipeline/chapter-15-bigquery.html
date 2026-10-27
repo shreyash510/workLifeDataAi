@@ -1,0 +1,393 @@
+<h2>Chapter 15 — Google BigQuery: The Warehouse</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>The brief says it plainly: <i>"Google BigQuery. Our central store. This is the foundation any AI capability would sit on."</i> Everything we build in Seasons 3 and 4 runs on it. So before we model anything with dbt, we need to understand how BigQuery stores data, how it charges, how it keeps data safe, and how to build the <b>"controlled copy"</b> the brief insists on.</p>
+
+<p>Our raw datasets are full from Lab 14.1. In this chapter we query them directly, answer two final-exam questions in pure SQL, reproduce the famous grain bug, and learn to read the cost of a query <i>before</i> running it.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Projects, datasets, tables and views</li>
+    <li>Storage vs compute: how BigQuery is built</li>
+    <li>Columnar storage, and why <code>SELECT *</code> costs money</li>
+    <li>How BigQuery charges (and the free tier)</li>
+    <li>Lab 15.1: MRR and occupancy straight from raw</li>
+    <li>Lab 15.2: Reproduce the grain bug</li>
+    <li>Lab 15.3: Dry runs and reading query cost</li>
+    <li>Partitioning and clustering (door events)</li>
+    <li>Locations and UK data</li>
+    <li>Permissions: who can see what</li>
+    <li>The "controlled copy": three ways to build it</li>
+    <li>Time travel: undo for tables</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>A new analyst joins a company (made-up story). On day one, curious, they open the biggest table in the warehouse, an event log with years of history, and run:</p>
+
+<pre>
+SELECT * FROM events;
+</pre>
+
+<p>It returns in 20 seconds. Impressive! A month later, the finance team asks why the cloud bill jumped. That one habit, run many times a day, read every column of every row, every time.</p>
+
+<p>In a traditional database, that query would just be slow. In BigQuery, it's fast <b>and</b> you pay for every byte it reads. That one fact shapes how we model data, how we design the AI layer (an AI writing SQL could make the same mistake 100 times an hour), and how we answer the brief's <i>"cost conscious"</i> principle. 💸</p>
+
+<hr/>
+
+<h3>2. Projects, Datasets, Tables and Views</h3>
+
+<pre>
+   PROJECT  mini-worklife-lab        ← billing, IAM, quotas live here
+     ├── DATASET  raw_nexudus        ← a folder; has a LOCATION and its own permissions
+     │      ├── TABLE  contracts     ← stored data
+     │      └── TABLE  members
+     ├── DATASET  marts
+     │      └── TABLE  fct_site_month_kpis
+     └── DATASET  ai_safe
+            └── VIEW   fct_site_month_kpis   ← a saved query, no data of its own
+
+   Full name of anything:  `project.dataset.table`
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Object</th><th>What it is</th><th>When to use</th></tr>
+<tr><td><b>Table</b></td><td>Stored data. You pay to store it.</td><td>Raw loads; marts that are queried a lot</td></tr>
+<tr><td><b>View</b></td><td>A saved query. Runs each time it's read.</td><td>Light staging; filtered/safe layers like <code>ai_safe</code></td></tr>
+<tr><td><b>Materialized view</b></td><td>A view BigQuery keeps pre-computed and refreshes for you</td><td>Hot aggregations (has restrictions; check docs)</td></tr>
+<tr><td><b>External table</b></td><td>Points at files in Cloud Storage or a Google Sheet</td><td>Quick access to sheets (Ch 06 option)</td></tr>
+</table>
+
+<p>The <b>dataset</b> is the important boundary: it has a location, and permissions are usually granted per dataset. That's why we made one dataset per layer in Lab 12.2.</p>
+
+<hr/>
+
+<h3>3. Storage vs Compute</h3>
+
+<pre>
+   ┌──────────────────────────────┐          ┌──────────────────────────────┐
+   │           STORAGE            │          │           COMPUTE            │
+   │  columnar files, replicated  │ ◄──────► │  thousands of workers spin   │
+   │  you pay per GB per month    │  fast    │  up for each query, then go  │
+   │  (cheap)                     │  network │  away. You pay per query     │
+   └──────────────────────────────┘          │  (or for reserved capacity)  │
+                                             └──────────────────────────────┘
+   No servers to size, patch or restart. That's "serverless".
+</pre>
+
+<p>Because storage and compute are separate, keeping all of Work.Life's raw history is cheap, and you only pay for compute when someone actually asks a question. For a company that is <i>"not a data business"</i>, no servers to manage is a big deal.</p>
+
+<hr/>
+
+<h3>4. Columnar Storage, and Why <code>SELECT *</code> Costs Money</h3>
+
+<p>A normal database stores data <b>row by row</b>. BigQuery stores it <b>column by column</b>:</p>
+
+<pre>
+   ROW STORE (Postgres, MySQL)            COLUMN STORE (BigQuery)
+   ───────────────────────────            ───────────────────────
+   [K001, C001, M001, P-HOT, ... 320]     contract_id:       K001 K002 K003 K004 ...
+   [K002, C001, M001, P-OFFICE, ... 2400] site_code:         SOHO SOHO SOHO SOHO ...
+   [K003, C002, M005, P-OFFICE, ... 1400] monthly_price_gbp: 320  2400 1400 320  ...
+
+   Query: SUM(monthly_price_gbp) BY site_code
+   Row store: reads every whole row.     Column store: reads ONLY 2 columns.
+</pre>
+
+<p>So in BigQuery, <b>the columns you select decide the cost</b>, not the number of rows you return. <code>LIMIT 10</code> does <b>not</b> make a <code>SELECT *</code> cheaper: it still reads every column of the table. Use the <b>table preview</b> tab (free) to look at data, and name your columns in queries.</p>
+
+<hr/>
+
+<h3>5. How BigQuery Charges</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>What</th><th>How it's charged</th><th>Notes</th></tr>
+<tr><td><b>Storage</b></td><td>Per GB per month. Data untouched for a while becomes cheaper "long-term" storage.</td><td>Work.Life's data is small: likely gigabytes, not terabytes.</td></tr>
+<tr><td><b>Queries: on-demand</b></td><td>Per byte processed by each query</td><td>Simple and good for small, spiky usage</td></tr>
+<tr><td><b>Queries: capacity (editions)</b></td><td>Pay for reserved compute ("slots") by the hour</td><td>Predictable bills for heavy, steady usage</td></tr>
+<tr><td><b>Free tier</b></td><td>A monthly allowance of storage and query bytes</td><td>Google's docs list 10 GB storage + 1 TB queries per month (sandbox uses the same limits)</td></tr>
+</table>
+
+<p>We don't quote per-TB prices here, because they change and vary by region. <b>Check the current BigQuery pricing page</b> before writing a cost estimate (that's <a href="../season-5-delivery/chapter-35-cost-build-and-run.html">Chapter 35</a>'s job). What you must understand now: <b>for Work.Life, BigQuery cost is driven by how much data each query reads, multiplied by how many queries run.</b> An AI layer that runs many queries an hour against well-designed small marts costs very little. The same AI pointed at wide raw tables could cost far more. That's an architecture decision, not a pricing one.</p>
+
+<hr/>
+
+<h3>6. Lab 15.1 — MRR and Occupancy Straight From Raw</h3>
+
+<p>Let's answer final-exam question 3 (MRR per site on 30 Sep 2026) directly on raw data. Remember: everything in raw is STRING, and rolling contracts have a blank <code>end_date</code> (NULL after our CSV load, but possibly <code>''</code> from other loaders; <code>SAFE_CAST</code> turns both into a NULL date).</p>
+
+<pre>
+-- Lab 15.1a · MRR per site, snapshot 30 Sep 2026, from RAW
+SELECT
+  site_code,
+  COUNT(*)                                      AS active_contracts,
+  SUM(CAST(monthly_price_gbp AS NUMERIC))       AS mrr_gbp
+FROM raw_nexudus.contracts
+WHERE CAST(start_date AS DATE) &lt;= DATE '2026-09-30'
+  AND (SAFE_CAST(end_date AS DATE) IS NULL                 -- blank / '' → NULL → rolling
+       OR SAFE_CAST(end_date AS DATE) &gt;= DATE '2026-09-30')
+GROUP BY site_code
+ORDER BY site_code;
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>site_code</th><th>active_contracts</th><th>mrr_gbp</th></tr>
+<tr><td>RDG</td><td>1</td><td>2700</td></tr>
+<tr><td>SOHO</td><td>3</td><td>3040</td></tr>
+</table>
+
+<p>Matches Chapter 11. ✅ Now desk occupancy, using the Chapter 06 rule: office contracts hold the office's capacity, hot-desk contracts hold 1 desk, Flex holds 0.</p>
+
+<pre>
+-- Lab 15.1b · desk occupancy per site, 30 Sep 2026
+WITH active AS (
+  SELECT c.site_code, c.plan_code, c.resource_code
+  FROM raw_nexudus.contracts AS c
+  WHERE CAST(c.start_date AS DATE) &lt;= DATE '2026-09-30'
+    AND (SAFE_CAST(c.end_date AS DATE) IS NULL
+         OR SAFE_CAST(c.end_date AS DATE) &gt;= DATE '2026-09-30')
+),
+desks AS (
+  SELECT a.site_code,
+         SUM(CASE a.plan_code
+               WHEN 'P-OFFICE' THEN CAST(r.capacity_people AS INT64)
+               WHEN 'P-HOT'    THEN 1
+               ELSE 0                                   -- Flex: day passes, no desk
+             END) AS desks_contracted
+  FROM active AS a
+  JOIN raw_nexudus.resources AS r USING (resource_code)
+  GROUP BY a.site_code
+)
+SELECT d.site_code,
+       d.desks_contracted,
+       CAST(b.sellable_desks AS INT64)                             AS sellable_desks,
+       ROUND(d.desks_contracted / CAST(b.sellable_desks AS INT64), 3) AS desk_occupancy
+FROM desks AS d
+JOIN raw_excel.capacity_budget_2026 AS b
+  ON b.site_code = d.site_code AND b.month = '2026-09'
+ORDER BY d.site_code;
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>site_code</th><th>desks_contracted</th><th>sellable_desks</th><th>desk_occupancy</th></tr>
+<tr><td>RDG</td><td>6</td><td>31</td><td>0.194</td></tr>
+<tr><td>SOHO</td><td>6</td><td>34</td><td>0.176</td></tr>
+</table>
+
+<p>It works, but look at how much casting and business logic is crammed into one query. Now imagine 50 dashboards and an AI each writing their own version of this. Some will forget the blank-end-date rule; some will count Flex as a desk. That's why the next chapter moves all of this <b>once</b> into dbt models.</p>
+
+<hr/>
+
+<h3>7. Lab 15.2 — Reproduce the Grain Bug</h3>
+
+<p>Chapter 11 warned about mixing grains. Let's make the mistake on purpose: join people to contracts, then sum price.</p>
+
+<pre>
+-- Lab 15.2 · WRONG on purpose: one row per PERSON × CONTRACT, then sum price
+SELECT c.site_code,
+       SUM(CAST(c.monthly_price_gbp AS NUMERIC)) AS mrr_gbp_WRONG
+FROM raw_nexudus.contracts AS c
+JOIN raw_nexudus.members   AS m ON m.company_id = c.company_id
+WHERE CAST(c.start_date AS DATE) &lt;= DATE '2026-09-30'
+  AND (SAFE_CAST(c.end_date AS DATE) IS NULL
+       OR SAFE_CAST(c.end_date AS DATE) &gt;= DATE '2026-09-30')
+GROUP BY c.site_code;
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>site_code</th><th>mrr_gbp_WRONG</th><th>Why</th></tr>
+<tr><td>RDG</td><td>16,200</td><td>GreenRoot's £2,700 office × 6 people</td></tr>
+<tr><td>SOHO</td><td>10,240</td><td>Pixel Chai's £2,400 office × 4 people + 320 + 320</td></tr>
+</table>
+
+<p>The query runs without errors and gives a confident, wrong number. This is the single most common way an AI text-to-SQL system gets money questions wrong. Remember this table; it's the reason Season 3 gives the AI <b>pre-aggregated marts with a clear grain</b> instead of raw tables to join (<a href="../season-3-ai-layer/chapter-20-text-to-sql.html">Chapter 20</a>).</p>
+
+<hr/>
+
+<h3>8. Lab 15.3 — Dry Runs and Reading Query Cost</h3>
+
+<p>BigQuery can tell you how many bytes a query <b>will</b> read, without running it. In the console, the validator in the top right says <i>"This query will process X when run"</i>. From the command line:</p>
+
+<pre>
+# dry run: estimate only, nothing is charged
+bq query --use_legacy_sql=false --dry_run \
+  'SELECT * FROM raw_act365.door_events'
+
+bq query --use_legacy_sql=false --dry_run \
+  'SELECT site, event_time_utc FROM raw_act365.door_events'
+</pre>
+
+<p>Compare the two estimates. The second reads fewer columns, so fewer bytes. On our tiny lab tables the numbers are a few kilobytes, but the <b>ratio</b> is the lesson. And after queries run, the warehouse keeps a log you can audit:</p>
+
+<pre>
+-- What did my queries actually cost? (last 7 days, this project, London region)
+SELECT
+  user_email,
+  job_id,
+  total_bytes_billed,
+  LEFT(query, 80) AS query_start
+FROM `region-europe-west2`.INFORMATION_SCHEMA.JOBS
+WHERE creation_time &gt; TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+  AND job_type = 'QUERY'
+ORDER BY total_bytes_billed DESC
+LIMIT 20;
+</pre>
+
+<p>Two safety nets we'll reuse for the AI layer in <a href="../season-3-ai-layer/chapter-27-cost-control.html">Chapter 27</a>:</p>
+<ul>
+    <li><b>Maximum bytes billed</b>: a per-query setting. If a query would read more than the limit, it fails instead of running. Perfect for AI-generated SQL.</li>
+    <li><b>Custom quotas</b>: daily caps on query bytes per user or per project.</li>
+</ul>
+
+<hr/>
+
+<h3>9. Partitioning and Clustering</h3>
+
+<p>Door events are the classic "big table" (Chapter 13 showed they dominate row counts). Two features make them cheap to query:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Feature</th><th>What it does</th><th>Door events example</th></tr>
+<tr><td><b>Partitioning</b></td><td>Splits the table into chunks, usually by date. Queries filtering on that column read only matching chunks.</td><td>One partition per day: "September only" reads 30 days, not 5 years</td></tr>
+<tr><td><b>Clustering</b></td><td>Sorts data within each partition by up to a few columns, so filters skip blocks</td><td>Cluster by <code>site</code>, so "Soho only" reads less</td></tr>
+</table>
+
+<pre>
+-- Lab 15.4 · a typed, partitioned, clustered copy of the door events
+CREATE OR REPLACE TABLE raw_act365.door_events_typed
+PARTITION BY DATE(event_time_utc)
+CLUSTER BY site
+AS
+SELECT
+  event_id,
+  CAST(event_time_utc AS TIMESTAMP) AS event_time_utc,
+  site,
+  door,
+  cardholder_id,                       -- no name: we don't need it for counting
+  event_type
+FROM raw_act365.door_events;
+
+-- Now a filter on the partition column only reads one week of data
+SELECT site, COUNT(DISTINCT cardholder_id) AS people_in
+FROM raw_act365.door_events_typed
+WHERE DATE(event_time_utc) BETWEEN '2026-09-14' AND '2026-09-18'
+  AND event_type = 'Access Granted'
+GROUP BY site;
+</pre>
+
+<p>⚠️ <b>Sandbox gotcha:</b> according to Google's sandbox docs (check the current page), the sandbox applies a 60-day expiration to <b>partitions</b> too, counted from each partition's date, not from when you created it. If you run this lab more than 60 days after September 2026, those partitions expire straight away and the new table looks empty. If that happens, drop the <code>PARTITION BY</code> line (keep <code>CLUSTER BY</code>) or use a billing-enabled project. A good reminder to always check a table's expiration settings in its Details tab.</p>
+
+<p>For tiny tables, partitioning doesn't help (there's a minimum amount BigQuery bills per query anyway). The habit matters for the real, multi-year tables. And notice we <b>dropped the person's name</b> while we were there. Chapter 08 showed door logs are personal data. Only ever move what you need.</p>
+
+<hr/>
+
+<h3>10. Locations and UK Data</h3>
+
+<p>Every dataset lives in a <b>location</b>: a region like <code>europe-west2</code> (London) or a multi-region like <code>EU</code> or <code>US</code>.</p>
+
+<ul>
+    <li>Data <b>stays</b> in its location. Good for UK GDPR conversations about where member data lives.</li>
+    <li>A query can only join datasets in the <b>same</b> location.</li>
+    <li>You <b>can't change</b> a dataset's location later; you copy the data to a new dataset.</li>
+</ul>
+
+<p>❓ <b>Question for the client:</b> which location is Work.Life's BigQuery in today? It's question #16 from Chapter 03. The AI layer's datasets (and ideally the LLM processing) should match it. This feeds the security answer in <a href="../season-3-ai-layer/chapter-26-security.html">Chapter 26</a>.</p>
+
+<hr/>
+
+<h3>11. Permissions: Who Can See What</h3>
+
+<p>BigQuery uses Google Cloud <b>IAM</b>: you grant a <b>role</b> to a <b>principal</b> (a person, a group or a service account) on a <b>resource</b> (project or dataset).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Role</th><th>Can</th><th>Typical holder</th></tr>
+<tr><td><code>BigQuery Data Viewer</code></td><td>Read tables in a dataset</td><td>BI tool on <code>marts</code>; AI service account on <code>ai_safe</code> only</td></tr>
+<tr><td><code>BigQuery Data Editor</code></td><td>Create/replace tables in a dataset</td><td>Loader on <code>raw_*</code>; dbt on staging/intermediate/marts/ai_safe</td></tr>
+<tr><td><code>BigQuery Job User</code></td><td>Run queries (jobs) in a project</td><td>Anyone who queries</td></tr>
+<tr><td><code>BigQuery Admin</code></td><td>Everything</td><td>Very few people</td></tr>
+</table>
+
+<p>Here's the permission plan for our pipeline. Each arrow is a separate service account with only the access it needs:</p>
+
+<pre>
+   loader SA      ── Data Editor ──►  raw_*                          (writes raw only)
+   dbt SA         ── Data Viewer ──►  raw_*
+                  ── Data Editor ──►  staging, intermediate, marts, ai_safe
+   BI tool SA     ── Data Viewer ──►  marts
+   AI layer SA    ── Data Viewer ──►  ai_safe ONLY                   ← the brief's "controlled copy"
+                  ✗ no access to raw_*, staging, marts
+</pre>
+
+<p>Finer controls exist too: <b>column-level security</b> (policy tags hide columns like emails), <b>row-level security</b> (e.g. a site manager sees only their site, useful for Phase 2's role-based access, <a href="../season-4-phase-2/chapter-32-role-based-access-agents.html">Chapter 32</a>), and <b>authorized views</b> (below).</p>
+
+<hr/>
+
+<h3>12. The "Controlled Copy": Three Ways to Build It</h3>
+
+<p>The brief's first principle: <i>"The AI layer sits on top of the BigQuery warehouse. It works from a controlled copy of the data, not our live primary sources."</i> In BigQuery terms, that's a separate dataset (we call it <code>ai_safe</code>) holding only approved, safe data. Three ways to build it:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Option</th><th>How</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><b>A. Authorized views</b></td><td><code>ai_safe</code> holds views over <code>marts</code> that select only safe columns. The views are "authorized" to read <code>marts</code>, so the AI never needs access to <code>marts</code> itself.</td><td>Always fresh, no extra storage, one place to define "safe"</td><td>Reads hit the marts tables; a bad view definition exposes data</td></tr>
+<tr><td><b>B. Scheduled table copies</b></td><td>After each dbt run, write <code>ai_safe</code> as real tables (dbt can do this)</td><td>A true copy: the AI can't affect marts in any way; can freeze a "known good" version</td><td>A little storage; must refresh after each build</td></tr>
+<tr><td><b>C. Separate project</b></td><td>Option A or B, but in a different Google Cloud project</td><td>Strongest isolation, separate billing and quotas for AI usage</td><td>More setup; cross-project permissions</td></tr>
+</table>
+
+<p>In our lab we'll build <code>ai_safe</code> as <b>dbt models</b> in Chapter 17, which lets us switch between views (A) and tables (B) with one config line. The full Phase 1 recommendation, including whether to use a separate project, is in <a href="../season-3-ai-layer/chapter-23-phase-1-architecture.html">Chapter 23</a>.</p>
+
+<hr/>
+
+<h3>13. Time Travel: Undo for Tables</h3>
+
+<p>BigQuery keeps recent history of every table (by default up to 7 days). If a bad load or a bad model overwrites a table, you can query it as it was:</p>
+
+<pre>
+-- What did the contracts table look like an hour ago?
+SELECT *
+FROM raw_nexudus.contracts
+  FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR);
+</pre>
+
+<p>Handy for "the numbers changed overnight, what was there before?" Check the sandbox's behaviour and your dataset's time-travel window in the docs; it's configurable.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Why can <code>SELECT * ... LIMIT 10</code> be expensive in BigQuery?</b></p>
+<p><i>"BigQuery is columnar and on-demand pricing charges by bytes processed. <code>SELECT *</code> reads every column of the whole table; <code>LIMIT</code> only trims the output. To look at data, use the free table preview; in queries, name only the columns you need and filter on partition columns."</i></p>
+
+<p><b>Q: How would you give an AI tool access to warehouse data safely?</b></p>
+<p><i>"A dedicated service account with read access to one dataset that holds only approved, non-sensitive columns, built as authorized views or scheduled copies of the marts. No access to raw or staging. Add a maximum-bytes-billed limit on its queries and custom quotas, and log every query it runs."</i></p>
+
+<p><b>Q: What's the difference between partitioning and clustering?</b></p>
+<p><i>"Partitioning splits a table into separate chunks, usually by date, so a query filtering on that column skips whole partitions and is billed for less. Clustering sorts data within partitions by a few columns so filters on them can skip blocks. Partition by the date you always filter on; cluster by common filters like site."</i></p>
+
+<p><b>Q: Why does dataset location matter?</b></p>
+<p><i>"Data stays in that location, which matters for data residency and privacy conversations. Queries can't join across locations. And you can't change a dataset's location later; you'd have to copy the data. So you pick it once, deliberately."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Hierarchy</b></td><td>Project → dataset (location + permissions) → table/view.</td></tr>
+<tr><td><b>Serverless</b></td><td>Storage and compute separate; no servers to run. Good fit for "not a data business".</td></tr>
+<tr><td><b>Columnar</b></td><td>Cost follows columns read. <code>LIMIT</code> doesn't reduce it.</td></tr>
+<tr><td><b>Pricing</b></td><td>Storage per GB + queries per byte (or reserved capacity). Free tier exists. Check current prices.</td></tr>
+<tr><td><b>Grain bug</b></td><td>Joining people to contracts turned £2,700 into £16,200. Model it once, correctly.</td></tr>
+<tr><td><b>Cost guards</b></td><td>Dry runs, maximum bytes billed, custom quotas, <code>INFORMATION_SCHEMA.JOBS</code>.</td></tr>
+<tr><td><b>Controlled copy</b></td><td><code>ai_safe</code>: authorized views, scheduled copies, or a separate project. AI reads only that.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Lab 15.1 showed the problem: business logic crammed into one-off queries. In Chapter 16 we fix it with <b>dbt</b>. We'll install dbt Core, turn our raw tables into staging models, build intermediate logic, and create the marts the AI will use: <code>dim_site</code>, <code>fct_contract_month</code>, <code>fct_gl</code>, <code>fct_site_month_kpis</code> and friends.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

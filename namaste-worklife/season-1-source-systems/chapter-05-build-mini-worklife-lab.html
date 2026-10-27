@@ -14,6 +14,7 @@
     <li>The right order to do the labs (trials expire!)</li>
     <li>The questions you must be able to answer at the end</li>
     <li>Lab rules: how to work like a real data engineer</li>
+    <li>Interview Questions</li>
 </ul>
 
 <hr/>
@@ -79,7 +80,7 @@
    2026-01  GreenRoot Foods (6 people) takes Reading 201.     (K005)
             Emma was referred by... Ravi! (see ACT)
    2026-02  Fatima joins Reading on Flex 10.                  (K006)
-   2026-04  Priya's studio grows: she UPGRADES to Office 101  (K001 ends, K002 starts)
+   2026-04  Priya's studio grows: UPGRADE to Office 101      (K001 ends, K002 starts)
             with 3 new team members, at a 7.7% discount.
    2026-04  Brightline gives NOTICE. Renewal deal is LOST.    (ACT: "moving to hybrid")
    2026-06  Brightline leaves. Office 103 sits EMPTY.
@@ -114,8 +115,10 @@
 <tr><td><code>contracts.csv</code></td><td>Nexudus contracts</td><td>Nexudus, Excel</td></tr>
 <tr><td><code>bookings_sep2026.csv</code></td><td>Nexudus bookings</td><td>Nexudus, Excel</td></tr>
 <tr><td><code>netsuite_gl_sep2026.csv</code></td><td>NetSuite transactions (GL)</td><td>NetSuite, Excel</td></tr>
-<tr><td><code>act_contacts.csv</code></td><td>ACT contacts</td><td>ACT</td></tr>
-<tr><td><code>act_opportunities.csv</code></td><td>ACT opportunities</td><td>ACT, HubSpot</td></tr>
+<tr><td><code>act_contacts.csv</code></td><td>Act! CRM contacts</td><td>ACT</td></tr>
+<tr><td><code>act_opportunities.csv</code></td><td>Act! CRM opportunities</td><td>ACT, HubSpot</td></tr>
+<tr><td><code>act365_cardholders.csv</code></td><td>ACT365 door-access cardholders</td><td>ACT (Part A)</td></tr>
+<tr><td><code>act365_door_events_sep2026.csv</code></td><td>ACT365 door events, September 2026</td><td>ACT (Part A)</td></tr>
 <tr><td><code>excel_capacity_budget_2026.csv</code></td><td>Ops/finance spreadsheet</td><td>Excel</td></tr>
 </table>
 
@@ -129,7 +132,7 @@
 <tr><td><b>Nexudus</b></td><td>21-day free trial, no credit card, one location (per their pricing page)</td><td>Use a real email. Our 2 sites → you may need to model RDG as a second "floor" or do it in a second pass</td></tr>
 <tr><td><b>Act!</b></td><td>14-day free trial of Act! Premium Cloud, no card</td><td>Browser based, nothing to install</td></tr>
 <tr><td><b>HubSpot</b></td><td>Free CRM, no time limit</td><td>Plus a free developer test account later for API work</td></tr>
-<tr><td><b>NetSuite</b></td><td>No easy self-service trial for individuals. Oracle gives trials to prospects via sales, and developer accounts mostly to partners.</td><td>Plan B in the NetSuite lab: use public NetSuite docs for the data model + practise the same accounting concepts in a free accounting tool (e.g. Xero's demo company — Work.Life used Xero before moving to NetSuite!)</td></tr>
+<tr><td><b>NetSuite</b></td><td>No easy self-service trial for individuals. Oracle gives trials to prospects via sales, and developer accounts mostly to partners.</td><td>Plan B in the NetSuite lab: use public NetSuite docs for the data model + practise the same accounting concepts in a free accounting tool (e.g. Xero's demo company, used here only as a practice tool)</td></tr>
 </table>
 
 <p><i>Trial terms change. Check each vendor's site when you sign up. Use the trial honestly for learning; don't pretend to be Work.Life.</i></p>
@@ -161,7 +164,7 @@
 <tr><td>4</td><td>What was recognised revenue at Soho in September, and why is it different from Nexudus?</td><td>NetSuite vs Nexudus</td></tr>
 <tr><td>5</td><td>Is Soho profitable? Before and after central costs? Why not?</td><td>NetSuite + Nexudus + Excel</td></tr>
 <tr><td>6</td><td>How did Soho perform vs budget in September?</td><td>NetSuite + Excel</td></tr>
-<tr><td>7</td><td>How many members churned in 2026? (Hint: not 3.)</td><td>Nexudus + ACT</td></tr>
+<tr><td>7</td><td>How many companies and people churned in 2026? (Hint: three contracts ended, but that is not the answer.)</td><td>Nexudus + ACT</td></tr>
 <tr><td>8</td><td>Why did Brightline leave?</td><td>ACT</td></tr>
 <tr><td>9</td><td>What is the open pipeline value, and which renewal is at risk?</td><td>ACT / HubSpot</td></tr>
 <tr><td>10</td><td>What was Brick Lane's utilisation in September?</td><td>Nexudus bookings</td></tr>
@@ -180,6 +183,19 @@
     <li><b>Never use real people's data.</b> Only the fake lab data.</li>
     <li><b>Export before the trial ends.</b></li>
 </ul>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Why would a data engineer bother using the source applications, when they only ever see the warehouse?</b></p>
+<p><i>"Because columns only make sense once you know the screen and the business step that created them. If I've created a contract, cancelled a booking or raised a credit note myself, I know why a field is empty, which dates matter and which records are corrections. That's how I spot wrong numbers before the client does."</i></p>
+
+<p><b>Q: How would you build a test dataset for a project like this?</b></p>
+<p><i>"Small and story-driven. Every awkward case the real business has should appear at least once: an upgrade, a site transfer, a real churn with a reason only in the CRM, a credit note only in finance, a name spelled two ways. Then I calculate the expected answers by hand, so the dataset doubles as an accuracy test."</i></p>
+
+<p><b>Q: Three contracts ended this year. Is churn three?</b></p>
+<p><i>"Not necessarily. In our lab, K001 ended because Pixel Chai upgraded to an office, and K006 ended because Kite &amp; Key moved from Reading to Soho. Only K003, Brightline, actually left: one company, two people, £1,400 of MRR. Churn has to be measured at the company level, after classifying each contract end."</i></p>
 
 <hr/>
 

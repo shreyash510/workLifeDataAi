@@ -49,7 +49,7 @@
 <h3>2. How Access Control Works in a Coworking Building</h3>
 
 <pre>
-   Priya taps her card ──► READER on the door ──► CONTROLLER ──► ACT365 cloud
+   Priya taps a card  ──► READER on the door ──► CONTROLLER ──► ACT365 cloud
                                                                     │
                                     "Is card 04A1B2C301 in a group  │
                                      that may open this door now?"  │
@@ -76,7 +76,7 @@
     <li>You create one ACT365 group per Nexudus <b>pass, resource, desk and office</b>.</li>
     <li>Nexudus <b>adds</b> a customer to the right group when they get a contract or booking, and <b>removes</b> them when the pass expires, contract is cancelled or booking ends.</li>
     <li>Door events can optionally create <b>check-ins</b> back in Nexudus.</li>
-    <li>It's listed as an add-on at <b>£50 per location per month</b>.</li>
+    <li>It's listed as an add-on at <b>£50 per location per month</b> (Nexudus pricing at the time of writing).</li>
 </ul>
 
 <pre>
@@ -108,8 +108,8 @@
     <li><b>How many events?</b> 276. Now: how many <b>people visited</b>? That's a different question!</li>
     <li>Filter to one person on one day. Notice that Priya taps <b>twice</b> each morning: main entrance, then office door. If you count events, you <b>double count</b> office members (but not hot-deskers, who only tap the main door). <b>Rule:</b> count unique <i>person-days</i> on the <b>main entrance</b> only.</li>
     <li>Look at <code>event_time_utc</code>. 07:02 UTC is <b>08:02 in London</b> in September (British Summer Time). If you group by hour in UTC, the "morning rush" lands at the wrong hour. And a late-night event at 23:30 UTC can land on the wrong <i>day</i>.</li>
-    <li>Find <code>CH-9001 Cleaner SparkleClean</code>. Contractors have cards too. They're not members. <b>Exclude them</b>, or your "member attendance" includes cleaners. 😄</li>
-    <li>Find the <code>Access Denied</code> event. Daniel Hughes (Brightline, left in June) tried his old card on 2 Sep. ACT365 said no, because Nexudus had removed him from the group. The integration worked! This kind of check is also a nice <b>security report</b>.</li>
+    <li>Open the cardholders file and find <code>CH-9001 Cleaner SparkleClean</code> (group "All Doors (Contractor)", no Nexudus email). Contractors have cards too. They're not members. Our September sample has no events for this card, but real logs will. <b>Exclude them</b> (no Nexudus match = not a member), or your "member attendance" includes cleaners. 😄</li>
+    <li>Find the <code>Access Denied</code> event. Daniel Hughes (Brightline, left in June) tried their old card on 2 Sep. ACT365 said no, because Nexudus had removed them from the group. The integration worked! This kind of check is also a nice <b>security report</b>.</li>
 </ol>
 
 <hr/>
@@ -196,7 +196,7 @@
     <li>Log an <b>activity</b>: "Call Emma Clarke re renewal" for next week. Log a <b>history</b> note on Brightline.</li>
 </ol>
 
-<p>📝 <b>Notebook:</b> look at the contacts you imported. Priya's email is <code>Priya.Sharma@pixelchai.co.uk</code>, but in Nexudus she's <code>priya@pixelchai.co.uk</code>. The company is "Pixel Chai Studio <b>Ltd</b>" here and "Pixel Chai Studio" in Nexudus. <b>No shared ID.</b> Hold that thought for Chapter 11.</p>
+<p>📝 <b>Notebook:</b> look at the contacts you imported. Priya's email is <code>Priya.Sharma@pixelchai.co.uk</code>, but in Nexudus it's <code>priya@pixelchai.co.uk</code>. The company is "Pixel Chai Studio <b>Ltd</b>" here and "Pixel Chai Studio" in Nexudus. <b>No shared ID.</b> Hold that thought for Chapter 11.</p>
 
 <hr/>
 
@@ -229,14 +229,14 @@
    ──────       ───────────────────────────                        ────
    Nexudus      Contract K005 active, Office 201, £2,700, ends     😊
                 31 Dec 2026. No notice given.
-   NetSuite     Paid every invoice. £2,900 revenue in Sep.         😊
+   NetSuite     Invoiced as normal: £2,900 revenue in Sep.         😊
    Act!         Renewal proposal sent at £2,800. Stage: open.      😊
-   ACT365       Attendance 73% → 23% → ~0 in 3 weeks.              🚨
+   ACT365       Attendance 73% → 23% → ~0 across September.        🚨
 
    ONE SYSTEM ALONE: "everything's fine".
    ALL SYSTEMS TOGETHER: "our Reading anchor tenant may be leaving.
                           Reading's only office revenue is at risk.
-                          Call Emma this week."
+                          Call GreenRoot this week."
 </pre>
 
 <p>That is the whole point of the project in one example. It's what the brief means by <b>"proactive insight"</b> and <b>"foresight over time"</b>, and what Phase 2 calls <b>"context packs a team member can take into a renewal conversation"</b>. It only works if the data from different systems lands in one place and is <b>joined correctly</b>.</p>

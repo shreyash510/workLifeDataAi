@@ -1,0 +1,282 @@
+<h2>Chapter 04 — Who's Who: Client, Data Partner, Leadership &amp; Us</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 03 we read the brief and learned <b>what</b> Work.Life wants. Now we meet <b>who</b>: the groups of people and companies around this project. It sounds like the soft part, but it isn't. Most data projects that fail don't fail on SQL. They fail because the wrong person signed off a definition, the person who knew how the pipeline worked left, or nobody asked the finance team before showing leadership a profit number. 🙈</p>
+
+<p>Our only client source is Work.Life's <b>scoping brief</b>. It names <b>groups</b>, not people. Everything below comes from it; where it is silent, we mark the point as a question, not a guess.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>The cast list in one picture</li>
+    <li>Inside Work.Life: who decides, who uses, who knows</li>
+    <li>The external data partner: what the brief says and what it doesn't</li>
+    <li>"More than one supplier": what a competitive brief means for us</li>
+    <li>Us: where we sit and what we own</li>
+    <li>The software vendors behind every system</li>
+    <li>Stakeholder map: power vs interest</li>
+    <li>RACI for Phase 1</li>
+    <li>How to talk to each group</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Week three of a project like this (an imagined scene, made-up numbers). The AI proudly answers <i>"Soho made £22,950 contribution last month."</i> A leader forwards it to Finance. Finance replies: <i>"That's wrong. September isn't closed yet, and you've missed the service charge accrual."</i></p>
+
+<p>The SQL was fine. The model was fine. What went wrong was <b>people</b>:</p>
+<ul>
+    <li>Nobody asked Finance which months are closed (Finance <b>knows</b>).</li>
+    <li>Nobody agreed with Finance what "contribution" includes (Finance <b>owns the definition</b>).</li>
+    <li>The leader trusted it because it came from "the AI" (the leader <b>uses</b> it).</li>
+</ul>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   For every number the AI gives, you must know:             │
+│     • WHO uses it        (and what they'll do with it)      │
+│     • WHO owns its definition                               │
+│     • WHO knows where its data comes from                   │
+│                                                             │
+│   Different people. Talk to all three.                      │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. The Cast List in One Picture</h3>
+
+<pre>
+                        ┌──────────────────────────────────┐
+                        │            WORK.LIFE             │
+                        │   B Corp · 14 UK sites · ~8,000  │
+                        │      members · ~70 staff         │
+                        │                                  │
+                        │   Leadership team  ◄── Phase 1   │
+                        │        │               USERS     │
+                        │   Operations &amp; IT Systems        │
+                        │        │  (wrote the brief)      │
+                        │   Finance · Sales/Membership ·   │
+                        │   Site teams                     │
+                        │                                  │
+                        │   HR ✗ (out of scope)            │
+                        │   Members (customers, not users) │
+                        └───────┬──────────────────┬───────┘
+                                │                  │
+              keeps the         │                  │  sent the brief to
+              pipeline running  │                  │  "a small number of suppliers"
+                                ▼                  ▼
+                  ┌──────────────────┐     ┌─────────────────────────┐
+                  │ EXTERNAL DATA    │     │   SUPPLIERS RESPONDING  │
+                  │ PARTNER          │ ◄──►│   ("more than one")     │
+                  │ (not named in    │  ?  │   incl. US: the team    │
+                  │  the brief)      │     │   who builds Phase 1    │
+                  └──────────────────┘     └─────────────────────────┘
+
+        Software vendors underneath: Nexudus · Oracle NetSuite · HubSpot ·
+        "ACT" · Microsoft Excel · Fivetran · Google Cloud · dbt · Tableau
+</pre>
+
+<p>The "?" between the partner and the suppliers is deliberate: the brief doesn't say whether the data partner is one of the suppliers it was sent to.</p>
+
+<hr/>
+
+<h3>3. Inside Work.Life</h3>
+
+<p>The brief doesn't name individuals or list the org chart. It does tell us which <b>groups</b> exist and what role each plays in this project:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Who</th><th>What we know (source)</th><th>Role in this project</th></tr>
+<tr><td><b>Leadership team</b></td><td>"Makes commercial and operational decisions across sites, membership, sales, finance and operations." Ran the discovery session that set the priority. The principles "came directly from our leadership team". (Brief §2, §4, §5)</td><td>The <b>users</b> of Phase 1 ("built for the leadership team first") and the source of the 8 principles. They decide if it's trusted. Size unknown (question #13).</td></tr>
+<tr><td><b>Operations &amp; IT Systems</b></td><td>Prepared the brief and is the named contact. (Brief cover, §8)</td><td>Our day-to-day client. Likely owns systems, access and security decisions, and probably runs the supplier selection. Confirm.</td></tr>
+<tr><td><b>Finance</b></td><td>Not named as a team, but the leadership team decides across "finance", NetSuite is the finance system, and the brief wants accuracy "tested against our actual results".</td><td>Very likely <b>owns the definitions</b> of revenue, contribution and profit, and knows which periods are closed. Should sign off the accuracy gate for money questions.</td></tr>
+<tr><td><b>Sales &amp; membership</b></td><td>Leadership decides across "membership, sales". HubSpot is "being integrated and is expected to become the source of truth for member data over time". (Brief §2, §3)</td><td>Likely owners of member, pipeline and churn definitions. Biggest Phase 2 beneficiaries (retention reporting, churn and renewal prediction, "context packs").</td></tr>
+<tr><td><b>Site / community teams</b></td><td>Implied: 14 sites have to be run day to day.</td><td>Know the real capacity, the odd deals and the data-entry habits. Great for "why does this number look weird?"</td></tr>
+<tr><td><b>Whoever builds reports today</b></td><td>Reporting "depends on someone finding time to rebuild it" and "sits in spreadsheets". (Brief §3) Who that is, is not stated.</td><td>Knows today's dashboards and spreadsheets from the inside, and is the person whose manual work the AI should remove. Ask who they are.</td></tr>
+<tr><td><b>HR</b></td><td>"Served by a separate HR system and is out of scope entirely." (Brief §5)</td><td><b>Not connected. Ever.</b> Staff costs appear only as finance totals.</td></tr>
+<tr><td><b>Members (~8,000)</b></td><td>The customers. "Member facing AI and bespoke member tooling" is out of scope. (Brief §6)</td><td>Not users. But their data is in the warehouse, so their privacy is our responsibility.</td></tr>
+</table>
+
+<p>⚠️ <b>Don't guess names and job titles.</b> Before the first call, ask Operations &amp; IT Systems for the roles in the leadership team (question #13), the Finance owner for definitions, and who maintains reporting today. Use "they" for anyone until you know more.</p>
+
+<hr/>
+
+<h3>4. The External Data Partner</h3>
+
+<p>This is everything the brief says about them:</p>
+
+<ul>
+    <li><i>"We already have a working, externally maintained data pipeline."</i></li>
+    <li><i>"The pipeline is currently kept running by an external data partner."</i></li>
+    <li>The stack table: Fivetran and Python → BigQuery → dbt (raw, intermediate, modelled) → Tableau.</li>
+</ul>
+
+<p>That's it. The partner isn't named, and nothing is said about their contract, how long they've worked with Work.Life or whether they're responding to this brief.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>What we can reasonably infer</th><th>What we must ask</th></tr>
+<tr><td>They know how each source is extracted (which parts are Fivetran, which are Python).</td><td>Who runs the Fivetran account and the Python jobs? Where does the code live?</td></tr>
+<tr><td>They know the dbt project: models, tests, the quirks behind each KPI.</td><td>Can we get read access to the dbt repo and BigQuery early?</td></tr>
+<tr><td>They are the first people called when a source API changes or a load fails.</td><td>Will they keep running the pipeline after Phase 1? What's the interface between their marts and our controlled copy?</td></tr>
+<tr><td>Their knowledge may not all be written down (that's why the brief insists on "documented and handover ready").</td><td>What documentation exists today?</td></tr>
+<tr><td>—</td><td>Who owns the BigQuery project and billing: Work.Life or the partner? (question #16)</td></tr>
+</table>
+
+<p>Why does this matter so much? Phase 1 sits <b>on top of</b> their pipeline. If the marts change without warning, the AI's answers change too. A clear boundary ("they own sources → marts; we own the copy and the AI layer") plus a change-notice habit protects everyone.</p>
+
+<hr/>
+
+<h3>5. "More Than One Supplier"</h3>
+
+<p>Section 1 of the brief: <i>"We are sharing it with a small number of suppliers"</i>, <i>"We are speaking to more than one supplier and will compare responses on a like for like basis."</i></p>
+
+<p>The brief doesn't say who those suppliers are, or whether the data partner is among them. For an engineer, the useful question is: <b>how does the knowledge gap change the plan?</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Situation</th><th>What's easier</th><th>What's harder</th></tr>
+<tr><td>The team building Phase 1 is the same team that runs the pipeline</td><td>Already knows the data and quirks; already has access; can start fast</td><td>Must still meet the handover principle ("not dependent on any single person, on your side or ours"); AI is a new skill on top of pipeline work</td></tr>
+<tr><td>The team building Phase 1 is a different supplier</td><td>Fresh view of the data and the BI/AI options</td><td>Needs discovery time and the partner's cooperation before building; must agree a clean interface with them</td></tr>
+</table>
+
+<p>Either way, the work is the same: understand every source, agree definitions, build on a controlled copy, test against actuals, document. That's why <b>Chapter 11's questions #1–12</b> matter: they turn "we've read about this pipeline" into "we know this pipeline".</p>
+
+<hr/>
+
+<h3>6. Us: Where We Sit</h3>
+
+<p>This series is written from one seat: <b>an engineer on the supplier side, joining this project to design, build and hand over Phase 1</b>. The job:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Stage</th><th>What "us" does</th><th>Season</th></tr>
+<tr><td>Understand</td><td>Learn the business, the KPIs and every source system</td><td>0, 1</td></tr>
+<tr><td>Respond</td><td>Write honest answers to the 10 questions; join the call</td><td>5 (Ch 33–35, 37)</td></tr>
+<tr><td>Build</td><td>Copy of safe marts, semantic layer, AI layer, alerts, security</td><td>2, 3</td></tr>
+<tr><td>Prove</td><td>Golden questions vs actuals; pass the launch gate with Finance and Ops</td><td>3 (Ch 25)</td></tr>
+<tr><td>Hand over</td><td>Docs and runbooks so nobody depends on one person (including us)</td><td>5 (Ch 36)</td></tr>
+<tr><td>Extend</td><td>Phase 2 on top, without a rebuild</td><td>4</td></tr>
+</table>
+
+<p>Notice <b>including us</b> in the "Hand over" row. The brief says the capability must not depend on any single person "on your side or ours". A good engineer makes themselves replaceable.</p>
+
+<hr/>
+
+<h3>7. The Software Vendors Behind Every System</h3>
+
+<p>Every system in the stack is also a company, with its own licences, pricing, API limits and roadmap. These matter for cost, security and the "source agnostic" principle.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>System</th><th>Vendor</th><th>Why it matters to us</th></tr>
+<tr><td>Nexudus</td><td>Nexudus</td><td>Largest source. API limits and pricing shape extraction. Could be replaced one day (the brief's own example).</td></tr>
+<tr><td>NetSuite</td><td>Oracle</td><td>Finance's truth today. Whether finance history before NetSuite lives in another ledger is unknown (Chapter 09).</td></tr>
+<tr><td>HubSpot</td><td>HubSpot</td><td>Becoming member source of truth. Sync rules with Nexudus are unknown.</td></tr>
+<tr><td>"ACT"</td><td>Unclear: Act! CRM, or ACT365 access control?</td><td>Different data, different privacy rules (Chapter 08).</td></tr>
+<tr><td>Excel</td><td>Microsoft</td><td>Manual sheets: budgets, capacity. No vendor API; people are the "pipeline".</td></tr>
+<tr><td>Fivetran</td><td>Fivetran</td><td>Usage-based pricing (Monthly Active Rows), Chapter 13.</td></tr>
+<tr><td>BigQuery</td><td>Google Cloud</td><td>The foundation. Region, IAM and billing live here.</td></tr>
+<tr><td>dbt</td><td>dbt Labs (open-source core)</td><td>Where definitions live today, and where source-agnostic happens.</td></tr>
+<tr><td>Tableau</td><td>Salesforce</td><td>Under review ("do not assume Tableau is fixed"). Don't build on it.</td></tr>
+<tr><td>The LLM</td><td>To be chosen</td><td>New vendor. Data handling, region and token pricing all need answers (Chapters 26, 27).</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. Stakeholder Map: Power vs Interest</h3>
+
+<p>A classic tool: put each stakeholder on a grid by how much <b>power</b> they have over the project and how much <b>interest</b> they have in it. It tells you how to manage each one. This placement is our first guess, to revise after the first call.</p>
+
+<pre>
+   POWER
+     ▲
+     │  KEEP SATISFIED                 MANAGE CLOSELY
+     │                                 • Leadership team (users + deciders)
+     │  • Finance (sign-off on         • Operations &amp; IT Systems (client lead)
+     │    money definitions)
+     │
+     │─────────────────────────────────┼──────────────────────────────────
+     │  MONITOR                        KEEP INFORMED
+     │  • Software vendors             • External data partner (owns the
+     │  • Site teams                     pipeline we build on)
+     │  • Members (privacy only)       • Whoever builds reports today
+     │                                 • Sales &amp; membership (Phase 2 users)
+     └──────────────────────────────────────────────────────────► INTEREST
+</pre>
+
+<p>One twist: <b>Finance</b> sits in "keep satisfied", but on accuracy day they move to "manage closely". If Finance won't sign off the profit numbers, the launch gate doesn't open.</p>
+
+<hr/>
+
+<h3>9. RACI for Phase 1</h3>
+
+<p><b>R</b>esponsible (does it), <b>A</b>ccountable (owns the outcome), <b>C</b>onsulted (asked first), <b>I</b>nformed (told after). This is our <i>proposed</i> split, to agree with the client:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Activity</th><th>Leadership</th><th>Ops &amp; IT</th><th>Finance</th><th>Sales / Membership</th><th>Data partner (pipeline)</th><th>Us</th></tr>
+<tr><td>Choose the Phase 1 questions</td><td>A</td><td>C</td><td>C</td><td>C</td><td>I</td><td>R</td></tr>
+<tr><td>Agree KPI definitions</td><td>A</td><td>C</td><td>R (money)</td><td>R (members, sales)</td><td>C</td><td>C</td></tr>
+<tr><td>Grant data &amp; BigQuery access</td><td>I</td><td>A/R</td><td>I</td><td>I</td><td>C</td><td>I</td></tr>
+<tr><td>Safe-data allow-list</td><td>I</td><td>A</td><td>C</td><td>C</td><td>C</td><td>R</td></tr>
+<tr><td>Build controlled copy + AI layer</td><td>I</td><td>C</td><td>I</td><td>I</td><td>C</td><td>A/R</td></tr>
+<tr><td>Golden questions &amp; accuracy gate</td><td>A</td><td>C</td><td>R (verifies money)</td><td>R (verifies members)</td><td>I</td><td>R</td></tr>
+<tr><td>SSO &amp; access control</td><td>I</td><td>A</td><td>I</td><td>I</td><td>I</td><td>R</td></tr>
+<tr><td>Keep source pipeline running</td><td>I</td><td>A</td><td>I</td><td>I</td><td>R</td><td>C</td></tr>
+<tr><td>Documentation &amp; handover</td><td>I</td><td>A</td><td>I</td><td>I</td><td>C</td><td>R</td></tr>
+</table>
+
+<p>Look at the "Agree KPI definitions" row: <b>we are only Consulted</b>. We can propose definitions, but the business must own them. If we own them, then every wrong number is "the supplier's fault", and trust never builds.</p>
+
+<hr/>
+
+<h3>10. How to Talk to Each Group</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Group</th><th>They care about</th><th>Talk in terms of</th><th>Avoid</th></tr>
+<tr><td>Leadership</td><td>Decisions, trust, time saved</td><td>"Ask 'is Soho profitable?' and get the right answer, with the reason and the definition used."</td><td>dbt, embeddings, token counts</td></tr>
+<tr><td>Ops &amp; IT Systems</td><td>Security, access, reliability, running cost</td><td>SSO, IAM, isolation, caps, runbooks</td><td>Vague "we'll secure it"</td></tr>
+<tr><td>Finance</td><td>Correct numbers, closed periods, definitions</td><td>"Your definition, your sign-off, tested against your actuals."</td><td>"The AI calculated it"</td></tr>
+<tr><td>Whoever builds reports today</td><td>Their spreadsheets and dashboards; their time; their future role</td><td>"Your knowledge becomes the definitions and the golden tests."</td><td>Anything that sounds like "replacing you"</td></tr>
+<tr><td>External data partner</td><td>Their pipeline, their stability, clear responsibilities</td><td>Clear interfaces: they own sources → marts, the AI reads the copy; change notices both ways</td><td>Blame for past gaps</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: On a data project, who should own KPI definitions: the data team or the business?</b></p>
+<p><i>"The business. The data team writes the definition down, implements it once and tests it, but Finance owns money definitions and the commercial leads own member and sales definitions. If the data team owns them, every disagreement becomes a data-team problem and trust never builds."</i></p>
+
+<p><b>Q: You're building on a pipeline another company maintains. How do you reduce the risk?</b></p>
+<p><i>"Agree a knowledge-transfer period, get read access to the dbt project and BigQuery early, document every source and model as I learn it, and set a clear boundary: for example, they keep the pipeline up to the marts and we build on a controlled copy, with change notices both ways. The goal is that nothing depends on one person or company."</i></p>
+
+<p><b>Q: What is a RACI and why use one?</b></p>
+<p><i>"It lists each activity and who is Responsible, Accountable, Consulted and Informed. It makes ownership explicit before problems happen. For example, who signs off the accuracy test, or who grants access, so nobody assumes someone else is doing it."</i></p>
+
+<p><b>Q: The people who rebuild reports by hand today might feel threatened by an AI layer. How do you handle that?</b></p>
+<p><i>"Involve them early and give them real ownership: the definitions, the golden-question set and reviewing answers. The AI removes the manual rebuilding, and their knowledge becomes what makes the AI accurate."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Users, owners, knowers</b></td><td>For every number: who uses it, who owns its definition, who knows its source.</td></tr>
+<tr><td><b>Leadership team</b></td><td>The Phase 1 users and the authors of the 8 principles. Size unknown; ask.</td></tr>
+<tr><td><b>Operations &amp; IT Systems</b></td><td>Wrote the brief; our main client contact.</td></tr>
+<tr><td><b>Finance</b></td><td>Owns money definitions; holds the key to the accuracy gate.</td></tr>
+<tr><td><b>External data partner</b></td><td>Keeps the pipeline running today. Unnamed. Their knowledge and a clean interface are critical.</td></tr>
+<tr><td><b>Suppliers</b></td><td>"More than one", compared like for like.</td></tr>
+<tr><td><b>Us</b></td><td>A supplier-side engineer building Phase 1. Make ourselves replaceable.</td></tr>
+<tr><td><b>HR</b></td><td>Out of scope. Never connected.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>That completes Season 0. We know the business, its numbers, the brief and the people. Time to get our hands dirty. In Chapter 05 we build a <b>Mini Work.Life lab</b>: 2 sites, 5 companies and 14 members that we'll run through every source system ourselves.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

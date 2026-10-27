@@ -1,0 +1,292 @@
+<h2>Chapter 32 — Role-Based Access &amp; Agents on Top</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Last Phase 2 chapter, and the same reminder: the brief puts this under <i>"for context only, not in this scope"</i>. The last Phase 2 item reads: <i>"Role based access for wider teams, and agents or automations built on top of the foundation."</i> And Phase 1 itself says: <i>"Built for the leadership team first. Wider team access is designed later, once the foundation is proven and trusted."</i></p>
+
+<p>So this chapter is about <b>opening the doors safely</b>. Chapters 29–31 built things that site managers, account managers and sales would love to use. But the moment more people can ask questions, a new problem appears: <b>who is allowed to see what?</b> And once the AI can do routine work by itself, a second one: <b>what is it allowed to do?</b></p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Why leadership-only was the right start</li>
+    <li>Roles: who needs what</li>
+    <li>The golden rule: the AI can never see more than the person asking</li>
+    <li>Row-level security in BigQuery: each site sees its own rows</li>
+    <li>Column-level security: hiding sensitive columns</li>
+    <li>Whose identity runs the query?</li>
+    <li>Agents: what they are, and three useful ones</li>
+    <li>Guardrails for agents</li>
+    <li>What never gets connected (still)</li>
+    <li>What Phase 1 gives us for free</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Imagine (made up) that Work.Life gives every site manager access to the AI. On day one, the Reading site manager asks a perfectly reasonable question:</p>
+
+<p><i>"How does my site's profit compare to the others?"</i></p>
+
+<p>The AI, connected with one shared service account that can see everything, answers helpfully, with every site's contribution, central cost allocations and Soho's rent. Then they ask <i>"why is Soho more profitable?"</i> and get a breakdown of another site's costs and its biggest customers' prices.</p>
+
+<p>Nobody did anything wrong. The person asked; the AI answered. The <b>access design</b> was wrong. In Phase 1, with only the leadership team, everyone was allowed to see everything, so a single shared identity was fine. Wider access needs a different design.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   The AI must never see more than the person asking it.     │
+│                                                             │
+│   Enforce access in the DATA layer (BigQuery),              │
+│   not in the prompt. A prompt can be talked round;          │
+│   a row access policy can't.                                │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Why Leadership-Only Was the Right Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Phase 1 (leadership)</th><th>Phase 2 (wider teams)</th></tr>
+<tr><td>Small group (exact size unknown: client question #13; cost chapters assume 10, labelled as an assumption)</td><td>Many more people, many roles</td></tr>
+<tr><td>Everyone may see all sites, all money</td><td>Each role sees a slice</td></tr>
+<tr><td>Users know the definitions</td><td>Users need more help and guard rails</td></tr>
+<tr><td>Cheap: few users, few questions</td><td>Cost grows with users (Chapter 27)</td></tr>
+<tr><td>Trust being built</td><td>Trust must already exist</td></tr>
+</table>
+
+<p>The brief's order is deliberate: <i>"once the foundation is proven and trusted."</i> Rolling out widely before the accuracy gate is passed would spread wrong numbers faster.</p>
+
+<hr/>
+
+<h3>3. Roles: Who Needs What</h3>
+
+<p>The brief doesn't list roles beyond the leadership team, so this is a <b>proposal to agree</b> with Operations &amp; IT Systems (made up, based on the teams in Chapter 04):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Role</th><th>Sites</th><th>Members &amp; contracts</th><th>Money (GL)</th><th>Pipeline</th><th>Typical question</th></tr>
+<tr><td><b>Leadership</b></td><td>All</td><td>All, aggregated</td><td>All</td><td>All</td><td>"Is Soho profitable? Why not?"</td></tr>
+<tr><td><b>Finance</b></td><td>All</td><td>Aggregated</td><td>All, detailed</td><td>Totals</td><td>"Revenue vs budget by site?"</td></tr>
+<tr><td><b>Site manager</b></td><td>Own site only</td><td>Own site</td><td>Own site's revenue &amp; direct costs</td><td>Own site</td><td>"Who's renewing in my site next quarter?"</td></tr>
+<tr><td><b>Account manager</b></td><td>Assigned sites</td><td>Assigned companies</td><td>No</td><td>Own deals</td><td>"Context pack for GreenRoot"</td></tr>
+<tr><td><b>Sales</b></td><td>All</td><td>Company names, products</td><td>No</td><td>All</td><td>"Win rate this quarter?"</td></tr>
+<tr><td><b>Everyone</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td>No HR data, ever. For anyone.</td></tr>
+</table>
+
+<p>Two kinds of restriction appear in this table:</p>
+<ul>
+    <li><b>Rows:</b> a site manager sees Soho's rows but not Reading's. → row-level security.</li>
+    <li><b>Columns:</b> an account manager sees contracts but not GL cost lines. → column-level security, or simply not granting the table.</li>
+</ul>
+
+<hr/>
+
+<h3>4. Row-Level Security in BigQuery</h3>
+
+<p>BigQuery has <b>row-level access policies</b>: filters attached to a table, so each user or group only gets the rows they're allowed to see, no matter what query they write. Users or groups not named in any policy see nothing.</p>
+
+<p>The simplest version uses one Google group per site (group names are placeholders):</p>
+
+<pre>
+-- Soho team sees Soho rows
+CREATE ROW ACCESS POLICY soho_only
+ON `ai_safe.fct_site_month_kpis`
+GRANT TO ('group:site-soho@worklife.example')
+FILTER USING (site_code = 'SOHO');
+
+-- Reading team sees Reading rows
+CREATE ROW ACCESS POLICY rdg_only
+ON `ai_safe.fct_site_month_kpis`
+GRANT TO ('group:site-reading@worklife.example')
+FILTER USING (site_code = 'RDG');
+
+-- Leadership and Finance see everything
+CREATE ROW ACCESS POLICY all_sites
+ON `ai_safe.fct_site_month_kpis`
+GRANT TO ('group:leadership@worklife.example', 'group:finance@worklife.example')
+FILTER USING (TRUE);
+</pre>
+
+<p>Now the same query gives different answers depending on who runs it:</p>
+
+<pre>
+   SELECT site_code, revenue_gbp FROM ai_safe.fct_site_month_kpis
+   WHERE month = '2026-09-01'
+
+   run by leadership ............  SOHO  …  |  RDG  …
+   run by Soho site manager .....  SOHO  …
+   run by Reading site manager ..  RDG   …
+   run by anyone else ...........  (no rows)
+</pre>
+
+<p>With 14 sites, 14 policies per table gets messy. A neater pattern is a single policy that looks up the caller in a small <b>access mapping table</b> using <code>SESSION_USER()</code> (the email of whoever is running the query):</p>
+
+<pre>
+CREATE ROW ACCESS POLICY by_site_mapping
+ON `ai_safe.fct_contract_month`
+GRANT TO ('domain:worklife.example')
+FILTER USING (
+  site_code IN (
+    SELECT site_code FROM `access_control.user_sites`
+    WHERE user_email = SESSION_USER()
+  )
+);
+</pre>
+
+<p>(Vendor fact to verify: BigQuery allows subqueries in row access policy filters, but check the current docs for the limits and for what access the lookup table itself needs before relying on this pattern.)</p>
+
+<p>⚠️ The mapping table is <b>access configuration</b>, not HR data: just "this login may see these sites". Keep it in its own <code>access_control</code> dataset that the AI cannot read, owned by Operations &amp; IT Systems, and ideally fed from the identity provider's groups rather than typed by hand. Who manages it, and how a leaver's access is removed, goes in the runbook (Chapter 36).</p>
+
+<p>Apply policies to every table in <code>ai_safe</code> that has a site, using a dbt post-hook or a script so new tables can't slip through without one. Add a test that fails if any <code>ai_safe</code> table with a <code>site_code</code> column has no policy.</p>
+
+<hr/>
+
+<h3>5. Column-Level Security</h3>
+
+<p>Some columns should be visible to some roles only. BigQuery handles this with <b>policy tags</b> (column-level access control, managed through Data Catalog / Dataplex taxonomies): tag a column as, say, <code>finance_detail</code>, and only groups granted that tag can read it.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Column</th><th>Tag (made up)</th><th>Who can read</th></tr>
+<tr><td><code>fct_gl.amount_gbp</code> on cost accounts</td><td>finance_detail</td><td>Leadership, Finance</td></tr>
+<tr><td><code>fct_contract_month.discount_pct</code></td><td>commercial</td><td>Leadership, Finance, Sales, Account managers</td></tr>
+<tr><td><code>dim_company.company_name</code></td><td>(none)</td><td>Everyone with row access</td></tr>
+</table>
+
+<p>But the cheapest column security is still the Phase 1 rule: <b>sensitive columns never enter <code>ai_safe</code> at all</b>. Member emails, phone numbers, card numbers and raw door events were excluded when the copy was built (Chapter 26). You can't leak a column that isn't there.</p>
+
+<hr/>
+
+<h3>6. Whose Identity Runs the Query?</h3>
+
+<p>This is the design decision that makes or breaks role-based access. Row policies only work if BigQuery knows <b>who is really asking</b>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Option</th><th>How it works</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><b>A. One shared service account</b></td><td>The AI app queries as itself</td><td>Simple. Fine for Phase 1 (everyone sees everything)</td><td>BigQuery sees one user, so row policies can't tell people apart. ❌ for Phase 2</td></tr>
+<tr><td><b>B. One service account per role</b></td><td>The app maps the signed-in user to a role, then queries as that role's account</td><td>Few accounts; policies by role</td><td>Can't do per-person rules (e.g. "my assigned companies"). The app's mapping must be right.</td></tr>
+<tr><td><b>C. The user's own identity</b></td><td>The user signs in with SSO; the app queries BigQuery with the user's credentials</td><td>BigQuery enforces everything per person. Audit logs show the real user.</td><td>More setup; every user needs BigQuery read permissions on <code>ai_safe</code></td></tr>
+</table>
+
+<p>Our recommendation for Phase 2 is <b>C</b>: it's the only option where the rule box above is guaranteed by BigQuery itself, and the audit log shows exactly who saw what. And here's the "no rebuild" part: if Phase 1 already uses <b>Work.Life SSO</b> (the brief's "access via Work.Life accounts only"), the user's identity is already there. Phase 2 just starts passing it through to BigQuery.</p>
+
+<p>The AI's <b>semantic layer and business context</b> need to respect roles too. If a site manager asks "how's the business?", the answer should be "how's <i>your site</i>?", and the AI shouldn't mention numbers it couldn't query. Since the AI only sees what the query returns, option C handles most of this automatically.</p>
+
+<hr/>
+
+<h3>7. Agents: What They Are, and Three Useful Ones</h3>
+
+<p>So far, the AI waits to be asked (chat) or runs a fixed schedule (digests). An <b>agent</b> is a step further: it's given a goal, plans steps, uses tools (queries, templates, messaging) and produces a result, repeatedly, with little human input.</p>
+
+<p>Three agents that fit Work.Life's Phase 2 items and only <b>read</b> data:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Agent</th><th>Goal</th><th>Steps</th><th>Output goes to</th></tr>
+<tr><td><b>Renewal prep</b></td><td>No renewal conversation happens without a context pack</td><td>Every Monday: find office contracts ending in 60–120 days → build each context pack (Chapter 30) → check against CRM for an open deal</td><td>The assigned account manager (draft for review)</td></tr>
+<tr><td><b>Weekly retention</b></td><td>Leadership never rebuilds the member report</td><td>Run Chapter 29's report → compare with last week → explain the biggest changes in plain English</td><td>Leadership digest</td></tr>
+<tr><td><b>Data watchdog</b></td><td>Wrong data is caught before a leader sees it</td><td>After each refresh: check row counts, freshness, dbt test results, sudden jumps (e.g. Soho MRR −40% overnight) → hold the digest if something looks broken</td><td>The named data owner at Work.Life and the support partner</td></tr>
+</table>
+
+<p>Notice the third one. It doesn't add insight; it protects <b>trust</b>. One broken overnight sync that says "Reading revenue: £0" in a leadership email does more damage than ten clever insights do good.</p>
+
+<p>Lab example: on <b>2 October 2026</b> the renewal-prep agent would find GreenRoot Foods (Office 201, ends 31 December, 90 days away) and produce exactly the context pack from Chapter 30. (It could also flag, from the CRM, that Ortho Robotics has toured and wants Office 202 at the same site from November, which is useful context for the Reading site team.)</p>
+
+<hr/>
+
+<h3>8. Guardrails for Agents</h3>
+
+<p>Agents act without someone watching every step, so they need firmer rules than chat:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Guardrail</th><th>What it means at Work.Life</th></tr>
+<tr><td><b>Read-only by default</b></td><td>Agents query <code>ai_safe</code>. They cannot write to Nexudus, NetSuite, HubSpot, ACT or any source system.</td></tr>
+<tr><td><b>Human in the loop for actions</b></td><td>Any action beyond "send a draft to a staff member" (e.g. creating a CRM task) needs a person to approve it.</td></tr>
+<tr><td><b>Own identity, least privilege</b></td><td>Each agent runs as its own service account, with only the tables it needs and the same row policies as the role it serves.</td></tr>
+<tr><td><b>Action allow-list</b></td><td>A short, written list of tools each agent may call. Nothing else.</td></tr>
+<tr><td><b>Budgets and caps</b></td><td>Token and BigQuery byte limits per run and per day (Chapter 27). An agent stuck in a loop must hit a wall, not a bill.</td></tr>
+<tr><td><b>Logging</b></td><td>Every run logs its queries, outputs and recipients, for audit and debugging.</td></tr>
+<tr><td><b>Staff only</b></td><td>No agent ever messages a member. Member-facing AI is out of scope in the brief.</td></tr>
+<tr><td><b>Kill switch</b></td><td>One setting pauses all agents. Documented in the runbook.</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. What Never Gets Connected (Still)</h3>
+
+<p>Wider access and agents don't change the brief's red lines. If anything, they make them more important:</p>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────┐
+│  NEVER CONNECTED · Phase 1 AND Phase 2                           │
+│                                                                  │
+│  ✗ HR system and people data       "out of scope entirely"       │
+│  ✗ Live source systems             AI works from the copy only   │
+│  ✗ Raw door events, contact details, card numbers                │
+│  ✗ Member-facing chat or messages                                │
+│  ✗ Write access to Nexudus / NetSuite / HubSpot / ACT            │
+│                                                                  │
+│  Staff costs appear only as finance totals in the GL,            │
+│  never per person.                                               │
+└──────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>One subtle risk: the <code>access_control.user_sites</code> table from section 4 lists staff logins. It must stay <b>access configuration only</b> (login → sites). No job titles, salaries, managers or anything else from HR. If someone asks to "just add the org chart so the AI knows reporting lines", the answer is no: that's people data.</p>
+
+<hr/>
+
+<h3>10. What Phase 1 Gives Us for Free</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Piece</th><th>From Phase 1</th><th>Added for Phase 2</th></tr>
+<tr><td>Work.Life SSO</td><td>✅ "Work.Life accounts only"</td><td>Pass the user's identity through to BigQuery</td></tr>
+<tr><td>Controlled copy <code>ai_safe</code></td><td>✅ Sensitive columns already removed</td><td>Row access policies + policy tags on it</td></tr>
+<tr><td>Semantic layer</td><td>✅ One definition per metric</td><td>Nothing: same definitions, filtered rows</td></tr>
+<tr><td>Proactive digests</td><td>✅ Chapter 24</td><td>Per-role digests; agents on the same scheduler</td></tr>
+<tr><td>Cost caps</td><td>✅ Chapter 27</td><td>Per-user and per-agent limits</td></tr>
+<tr><td>Accuracy tests</td><td>✅ Chapter 25</td><td>Same golden questions run as each role, checking each sees only its rows</td></tr>
+<tr><td>Docs &amp; runbooks</td><td>✅ Chapter 36</td><td>Access management, agent list, kill switch</td></tr>
+</table>
+
+<p>Look at that list for the Q10 answer. Phase 1's choices made Phase 2 cheap: <b>SSO</b> from day one, a <b>controlled copy</b> instead of live access, a <b>semantic layer</b> instead of raw tables, and <b>caps and logs</b> from the start. None of Chapters 29–32 needs a rebuild. They need new models, new policies and new templates on the same foundation.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How do you give a site manager access to an AI analytics tool so they only see their own site?</b></p>
+<p><i>"Enforce it in the warehouse, not the prompt. In BigQuery I'd add row access policies on every table in the AI's dataset, filtering by site for the user's group, or with one policy that looks up SESSION_USER() in an access mapping table. Then I'd make the AI query with the user's own identity, so BigQuery applies the policy to every query."</i></p>
+
+<p><b>Q: Why not just tell the AI in its prompt "only show this user Soho data"?</b></p>
+<p><i>"Prompts aren't a security boundary. Users can phrase questions to get around them, and a model can make mistakes. If the data layer never returns other sites' rows, the AI can't leak them, whatever is asked."</i></p>
+
+<p><b>Q: Shared service account vs end-user credentials for an AI that queries BigQuery: which do you choose?</b></p>
+<p><i>"A shared service account is fine when every user may see everything, like a small leadership group. Once access differs per person, I'd use end-user credentials from SSO so row and column policies apply per person and the audit log shows the real user. Per-role service accounts are a middle ground, but they can't do per-person rules."</i></p>
+
+<p><b>Q: What guardrails would you put on an agent that runs on business data?</b></p>
+<p><i>"Read-only access through its own least-privilege identity, an explicit allow-list of tools, human approval for any action, token and query cost caps, full logging, no contact with customers, and a kill switch. And it must never be connected to data that's out of scope, like HR."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Order</b></td><td>Leadership first, wider teams once the foundation is trusted.</td></tr>
+<tr><td><b>Golden rule</b></td><td>The AI never sees more than the person asking.</td></tr>
+<tr><td><b>Rows</b></td><td>BigQuery row access policies, by group or via <code>SESSION_USER()</code> mapping.</td></tr>
+<tr><td><b>Columns</b></td><td>Policy tags, but better: keep sensitive columns out of <code>ai_safe</code>.</td></tr>
+<tr><td><b>Identity</b></td><td>Query as the real user (SSO) so policies and audit logs work.</td></tr>
+<tr><td><b>Agents</b></td><td>Renewal prep, weekly retention, data watchdog. Read-only, staff-facing.</td></tr>
+<tr><td><b>Guardrails</b></td><td>Least privilege, allow-list, human approval, caps, logs, kill switch.</td></tr>
+<tr><td><b>Red lines</b></td><td>No HR, no live sources, no member-facing AI, no writes. Ever.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>That's Season 4. We've seen where the capability goes after Phase 1, and why none of it needs a rebuild. Now it's time to deliver. In <b>Season 5</b>, Chapter 33 takes everything we've learned and writes the actual response: <b>clear answers to the 10 questions in Section 7</b> of the brief.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

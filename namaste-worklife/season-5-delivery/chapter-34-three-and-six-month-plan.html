@@ -1,0 +1,234 @@
+<h2>Chapter 34 — The 3-Month and 6-Month Plan</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 33 we wrote the response, and in Q2 we made a promise: <b>trusted for the leadership team by end of 2026, full coverage and handover by the 6-month mark</b>. A promise without a plan is just a wish. In this chapter we build the plan week by week, find the critical path, and write down exactly what has to be true on Work.Life's side for the dates to hold.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>The timeline tension from Chapter 03, resolved</li>
+    <li>The assumptions behind every date</li>
+    <li>The big picture: 4 stages in 6 months</li>
+    <li>Months 1–3, week by week</li>
+    <li>The critical path (what can't slip)</li>
+    <li>Months 4–6, month by month</li>
+    <li>What must be true on Work.Life's side</li>
+    <li>Risks and what we do about them</li>
+    <li>Milestones and how we prove each one</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Two plans for the same project:</p>
+
+<ul>
+    <li><b>Plan A:</b> "Months 1–2: build. Month 3: test. Go live." Looks tidy. In week 7 the team discovers nobody has agreed what "occupancy" means. Testing can't start. Go-live slips to February. Leadership hears about it in January. 😬</li>
+    <li><b>Plan B:</b> "Week 1: get access. Weeks 1–4: agree the 20 KPI definitions with Finance and Ops, <i>in parallel</i> with building the safe copy. Week 8: golden answers verified. Week 11: accuracy gate." When definitions run late in week 3, everyone sees it immediately, because it's on the critical path.</li>
+</ul>
+
+<p>Plan B isn't faster. It's <b>honest about what the dates depend on</b>.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   In a data + AI project, the critical path runs through    │
+│   PEOPLE, not code:                                         │
+│       access → definitions → verified answers → sign-off    │
+│   Start these on day one. Build the tech in parallel.       │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. The Tension, Resolved</h3>
+
+<p>From Chapter 03: the brief asks for 3-month and 6-month marks, but also wants a <b>trusted</b> capability by end of 2026, only about 3.5 months after partner selection in mid-September.</p>
+
+<pre>
+   MID SEP 2026     EARLY OCT          END DEC 2026             END MAR 2027
+   ────────────     ─────────          ────────────             ────────────
+   Partner     ──►  KICK-OFF  ──────►  3-MONTH MARK  ─────────► 6-MONTH MARK
+   selected         (week 1)           = brief's target         Full coverage,
+                                       "working, trusted"       alerts, handover,
+                                       for leadership           Phase 2 design
+        │◄─ contract, ─►│
+        │  onboarding   │
+</pre>
+
+<p>The resolution: <b>the 3-month mark and the brief's end-2026 target are the same milestone</b>, if we count from an early-October start. We make that milestone small and solid (a limited, tested set of board-pack questions), and put everything else into months 4–6.</p>
+
+<hr/>
+
+<h3>3. Assumptions Behind Every Date</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Assumption</th><th>If it's wrong</th></tr>
+<tr><td>A1</td><td>Contract signed and work starts in early October 2026 (assumed: Mon 5 Oct)</td><td>Every date moves by the same amount</td></tr>
+<tr><td>A2</td><td>Read access to BigQuery and the dbt repo within week 1</td><td>Build can't start; slip week for week</td></tr>
+<tr><td>A3</td><td>Finance and Ops definition owners give ~3–4 hours/week in Oct–Nov</td><td>Definitions slip; accuracy gate slips</td></tr>
+<tr><td>A4</td><td>Phase 1 users: leadership team only (size unknown, client question #13; we assume 10, as in Chapter 35)</td><td>More users = more access, testing and support</td></tr>
+<tr><td>A5</td><td>Existing marts cover most board-pack KPIs; a few need new dbt models</td><td>More modelling work before the AI can answer</td></tr>
+<tr><td>A6</td><td>The current data partner keeps the pipeline running during the project</td><td>We'd have to absorb pipeline work</td></tr>
+<tr><td>A7</td><td>The last closed months in NetSuite can be used for golden answers</td><td>Need another source of verified actuals</td></tr>
+<tr><td>A8</td><td>Christmas: little leadership availability from ~18 Dec</td><td>Go-live and sign-off must land before then</td></tr>
+</table>
+
+<p>A8 matters more than it looks. "End of 2026" in practice means <b>mid-December</b>, because nobody signs off an accuracy gate on 29 December. 🎄</p>
+
+<hr/>
+
+<h3>4. The Big Picture: 4 Stages</h3>
+
+<pre>
+   OCT              NOV              DEC          JAN        FEB        MAR
+   wk1 ─ wk4        wk5 ─ wk8        wk9 ─ wk11   │          │          │
+   ┌──────────┐     ┌──────────┐     ┌────────┐   ┌─────────────────────────┐
+   │ 1.FOUND- │────►│ 2. BUILD │────►│3.PROVE │──►│ 4. EXTEND &amp; HAND OVER   │
+   │  ATIONS  │     │ & TEST   │     │ & LIVE │   │                         │
+   └──────────┘     └──────────┘     └────────┘   └─────────────────────────┘
+   access,          AI app, SSO,     accuracy      more questions, alerts,
+   definitions,     golden set,      gate,         trends, HubSpot swap
+   ai_safe copy,    internal         pilot,        rehearsal, docs, handover,
+   semantic layer   testing          go-live       Phase 2 design
+                                     ▲
+                                     │ 3-MONTH MARK (mid/late Dec 2026)
+</pre>
+
+<hr/>
+
+<h3>5. Months 1–3, Week by Week</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Week (2026)</th><th>Tech work (us)</th><th>People work (Work.Life + us)</th><th>Output</th></tr>
+<tr><td><b>1</b> (5 Oct)</td><td>Read BigQuery and dbt; map marts to board-pack KPIs</td><td>Kick-off; access granted; named owners; user list</td><td>Access, RACI agreed (Ch 04)</td></tr>
+<tr><td><b>2</b></td><td>Safe-data inventory: every column marked allow / drop / aggregate</td><td>Board pack walkthrough with Finance and Ops</td><td>Draft KPI list (15–25)</td></tr>
+<tr><td><b>3</b></td><td>Build <code>ai_safe</code> dataset and refresh job; IAM for AI service account</td><td>Definition workshops #1 (money KPIs with Finance)</td><td>Safe copy running</td></tr>
+<tr><td><b>4</b></td><td>Semantic layer v1: metrics on <code>fct_site_month_kpis</code>, <code>fct_contract_month</code>, <code>fct_gl</code></td><td>Definition workshops #2 (occupancy, members, churn)</td><td><b>KPI dictionary signed off</b> ⭐</td></tr>
+<tr><td><b>5</b></td><td>New dbt models for any gaps (e.g. capacity from Excel)</td><td>Choose the 50 golden questions with leadership</td><td>Golden question list</td></tr>
+<tr><td><b>6</b></td><td>AI layer: question → metric/SQL → answer with definition and source</td><td>Finance and the reporting owner work out golden answers from closed months</td><td>AI v1 in dev</td></tr>
+<tr><td><b>7</b></td><td>Chat interface; SSO with Work.Life accounts; logging</td><td>Golden answers continue</td><td>Sign-in working</td></tr>
+<tr><td><b>8</b></td><td>Automated golden test run; cost caps and alerts</td><td>Golden answers complete</td><td><b>Golden set verified</b> ⭐</td></tr>
+<tr><td><b>9</b></td><td>Fix failures; refusal mode for low-confidence answers</td><td>Reporting owner reviews answers</td><td>Pass rate report</td></tr>
+<tr><td><b>10</b></td><td>Weekly digest v1; security review</td><td>Pilot with 2 leaders</td><td>Pilot feedback</td></tr>
+<tr><td><b>11</b> (~14 Dec)</td><td>Final test run on latest closed month</td><td><b>Accuracy gate meeting: Finance + Ops sign-off</b></td><td><b>GO-LIVE for leadership</b> ⭐</td></tr>
+<tr><td><b>12–13</b></td><td>Light monitoring over holidays</td><td>(Christmas)</td><td>Usage and cost log</td></tr>
+</table>
+
+<hr/>
+
+<h3>6. The Critical Path</h3>
+
+<p>The critical path is the chain of tasks where <b>any delay delays the end date</b>. In this project it isn't the code:</p>
+
+<pre>
+   ACCESS ──► DEFINITIONS ──► GOLDEN ANSWERS ──► TEST &amp; FIX ──► SIGN-OFF ──► LIVE
+   wk 1        wk 2–4          wk 5–8             wk 8–10        wk 11
+   (Ops/IT)    (Finance, Ops)  (Finance +        (us)           (Finance, Ops,
+                               reporting owner)                 leadership)
+
+   OFF the critical path (has slack): chat UI, SSO, digest, caps, dashboards
+</pre>
+
+<p>Notice how much of the critical path belongs to Work.Life's people. That's exactly why Q3 ("what do you need from us?") was so important in the response. We track these weekly in a simple status note: green / amber / red for each critical-path item.</p>
+
+<hr/>
+
+<h3>7. Months 4–6</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Month (2027)</th><th>Focus</th><th>Output</th></tr>
+<tr><td><b>January</b></td><td>Review real usage: what leaders asked, what failed, what was refused. Add the most-wanted KPIs and questions; extend the golden set.</td><td>Coverage v2; golden set ~150</td></tr>
+<tr><td><b>February</b></td><td>Alerts on agreed thresholds; trend and anomaly spotting on monthly history; <b>rehearse a source swap</b>: map HubSpot members into the same marts in a test environment and re-run the golden set.</td><td>Alerts live; source-agnostic proof</td></tr>
+<tr><td><b>March</b></td><td>Documentation complete; runbook drills with Work.Life staff; cost review; Phase 2 design document.</td><td><b>6-MONTH MARK:</b> handover signed off</td></tr>
+</table>
+
+<p>The February source-swap rehearsal is our proof for brief Q7. It turns "we're source agnostic" from a claim into a test result. And since HubSpot is <i>"expected to become the source of truth for member data over time"</i> (brief §3), it's useful practice too.</p>
+
+<hr/>
+
+<h3>8. What Must Be True on Work.Life's Side</h3>
+
+<p>This list goes to the client in week 1, in plain words:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>By</th><th>Work.Life provides</th><th>Owner (likely)</th></tr>
+<tr><td>Week 1</td><td>Read access to BigQuery and dbt; a GCP project/dataset for deployment; single point of contact; leadership user list</td><td>Operations &amp; IT Systems</td></tr>
+<tr><td>Week 2</td><td>A recent board pack; identity provider details for SSO; list of test/staff accounts</td><td>Ops &amp; IT, Finance</td></tr>
+<tr><td>Weeks 2–4</td><td>~3–4 hours/week from Finance and Ops definition owners</td><td>Finance, Ops / Membership</td></tr>
+<tr><td>Week 4</td><td>Signed-off KPI dictionary and safe-data list</td><td>Finance, Ops &amp; IT</td></tr>
+<tr><td>Weeks 5–8</td><td>Golden answers from closed months, worked out and checked</td><td>Finance, reporting owner</td></tr>
+<tr><td>Week 10</td><td>Two leaders available for the pilot</td><td>Leadership</td></tr>
+<tr><td>Week 11</td><td>Accuracy gate meeting before Christmas</td><td>Finance, Ops, leadership</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. Risks and Responses</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>What we do</th></tr>
+<tr><td>Definitions take longer to agree</td><td>High</td><td>High</td><td>Start week 1; go live with the KPIs that are agreed, park the rest for January</td></tr>
+<tr><td>Access delayed</td><td>Medium</td><td>High</td><td>Ask before kick-off; use the Mini Work.Life lab (Ch 05) to build in the meantime</td></tr>
+<tr><td>Marts don't cover a board KPI</td><td>Medium</td><td>Medium</td><td>Budgeted dbt modelling in week 5</td></tr>
+<tr><td>Golden test fails on money questions</td><td>Medium</td><td>High</td><td>Two buffer weeks (9–10) before the gate; never lower the bar to hit a date</td></tr>
+<tr><td>"ACT" turns out to hold sensitive data</td><td>Medium</td><td>Medium</td><td>Exclude from <code>ai_safe</code> until reviewed</td></tr>
+<tr><td>Source swap (HubSpot) happens mid-project</td><td>Low–Medium</td><td>Medium</td><td>Source-agnostic design; golden tests catch breaks</td></tr>
+<tr><td>Christmas availability</td><td>High</td><td>Medium</td><td>Gate meeting booked in October for mid-December</td></tr>
+</table>
+
+<p>⚠️ <b>The most important line in that table:</b> "never lower the bar to hit a date". If money questions fail the gate, go-live moves. The brief says accuracy is a launch gate, not a launch suggestion.</p>
+
+<hr/>
+
+<h3>10. Milestones and Proof</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Milestone</th><th>Target</th><th>Proof (what the client sees)</th></tr>
+<tr><td>M1 · Foundations</td><td>End Oct 2026</td><td>KPI dictionary signed off; <code>ai_safe</code> refreshing; IAM policy shown</td></tr>
+<tr><td>M2 · Verified test set</td><td>End Nov 2026</td><td>Golden questions with hand-checked answers, signed by owners</td></tr>
+<tr><td>M3 · Trusted go-live</td><td>Mid Dec 2026</td><td>Test report meeting the agreed bar; Finance + Ops sign-off; leaders signed in</td></tr>
+<tr><td>M4 · Coverage &amp; alerts</td><td>End Feb 2027</td><td>Usage review; alerts firing correctly; source-swap rehearsal passed</td></tr>
+<tr><td>M5 · Handover</td><td>End Mar 2027</td><td>Work.Life staff ran the runbooks; docs signed off; Phase 2 design delivered</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: What's usually on the critical path of an AI-on-warehouse project?</b></p>
+<p><i>"People and decisions: access, agreeing KPI definitions, producing verified answers for testing, and sign-off. The technical build usually has slack. So I start those people tasks on day one and track them weekly."</i></p>
+
+<p><b>Q: The accuracy test fails a week before the go-live date. What do you do?</b></p>
+<p><i>"Don't go live on the failing scope. Either go live with only the questions that pass, clearly limited, or move the date. Lowering the bar breaks the client's own launch-gate principle and risks the trust the whole project depends on."</i></p>
+
+<p><b>Q: How do you prove a system is source agnostic before a real migration happens?</b></p>
+<p><i>"Rehearse it. Map the new source into the same marts in a test environment, then re-run the golden questions. If they pass without touching the AI layer or the definitions, you've proved it."</i></p>
+
+<p><b>Q: How do you plan around holidays and client availability?</b></p>
+<p><i>"Treat them as fixed constraints. Book key meetings like the sign-off well in advance, put the real deadline before the holiday, and plan light monitoring rather than changes over the break."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Tension resolved</b></td><td>3-month mark = end-2026 target, with a small, tested scope.</td></tr>
+<tr><td><b>Assumptions</b></td><td>Every date depends on written assumptions, starting with an early-October start.</td></tr>
+<tr><td><b>Critical path</b></td><td>Access → definitions → golden answers → sign-off. Mostly client people.</td></tr>
+<tr><td><b>Real deadline</b></td><td>Mid-December, because of Christmas.</td></tr>
+<tr><td><b>Months 4–6</b></td><td>Coverage, alerts, source-swap rehearsal, handover, Phase 2 design.</td></tr>
+<tr><td><b>Never</b></td><td>Lower the accuracy bar to hit a date.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>The plan tells us how many weeks of work there are and who does what. In Chapter 35 we turn that into <b>money</b>: the one-off build cost and the yearly running cost at two levels, leadership only and wider team, with every assumption on the table.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

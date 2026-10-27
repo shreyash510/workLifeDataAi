@@ -1,0 +1,384 @@
+<h2>Chapter 31 — Forecasting: Resident Revenue, Seasonality, Meeting Rooms</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Phase 2 reminder: the brief lists forecasting under <i>"Where it goes next (Phase 2, for context only, not in this scope)"</i>. We design Phase 1 so this fits on top later. We don't price it now.</p>
+
+<p>This chapter has a specific shopping list, straight from the brief: <i>"Revenue and membership forecasting, for example resident revenue projection, net member movements, seasonality and meeting room demand."</i> That's four named forecasts. Note the words <i>"for example"</i>: the list isn't complete, so we'll also cover the coworking pool, which is the rest of membership revenue. We'll build every one on the lab data.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Forecast vs budget vs target</li>
+    <li>The forecasting ladder: from "known" to "guessed"</li>
+    <li>Resident revenue projection, layer 1: signed contracts</li>
+    <li>Resident revenue projection, layer 2: expected renewals (and pipeline, kept separate)</li>
+    <li>The coworking pool</li>
+    <li>Net member movements</li>
+    <li>Seasonality: yearly and weekly</li>
+    <li>Meeting room demand</li>
+    <li>Time-series models with BigQuery ML</li>
+    <li>Keeping forecasts honest</li>
+    <li>What Phase 1 gives us for free</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>A leader asks the AI: <i>"What will Reading's revenue be in March?"</i></p>
+
+<p>Bad answer: <b>"£6,900."</b> One number, no explanation. Where did it come from? Does it assume GreenRoot renews? Does it count Ortho Robotics, who haven't signed anything?</p>
+
+<p>Good answer:</p>
+<pre>
+   Reading, March 2027 — FORECAST (not actuals)
+
+   Already contracted ........................  £0       (GreenRoot's term ends 31 Dec)
+   + expected renewals .......................  £1,680   (GreenRoot: 60% × £2,800)
+   + expected new business ...................  £1,260   (Ortho Robotics: 30% × £4,200)
+                                               ───────
+   Expected ..................................  £2,940
+   Range .....................................  £0 – £7,000
+   Biggest swing: whether GreenRoot renews.
+   (probabilities made up for the lab)
+</pre>
+
+<p>The good answer is less impressive and much more useful. It shows what's <b>known</b>, what's <b>assumed</b>, and what would change the number. That's how a leader can trust a forecast, which is the brief's whole point.</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   Every forecast says:                                      │
+│     • it's a FORECAST (never mixed up with actuals)         │
+│     • what's KNOWN vs what's ASSUMED                        │
+│     • a RANGE, not just one number                          │
+│     • how accurate past forecasts were                      │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. Forecast vs Budget vs Target</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>Meaning</th><th>Where it lives at Work.Life</th></tr>
+<tr><td><b>Budget</b></td><td>What we <i>planned</i> at the start of the year</td><td>Excel (<code>excel_capacity_budget_2026.csv</code>, Chapter 06)</td></tr>
+<tr><td><b>Target</b></td><td>What we're <i>aiming</i> for</td><td>Board pack (Chapter 22)</td></tr>
+<tr><td><b>Forecast</b></td><td>What we now <i>expect</i>, given what we know today</td><td>New in Phase 2</td></tr>
+<tr><td><b>Actual</b></td><td>What happened</td><td>NetSuite (money), Nexudus (members)</td></tr>
+</table>
+
+<p>The most useful leadership view puts them side by side: <b>"forecast vs budget"</b> tells you early whether the year is on track. That's why the Excel budget must already be in the warehouse from Phase 1.</p>
+
+<hr/>
+
+<h3>3. The Forecasting Ladder</h3>
+
+<p>Not all forecasts are equal. Some are almost facts; some are educated guesses. Always build from the bottom up:</p>
+
+<pre>
+   HOW SURE ARE WE?
+
+   ▲ GUESSED      Seasonality of new sales, meeting room ad-hoc demand
+   │              → statistical models on history (section 10)
+   │
+   │ ESTIMATED    Renewals, pipeline deals, coworking churn
+   │              → probabilities from history and Chapter 30's risk score
+   │
+   │ KNOWN        Signed contracts, recurring bookings
+   ▼              → just arithmetic on the contract table
+</pre>
+
+<p>A coworking business is lucky: a big slice of next quarter's revenue is <b>already signed</b>. Start there.</p>
+
+<hr/>
+
+<h3>4. Resident Revenue Projection, Layer 1: Signed Contracts</h3>
+
+<p>What does <b>"resident"</b> mean? In flexible workspace it usually means members who are based at a site on a term contract (private offices, sometimes dedicated desks), as opposed to coworking members who come and go. That's the meaning we use in the lab: private office contracts. <b>But Work.Life hasn't defined it for us</b>, so it's a new question for the client: <i>does "resident revenue" mean private offices only, offices plus dedicated desks, or every term contract?</i> The answer changes which contracts go into the projection.</p>
+
+<p>Layer 1 is <b>only money already signed for</b>. No renewals, no new deals.</p>
+
+<p>From the lab <code>contracts.csv</code>, the office contracts still running after September 2026:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Contract</th><th>Company</th><th>Office</th><th>£/month</th><th>Ends</th></tr>
+<tr><td>K002</td><td>Pixel Chai</td><td>SOHO Office 101</td><td>2,400</td><td>2027-03-31</td></tr>
+<tr><td>K005</td><td>GreenRoot Foods</td><td>RDG Office 201</td><td>2,700</td><td>2026-12-31</td></tr>
+</table>
+
+<pre>
+   RESIDENT REVENUE · SIGNED CONTRACTS ONLY (lab)
+
+   Oct 26  Nov 26  Dec 26 │ Jan 27  Feb 27  Mar 27 │ Apr 27  May 27  Jun 27
+   5,100   5,100   5,100  │ 2,400   2,400   2,400  │   0       0       0
+   ███████████████████████│████████████████       │
+                          ▲                        ▲
+                    GreenRoot ends            Pixel Chai ends
+</pre>
+
+<p>This line always falls over time, the "contract cliff". That's not bad news; it's simply the part we're sure of. In the dbt model it's straightforward:</p>
+
+<pre>
+-- for each future month, sum contracts that are signed and still running
+select m.month, c.site_code, sum(c.monthly_price_gbp) as contracted_gbp
+from {{ ref('dim_month') }} m
+join {{ ref('int_contracts') }} c          -- contract-grain model (one row per contract)
+  on c.start_date &lt;= last_day(m.month)
+ and coalesce(c.end_date, date '9999-12-31') &gt;= m.month
+where c.plan_type = 'office'
+  and m.month &gt; current_date()
+group by 1, 2
+</pre>
+
+<p>⚠️ Watch out for <b>rolling contracts</b> (no end date). They aren't really signed for 12 months; they're signed for the notice period only. Your definition must say how they're counted, and Finance must agree it.</p>
+
+<hr/>
+
+<h3>5. Resident Revenue Projection, Layer 2: Expected Renewals</h3>
+
+<p>Now add the <b>expected</b> value of each renewal: probability × renewal price. The probabilities come from history (what share of similar contracts renewed?) or from Chapter 30's risk score.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Renewal</th><th>From</th><th>Price</th><th>Renewal probability (made up)</th><th>Expected £/month</th></tr>
+<tr><td>GreenRoot Foods</td><td>Jan 2027</td><td>£2,800 (proposal sent)</td><td>60% (high risk in Chapter 30)</td><td>£1,680</td></tr>
+<tr><td>Pixel Chai</td><td>Apr 2027</td><td>£2,400 (assume same)</td><td>80% (low risk)</td><td>£1,920</td></tr>
+</table>
+
+<pre>
+   RESIDENT REVENUE (lab)            Oct–Dec 26   Jan–Mar 27   Apr–Jun 27
+   ─────────────────────────────     ──────────   ──────────   ──────────
+   Signed contracts                    5,100        2,400            0
+   + expected renewals                     0        1,680        3,600
+                                       ─────        ─────        ─────
+   Resident projection                 5,100        4,080        3,600   per month
+
+   Optional third line, kept SEPARATE:
+   + weighted pipeline (new deals)     1,260*       1,260        1,260
+   * Ortho Robotics, Office 202, £4,200 × 30% (made up), from Nov
+</pre>
+
+<p>Workings: Jan–Mar = Pixel Chai's signed £2,400 + GreenRoot's expected £1,680. Apr–Jun = nothing signed + £1,680 + £1,920. New business from the pipeline is a <b>different kind of uncertain</b> (a stranger signing vs a current member staying), so keep it on its own line. Mixing them hides risk.</p>
+
+<p>And this is where Chapter 30 pays off: if the account manager's context pack conversation goes well, GreenRoot's probability goes up, and the forecast moves. Forecasts and renewals are one system.</p>
+
+<hr/>
+
+<h3>6. The Coworking Pool</h3>
+
+<p>Coworking members are different: <b>rolling monthly</b> plans, small amounts each, and lots of them. You don't forecast them one by one; you forecast the <b>pool</b>.</p>
+
+<pre>
+   NEXT MONTH'S COWORKING MRR =
+        this month's MRR
+      × (1 − monthly coworking churn rate)      ← from history
+      + expected new coworking MRR              ← from history / seasonality
+</pre>
+
+<p>In the lab, the coworking pool is two Soho hot desks: Nomad Analytics and Kite &amp; Key, <b>£640 a month</b>. Two members is far too few to forecast statistically; in the real business, with thousands of members across 14 sites, the rates become stable and this formula works well. Do it per site and per plan (Unlimited Coworking £320, Flex 10 Days £180), because they behave differently.</p>
+
+<p>Watch for <b>transfers</b>: in August, Kite &amp; Key moved from Reading Flex to Soho hot desk. At business level the pool grew by £140 a month; Reading lost £180 and Soho gained £320. Use <code>fct_contract_events</code> (Chapter 29) so moves aren't counted as churn plus new.</p>
+
+<hr/>
+
+<h3>7. Net Member Movements</h3>
+
+<p>From Chapter 29: net member movement = joined − left. Forecasting it combines the pieces above:</p>
+
+<pre>
+   EXPECTED JOINERS  = Σ (pipeline deal desks × win probability)
+                     + typical new coworking joiners for the month (history)
+
+   EXPECTED LEAVERS  = Σ (people on contracts ending × (1 − renewal probability))
+                     + coworking pool × monthly churn rate
+</pre>
+
+<p>Lab, Q4 2026 (probabilities made up):</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Calculation</th><th>Expected people</th></tr>
+<tr><td>Joiners</td><td>Ortho Robotics: 10 desks × 30%</td><td>+3.0</td></tr>
+<tr><td>Leavers</td><td>GreenRoot: 6 people × (1 − 60%)</td><td>−2.4</td></tr>
+<tr><td><b>Net</b></td><td></td><td><b>+0.6</b>, range −6 to +10</td></tr>
+</table>
+
+<p>A forecast of "+0.6 people" sounds silly, and that's the point: with lumpy deals, the <b>range</b> matters more than the average. The honest message to leadership is: <i>"Q4 net movement depends almost entirely on two decisions: GreenRoot and Ortho Robotics."</i> That's an insight a leader can act on.</p>
+
+<hr/>
+
+<h3>8. Seasonality: Yearly and Weekly</h3>
+
+<p><b>Yearly seasonality.</b> The lab's Excel budget has a note for Soho August: <i>"August is quiet - holidays"</i>. But look: Soho's budget revenue is £9,000 in both July and August. Why isn't August lower?</p>
+
+<p>Because <b>contracted revenue doesn't take holidays</b>. Office contracts bill the same every month. Seasonality hits the parts that depend on people turning up or buying:</p>
+<ul>
+    <li>Meeting room hours and day passes</li>
+    <li>New enquiries, tours and sales (fewer deals in August and late December)</li>
+    <li>Physical occupancy (desks empty, even though they're paid for)</li>
+</ul>
+
+<p>So forecast seasonality on <b>usage and sales</b>, not on contracted revenue. You need at least two full years of history to see a yearly pattern reliably. We don't yet know how far back clean, continuous history goes in each system (for finance, whether older years sit in an earlier ledger is unknown: Chapter 11, question 5), so check that before you trust any yearly pattern.</p>
+
+<p><b>Weekly seasonality.</b> This one we can see in the lab door data. Distinct person-days through the main entrance in September 2026. First the raw totals:</p>
+
+<pre>
+           Mon   Tue   Wed   Thu   Fri
+   SOHO     12    19    22    20    16
+   RDG      11    13     9    13    13
+   (days)  (4)   (5)   (5)   (4)   (4)    ← Sep 2026 has five Tuesdays and five Wednesdays
+</pre>
+
+<p>Careful: September 2026 starts on a Tuesday, so it has <b>five</b> Tuesdays and Wednesdays but only four of every other weekday. Raw totals make Tue/Wed look busier than they are. Divide by the number of each weekday:</p>
+
+<pre>
+   AVERAGE PERSON-DAYS PER WEEKDAY, SEP 2026 (lab)
+
+   SOHO   Mon ███████████████        3.0
+          Tue ███████████████████    3.8
+          Wed ██████████████████████ 4.4
+          Thu █████████████████████████ 5.0   ← peak
+          Fri ████████████████████   4.0
+
+   RDG    Mon ██████████████         2.8
+          Tue █████████████          2.6
+          Wed █████████              1.8   ← quietest
+          Thu ████████████████       3.3
+          Fri ████████████████       3.3
+</pre>
+
+<p>Two lessons. First, <b>normalise by the calendar</b> before comparing days or months (the same trap catches month-to-month usage comparisons: months have different numbers of working days and bank holidays). Second, Reading's shape is distorted by a <b>trend</b>: GreenRoot's attendance collapsed during the month, so later weeks drag every weekday down. One month of one team can't separate a weekly pattern from a trend. That is exactly what a time-series model does with longer history (section 10). With real data across 14 sites, forecast <b>per site</b>: shapes will differ, and they matter for staffing, cleaning, events and pricing.</p>
+
+<hr/>
+
+<h3>9. Meeting Room Demand</h3>
+
+<p>Lab bookings for September 2026 (available hours = 10 a day × 22 working days = 220, as in Chapter 02):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Room</th><th>Site</th><th>Hours booked</th><th>Utilisation</th><th>Revenue</th></tr>
+<tr><td>Brick Lane (8 people)</td><td>SOHO</td><td>9</td><td>4.1%</td><td>£405</td></tr>
+<tr><td>Carnaby (4 people)</td><td>SOHO</td><td>4</td><td>1.8%</td><td>£120</td></tr>
+<tr><td>Thames (10 people)</td><td>RDG</td><td>5</td><td>2.3%</td><td>£200</td></tr>
+</table>
+
+<p>Look closer at Brick Lane: all 9 hours are Pixel Chai, and <b>8 of them</b> are one slot: member M001, every Thursday, 10:00–12:00 (3, 10, 17 and 24 September). That's a <b>recurring</b> booking: it's almost "contracted" demand. October 2026 has five Thursdays, so if the habit continues, that's 10 hours and £450 (an assumption, not a booking).</p>
+
+<pre>
+   MEETING ROOM FORECAST = KNOWN + PATTERN + AD HOC
+
+   KNOWN     future bookings already in Nexudus
+   PATTERN   recurring habits (same team, same slot, every week)
+   AD HOC    everything else → statistical model by room, weekday, hour,
+             with yearly seasonality (section 10)
+</pre>
+
+<p>Forecast <b>by hour of day</b> too. Chapter 02 said 10am–3pm fills up while 5pm is empty. Demand forecasts per hour tell Work.Life whether to add rooms, change prices at peak times, or give members free off-peak credits.</p>
+
+<hr/>
+
+<h3>10. Time-Series Models with BigQuery ML</h3>
+
+<p>For the "guessed" layer (ad-hoc room hours, daily attendance, new coworking joiners), use a time-series model. BigQuery ML has <b><code>ARIMA_PLUS</code></b>, which handles trend, weekly and yearly seasonality and holidays, inside BigQuery, in SQL:</p>
+
+<pre>
+-- One model per room (time_series_id_col), daily booked hours
+CREATE OR REPLACE MODEL `ml.room_hours_forecast`
+OPTIONS (
+  model_type                = 'ARIMA_PLUS',
+  time_series_timestamp_col = 'booking_date',
+  time_series_data_col      = 'hours_booked',
+  time_series_id_col        = 'resource_code',
+  holiday_region            = 'GB'      -- UK bank holidays
+) AS
+SELECT booking_date, resource_code, SUM(hours) AS hours_booked
+FROM `marts.fct_booking`
+WHERE status = 'confirmed'
+GROUP BY 1, 2;
+
+-- Next 90 days, with an 80% range
+SELECT resource_code, forecast_timestamp, forecast_value,
+       prediction_interval_lower_bound, prediction_interval_upper_bound
+FROM ML.FORECAST(MODEL `ml.room_hours_forecast`,
+                 STRUCT(90 AS horizon, 0.8 AS confidence_level));
+</pre>
+
+<p>Notice the output already includes <b>lower and upper bounds</b>. That's our "range, not one number" rule, for free.</p>
+
+<p>⚠️ <b>Don't use a time-series model for resident revenue.</b> Contracted revenue is arithmetic on a contract table (section 4). A model would "learn" a smooth trend and ignore the fact that GreenRoot's contract ends on a specific date. Use the right tool for each rung of the ladder.</p>
+
+<hr/>
+
+<h3>11. Keeping Forecasts Honest</h3>
+
+<p>The brief's accuracy principle doesn't switch off because it's a forecast. Three habits:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Habit</th><th>How</th></tr>
+<tr><td><b>Store every forecast</b></td><td>Save each month's forecast as a snapshot (<code>fct_forecast_snapshot</code>) instead of overwriting it. Otherwise you can never check yourself.</td></tr>
+<tr><td><b>Score against actuals</b></td><td>Each month, compare last month's forecast with NetSuite / Nexudus actuals. Track the error (e.g. average % error) per forecast type and site.</td></tr>
+<tr><td><b>Say it in the answer</b></td><td>The AI always labels forecasts, shows the known vs assumed split, the range, and recent accuracy: "our Q3 forecasts for Reading were within 5% (made up)".</td></tr>
+</table>
+
+<p>Add <b>forecast questions to the golden set</b> (Chapter 25), testing the <i>method</i>: given this contract table, does the AI produce the right contracted figure, and does it label renewals as assumptions? The contracted line has a right answer you can check by hand, even though the future doesn't.</p>
+
+<hr/>
+
+<h3>12. What Phase 1 Gives Us for Free</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Forecast</th><th>Built on (Phase 1)</th><th>Added in Phase 2</th></tr>
+<tr><td>Resident revenue: signed</td><td><code>fct_contract_month</code></td><td>A future-months model</td></tr>
+<tr><td>Resident revenue: + renewals</td><td>Contracts + CRM deals</td><td>Renewal probabilities (Chapter 30)</td></tr>
+<tr><td>Coworking pool</td><td><code>fct_contract_events</code> (Chapter 29)</td><td>Pool churn and join rates</td></tr>
+<tr><td>Net member movements</td><td>Chapter 29 metric</td><td>Expected joiners and leavers</td></tr>
+<tr><td>Seasonality</td><td>History in BigQuery; aggregated attendance</td><td><code>ARIMA_PLUS</code> models</td></tr>
+<tr><td>Meeting rooms</td><td><code>fct_booking</code></td><td>Recurring-pattern detection + <code>ARIMA_PLUS</code></td></tr>
+<tr><td>Forecast vs budget</td><td>Excel budget in the warehouse (Chapter 06)</td><td>One comparison model</td></tr>
+<tr><td>Asking about forecasts</td><td>AI layer + semantic layer</td><td>Forecast metrics, clearly labelled</td></tr>
+</table>
+
+<p>Everything runs inside the same BigQuery project, reads the same models and goes through the same <code>ai_safe</code> copy. No new platform, no data science team. That's the answer to Q10.</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How would you forecast revenue for a flexible workspace business?</b></p>
+<p><i>"Build it in layers. First, contracted revenue: arithmetic on signed contracts by month. Second, add expected renewals as probability times renewal price. Third, keep weighted new-business pipeline on a separate line. Forecast coworking as a pool with churn and join rates, and use time-series models only for usage-driven items like meeting rooms. Always show known vs assumed and a range."</i></p>
+
+<p><b>Q: Why not just fit a time-series model to total monthly revenue?</b></p>
+<p><i>"Because much of the future is already known from contracts, including specific end dates. A smooth trend model would ignore a large contract ending next month. Use arithmetic for what's known, probabilities for renewals and pipeline, and time-series models only for the genuinely uncertain usage-based parts."</i></p>
+
+<p><b>Q: The budget shows no August dip, but the business says August is quiet. Explain.</b></p>
+<p><i>"Contracted membership and office revenue bill the same every month, so the budget's revenue line is flat. August is quiet in usage and sales: meeting rooms, day passes, attendance and new deals. Seasonality should be modelled on those, not on contracted revenue."</i></p>
+
+<p><b>Q: How do you know if your forecasts are any good?</b></p>
+<p><i>"Snapshot every forecast, compare it with actuals once the month closes, and track the error by forecast type and site over time. Show that track record next to new forecasts, so users know how much to trust them."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>The brief's list</b></td><td>Resident revenue projection, net member movements, seasonality, meeting room demand ("for example", so we add the coworking pool).</td></tr>
+<tr><td><b>"Resident"</b></td><td>Not defined by the client. Ask what it covers before building.</td></tr>
+<tr><td><b>Ladder</b></td><td>Known (contracts) → estimated (renewals, pipeline) → guessed (usage). Build bottom up.</td></tr>
+<tr><td><b>Signed revenue</b></td><td>Arithmetic, not a model. It always falls over time.</td></tr>
+<tr><td><b>Calendar</b></td><td>Normalise by number of weekdays/working days before comparing.</td></tr>
+<tr><td><b>Renewals vs pipeline</b></td><td>Different kinds of uncertainty. Keep them on separate lines.</td></tr>
+<tr><td><b>Seasonality</b></td><td>Hits usage and sales, not contracted revenue. Forecast per site.</td></tr>
+<tr><td><b>Meeting rooms</b></td><td>Known bookings + recurring patterns + ad hoc. Forecast by hour.</td></tr>
+<tr><td><b>ARIMA_PLUS</b></td><td>Time series in BigQuery ML, with ranges and UK holidays.</td></tr>
+<tr><td><b>Honesty</b></td><td>Label forecasts, show ranges, snapshot and score against actuals.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Retention reports, context packs and forecasts are useful to far more people than the leadership team: site managers, account managers, the sales team. In Chapter 32 we open the doors safely: <b>role-based access</b>, so each person sees only what they should, and <b>agents</b> that do routine work on top of the foundation.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

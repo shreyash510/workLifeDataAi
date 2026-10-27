@@ -1,0 +1,286 @@
+<h2>Chapter 23 — Phase 1 Architecture on BigQuery ⭐</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>This is the chapter the client is really asking for. Section 7, question 1 of the brief: <i>"Can you build the Phase 1 capability described above on our existing BigQuery warehouse? What architecture and approach would you recommend, in plain terms?"</i></p>
+
+<p>We have all the parts from Chapters 19 to 22. Today we assemble them into one design, check it against all 8 principles, follow one question through every box, and compare it with the other ways you could build it. If you only read one chapter of Season 3, read this one. ⭐</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>The answer in one sentence</li>
+    <li>The whole architecture in one picture</li>
+    <li>Each box: what it is, which service, why</li>
+    <li>The <code>ai_safe</code> dataset: the "controlled copy"</li>
+    <li>One question's journey, box by box</li>
+    <li>Build options: Google-native, BI-tool AI, or a thin custom layer</li>
+    <li>Choosing the LLM without getting locked in</li>
+    <li>The 8 principles: design check</li>
+    <li>Where Phase 2 plugs in</li>
+    <li>What we need from Work.Life</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. The Answer in One Sentence</h3>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────────┐
+│  YES. We add a small, separate AI layer that reads ONLY a controlled │
+│  copy of approved BigQuery marts, answers through ONE set of         │
+│  business definitions, signs people in with Work.Life accounts, and  │
+│  doesn't go live until it passes an accuracy test against actuals.   │
+│  The pipeline and warehouse you already have stay as they are.       │
+└──────────────────────────────────────────────────────────────────────┘
+</pre>
+
+<p>Notice what's <b>not</b> in that sentence: no new warehouse, no new pipeline, no replacement of dbt, no new BI tool. The brief says Work.Life is <i>"not a data business"</i>. The smallest design that meets the principles wins.</p>
+
+<hr/>
+
+<h3>2. The Whole Architecture in One Picture</h3>
+
+<pre>
+  EXISTING (unchanged)                          NEW: PHASE 1 AI LAYER
+  ────────────────────                          ─────────────────────
+
+  Nexudus ─┐                                     ┌──────────────────────────────┐
+  NetSuite ┤ Fivetran                            │  Leadership team (size: #13) │
+  ACT      ┼─────────► BigQuery: WAREHOUSE       │  Work.Life accounts only     │
+  Excel    ┤ Python    ┌──────────────────┐      └──────────────┬───────────────┘
+  HubSpot ─┘           │ raw              │                     │ SSO
+                       │ staging          │      ┌──────────────▼───────────────┐
+                       │ intermediate     │      │ ① ACCESS GATE                │
+                       │ marts ───────────┼──┐   │   SSO + allow-list of users  │
+                       └──────────────────┘  │   └──────────────┬───────────────┘
+                                             │                  │
+                dbt job: copy approved       │   ┌──────────────▼───────────────┐
+                tables + columns only        │   │ ② AI SERVICE (small app)     │
+                (drop/aggregate PII)         │   │   understand → retrieve →    │
+                                             ▼   │   plan → validate → execute →│
+                       ┌──────────────────────┐  │   answer + checks            │
+                       │ ③ ai_safe dataset    │◄─┤                              │
+                       │   (separate project) │  │   tools: query_metrics,      │
+                       │   read-only for AI   │  │   run_sql,                   │
+                       └──────────────────────┘  │   get_business_context       │
+                                                 │   ④ semantic layer (Ch 21)   │
+                                                 │   ⑤ context library (Ch 22)  │
+                                                 │   ⑥ LLM via Vertex AI        │
+                       ┌──────────────────────┐  │      (inside Google Cloud)   │
+                       │ ⑦ ai_logs + ai_eval  │◄─┤                              │
+                       │   logs, feedback,    │  └──────────────┬───────────────┘
+                       │   cost (ai_logs);    │                 │
+                       │   golden set: ai_eval│  ┌──────────────▼───────────────┐
+                       └──────────────────────┘  │ ⑧ SCHEDULER                  │
+                                                 │   digests + alerts (Ch 24)   │
+                                                 │   golden tests nightly (25)  │
+                                                 └──────────────────────────────┘
+       ✗ HR / people system      ✗ live source systems      ✗ raw / staging tables
+         never connected            never queried by AI        never visible to AI
+</pre>
+
+<hr/>
+
+<h3>3. Each Box: What, Which Service, Why</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Component</th><th>Suggested service (Google Cloud)</th><th>Why this choice</th><th>Ch</th></tr>
+<tr><td>①</td><td>Access gate</td><td>Identity-Aware Proxy (IAP) in front of the app, or the app's own SSO with Work.Life's identity provider</td><td>"Access via Work.Life accounts only". No separate passwords.</td><td>26</td></tr>
+<tr><td>②</td><td>AI service</td><td>A small container on <b>Cloud Run</b></td><td>Serverless: costs nothing when idle, no servers to patch. Fits "no large team to run".</td><td>20</td></tr>
+<tr><td>③</td><td><code>ai_safe</code> dataset</td><td>BigQuery dataset in a <b>separate project</b>, filled by dbt</td><td>"Warehouse first, on a copy". Clean IAM boundary.</td><td>23, 26</td></tr>
+<tr><td>④</td><td>Semantic layer</td><td>dbt semantic models, in the existing dbt repo</td><td>One definition per KPI, shared with BI</td><td>21</td></tr>
+<tr><td>⑤</td><td>Context library</td><td>YAML files in the same git repo, loaded by the service</td><td>Versioned, owned, reviewable, and is documentation</td><td>22</td></tr>
+<tr><td>⑥</td><td>LLM</td><td>A model served through <b>Vertex AI</b> (Google's models or partner models such as Anthropic's Claude)</td><td>Calls stay within Google Cloud, under Work.Life's billing and controls</td><td>23</td></tr>
+<tr><td>⑦</td><td><code>ai_logs</code> and <code>ai_eval</code> datasets</td><td>Two BigQuery datasets (same AI project)</td><td><code>ai_logs</code>: audit trail, feedback, alerts sent, tokens and bytes per question (cost). <code>ai_eval</code>: the golden questions and every test run. All queryable.</td><td>25, 26, 27</td></tr>
+<tr><td>⑧</td><td>Scheduler</td><td>Cloud Scheduler → Cloud Run jobs</td><td>Proactive digests, alerts, nightly golden tests</td><td>24, 25</td></tr>
+</table>
+
+<p>💡 Count the moving parts: one small app, three small datasets, a scheduler, files in git. That's deliberate. Each part is a managed service with a free or near-free idle cost. That's how we answer "cost conscious" and "not dependent on one person" in the same design.</p>
+
+<hr/>
+
+<h3>4. The <code>ai_safe</code> Dataset: the "Controlled Copy"</h3>
+
+<p>The brief's first principle: <i>"It works from a controlled copy of the data, not our live primary sources."</i> Here's exactly what goes into the copy:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Mart (shared design)</th><th>In <code>ai_safe</code>?</th><th>Columns dropped / changed</th></tr>
+<tr><td><code>dim_site</code></td><td>✅</td><td>None</td></tr>
+<tr><td><code>dim_company</code></td><td>✅</td><td>Billing email and source match keys dropped. Company name kept (leaders need it).</td></tr>
+<tr><td><code>fct_site_month_kpis</code></td><td>✅</td><td>None: already aggregated to site × month. This is the AI's main table.</td></tr>
+<tr><td><code>fct_contract_month</code></td><td>✅ Reduced</td><td><code>member_key</code> dropped. Prices, desks and plans are business data; the contract holder's identity isn't needed.</td></tr>
+<tr><td><code>fct_booking</code></td><td>✅ Reduced</td><td><code>member_key</code> dropped; the booker is reduced to <code>company_key</code>.</td></tr>
+<tr><td><code>fct_gl</code></td><td>✅ Reduced</td><td><code>memo</code> and <code>entity</code> dropped: free text can hide personal details. Payroll appears only as the "Site Staff" journal total.</td></tr>
+<tr><td><code>dim_member</code></td><td>❌</td><td>Names and emails of individuals. Leadership questions are about sites and companies, so people-level questions are out of scope for the AI.</td></tr>
+<tr><td><code>member_xref</code></td><td>❌</td><td>Identity mapping isn't needed for answers, and it links source IDs back to people.</td></tr>
+<tr><td>Door events (ACT365), CRM contacts</td><td>❌</td><td>Individual movement and personal contact details. A company × week attendance aggregate may be added later, only with a minimum group size and the client's approval.</td></tr>
+</table>
+
+<p><b>Copy, not view (for production).</b> In the Chapter 17 lab, <code>ai_safe</code> is built as views (option A from Chapter 15) because they're quick to iterate on. For the real build we recommend switching to tables (option B), which is one config line. Why physically copy?</p>
+<ul>
+    <li><b>Blast radius:</b> if someone accidentally adds a sensitive column to a mart, it doesn't reach the AI until the copy job's allow-list includes it.</li>
+    <li><b>Stability:</b> the AI sees a consistent snapshot, refreshed once after the nightly dbt build, not tables changing mid-question.</li>
+    <li><b>Clean permissions:</b> the AI's service account needs access to <b>one dataset in one project</b>, nothing else.</li>
+</ul>
+
+<p>The copy is just more dbt models with an <b>explicit column list</b> for every table that holds anything sensitive (no <code>SELECT *</code> there), materialised as tables in <code>ai_safe</code>, with tests. At Work.Life's size (thousands of rows, not billions) the copy takes seconds and costs pennies.</p>
+
+<pre>
+-- models/ai_safe/ai_safe__fct_contract_month.sql   (as in Chapter 17)
+{{ config(alias = 'fct_contract_month') }}
+select month_start, month_end, site_code, contract_id, company_key,
+       plan_code, resource_code, is_office, desks, mrr_gbp
+    -- no member_key: questions are about companies and sites, not people
+from {{ ref('fct_contract_month') }}
+</pre>
+
+<hr/>
+
+<h3>5. One Question's Journey</h3>
+
+<p>Monday 08:40. A leader opens the app and types: <b>"Is Soho profitable? If not, why not?"</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>Box</th><th>What happens</th><th>≈ time</th></tr>
+<tr><td>1</td><td>① Access gate</td><td>SSO checks the Work.Life account and the leadership allow-list</td><td>instant</td></tr>
+<tr><td>2</td><td>② Understand</td><td>LLM call #1: metrics = contribution (+ after central), site = Soho, period = latest closed month, plus a "why" drill-down</td><td>1–2 s</td></tr>
+<tr><td>3</td><td>④⑤ Retrieve</td><td>Semantic definitions for contribution, revenue and costs; <code>get_business_context</code> returns the site_contribution card and glossary entries</td><td>&lt; 0.5 s</td></tr>
+<tr><td>4</td><td>② Plan</td><td><code>query_metrics</code> call 1: contribution for Soho, Sep 2026 (the last closed month). Call 2: revenue by account and occupancy by resource for the drill-down. Each result is capped at 200 rows; these return a handful.</td><td>1–2 s</td></tr>
+<tr><td>5</td><td>② Validate</td><td>Compiled SQL dry-run: reads only <code>ai_safe</code>, bytes under cap, SELECT only</td><td>&lt; 1 s</td></tr>
+<tr><td>6</td><td>③ Execute</td><td>BigQuery returns small result tables</td><td>1–2 s</td></tr>
+<tr><td>7</td><td>② Answer</td><td>LLM call #3 writes the answer from the rows; the number check confirms every figure is in the results</td><td>2–4 s</td></tr>
+<tr><td>8</td><td>⑦ Log</td><td>Question, tools called, metrics, SQL, tokens, bytes, latency and user written to <code>ai_logs</code></td><td>async</td></tr>
+</table>
+
+<p>Total: roughly <b>5 to 12 seconds</b>. The answer card looks like the one at the end of Chapter 20: −£4,175 before central costs, −£5,175 after, driven by empty Offices 102 and 103 and unsold hot desks, with definitions, period status and "Show SQL".</p>
+
+<hr/>
+
+<h3>6. Build Options</h3>
+
+<p>There's more than one way to build box ②. A good supplier response compares them honestly instead of pitching only its favourite:</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>A. Google-native data agents</th><th>B. AI inside the BI tool</th><th>C. Thin custom layer (our design)</th></tr>
+<tr><td><b>What it is</b></td><td>Google's built-in conversational analytics features for BigQuery / Looker</td><td>AI features of whichever BI tool the parallel review picks (Tableau today; others have similar features)</td><td>The small Cloud Run service above, using a model via Vertex AI</td></tr>
+<tr><td><b>Speed to demo</b></td><td>✅ Fast</td><td>✅ Fast, once the BI tool is chosen</td><td>🟡 A few weeks</td></tr>
+<tr><td><b>Semantic layer / definitions</b></td><td>🟡 Its own config format</td><td>🟡 Inside the BI tool</td><td>✅ The dbt definitions, shared</td></tr>
+<tr><td><b>Accuracy gate &amp; number checks</b></td><td>🟡 Limited control</td><td>🟠 Limited control</td><td>✅ Full control</td></tr>
+<tr><td><b>Proactive digests and alerts</b></td><td>🟡 Partial</td><td>🟡 Varies by tool</td><td>✅ Built in</td></tr>
+<tr><td><b>Lock-in</b></td><td>Google</td><td>The BI tool, which is under review</td><td>Low: model and UI swappable</td></tr>
+<tr><td><b>Phase 2 (agents, context packs)</b></td><td>🟡</td><td>🟠</td><td>✅ Same service grows</td></tr>
+<tr><td><b>Run cost</b></td><td>Usage-based</td><td>Often a per-seat add-on</td><td>Usage-based, capped by us</td></tr>
+</table>
+
+<p><b>Our recommendation:</b> C, the thin custom layer, because the accuracy gate, shared definitions and source agnosticism are non-negotiable and C controls all three. But spend the first two weeks <b>testing A against the golden questions</b>. These products move fast. If a native option passes the gate with less to maintain, the honest advice is to use it. Either way, the expensive and valuable parts (<code>ai_safe</code>, semantic layer, context library, golden set) are the same. Only box ② changes.</p>
+
+<p>⚠️ Products and features in this space change month to month. Check what each option actually supports at the time you write the response; don't rely on this table's details.</p>
+
+<hr/>
+
+<h3>7. Choosing the LLM Without Getting Locked In</h3>
+
+<p>The model is the part that changes fastest. New ones arrive every few months, and prices fall. So the AI service talks to the model through <b>one small adapter</b>:</p>
+
+<pre>
+   AI service ──► llm.complete(task, prompt) ──► adapter ──► model A (Vertex AI)
+                                                        └──► model B (swap in a config change)
+
+   task = "understand" | "plan" | "answer" | "digest"
+   → each task can use a different model: a cheaper model for "understand",
+     a stronger one for "answer". (Cost, Chapter 27.)
+</pre>
+
+<p>Choosing the model is a <b>test, not an opinion</b>: run the golden set (Chapter 25) against two or three candidate models, compare accuracy, latency and cost per question, and pick the cheapest one that passes the gate. Re-run that comparison when new models appear. Because the golden set exists, switching models is a measured decision instead of a risky one.</p>
+
+<p>Serving the model through Vertex AI keeps prompts and data inside Work.Life's Google Cloud project and billing. Check the model's region and data-use terms during the security review (Chapter 26).</p>
+
+<hr/>
+
+<h3>8. The 8 Principles: Design Check</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Principle</th><th>Where the design meets it</th></tr>
+<tr><td><b>Warehouse first, on a copy</b></td><td>③ <code>ai_safe</code>: a dbt-built copy of approved marts in a separate project. The AI never touches sources or raw.</td></tr>
+<tr><td><b>Source agnostic</b></td><td>The AI only knows marts and metrics. Source changes stay in dbt staging (Ch 28).</td></tr>
+<tr><td><b>Safe data only</b></td><td>Explicit column allow-list in the copy models; PII dropped or aggregated.</td></tr>
+<tr><td><b>People data excluded</b></td><td>No HR connector, dataset or credentials. Payroll only as site totals.</td></tr>
+<tr><td><b>Accuracy is a launch gate</b></td><td>Golden set in <code>ai_eval</code>, run nightly by ⑧. Go-live blocked until the gate passes: tier 1 (board-pack KPIs) 100% correct on the last 3 closed months, tier 2 (diagnostic) at least 90% with every miss a refusal or caveat, tier 3 (must-refuse) 100% (Ch 25).</td></tr>
+<tr><td><b>Cost conscious</b></td><td>Serverless, idle ≈ £0, byte caps, token budgets per user (Ch 27).</td></tr>
+<tr><td><b>Secure by design</b></td><td>① SSO + allow-list; read-only service account on one dataset; audit log (Ch 26).</td></tr>
+<tr><td><b>Documented, handover ready</b></td><td>Everything in git: dbt, definitions, context, infrastructure-as-code, runbooks (Ch 36).</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. Where Phase 2 Plugs In</h3>
+
+<p>The brief: <i>"We want Phase 1 built so these extend from it without a rebuild."</i> Here's the proof, box by box:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Phase 2 use case</th><th>What's added</th><th>What's reused unchanged</th></tr>
+<tr><td>Real-time member &amp; retention reporting (Ch 29)</td><td>More frequent dbt runs; retention metrics</td><td>Semantic layer, BI, ai_safe pattern</td></tr>
+<tr><td>Churn &amp; renewal prediction + context packs (Ch 30)</td><td>A model (e.g. BigQuery ML) writing scores into <code>ai_safe</code>; a "context pack" task</td><td>AI service, context library, golden-test approach</td></tr>
+<tr><td>Forecasting (Ch 31)</td><td>Forecast tables in <code>ai_safe</code> + forecast metrics</td><td>Semantic layer, answer cards (with ranges)</td></tr>
+<tr><td>Role-based access, wider teams (Ch 32)</td><td>User roles; BigQuery row-level policies (e.g. site managers see their site)</td><td>Access gate, ai_safe, audit</td></tr>
+<tr><td>Agents &amp; automations (Ch 32)</td><td>New "tasks" in the AI service; scheduler jobs</td><td>Everything</td></tr>
+</table>
+
+<p>Every Phase 2 item is <b>"add a table, a metric, a task or a role"</b>. None is "replace a box". That's the answer to Section 7, Q10 (scalability).</p>
+
+<hr/>
+
+<h3>10. What We Need From Work.Life</h3>
+
+<p>Section 7, Q3 asks what we'd need. For this architecture specifically:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Need</th><th>Why</th><th>Client question #</th></tr>
+<tr><td>Who owns the BigQuery project, and which region</td><td>Where the AI project and <code>ai_safe</code> sit</td><td>16</td></tr>
+<tr><td>Permission to create a separate Google Cloud project (or folder) for the AI layer</td><td>Clean security boundary</td><td>new</td></tr>
+<tr><td>Identity provider (Google Workspace, Microsoft 365, other)</td><td>SSO setup</td><td>15</td></tr>
+<tr><td>Named leadership users</td><td>Allow-list, testing, cost</td><td>13</td></tr>
+<tr><td>Recent board pack + KPI definitions, and an owner per KPI</td><td>Semantic layer, context, golden set</td><td>10, 14</td></tr>
+<tr><td>Sign-off on the <code>ai_safe</code> column inventory</td><td>"Safe data only"</td><td>17</td></tr>
+<tr><td>Access to the dbt repo, and time with the pipeline partner</td><td>Add the copy models and metrics</td><td>12</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Describe your architecture for a natural-language analytics assistant on BigQuery.</b></p>
+<p><i>"A separate dataset holding a dbt-built copy of approved marts with PII removed; a semantic layer with the business definitions; a small serverless service that turns questions into metric queries, validates and runs them read-only, and writes answers only from the results; SSO in front; logs and feedback in <code>ai_logs</code>, golden tests in <code>ai_eval</code>; and a scheduler for digests and nightly accuracy runs."</i></p>
+
+<p><b>Q: Why copy data into a separate dataset instead of using views on the marts?</b></p>
+<p><i>"The brief asks for a controlled copy, and it gives a smaller blast radius: a new sensitive column in a mart doesn't reach the AI until it's explicitly allowed. It also gives a stable snapshot and one simple permission boundary. At this data size, the copy is cheap."</i></p>
+
+<p><b>Q: Would you build custom or use a vendor's built-in AI analytics?</b></p>
+<p><i>"I'd test the built-in options against the golden questions first, because less to maintain is better for a client without a data team. But the definitions, the safe dataset, the context and the accuracy tests are built either way. I'd only go custom if the native options can't meet the accuracy gate, the shared definitions or source agnosticism."</i></p>
+
+<p><b>Q: How do you avoid lock-in to one LLM?</b></p>
+<p><i>"Call it through a thin adapter, keep prompts as versioned templates, and choose models by running the golden set: pick the cheapest model that passes. Switching becomes a config change plus a test run."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Small on purpose</b></td><td>One small app, three datasets (ai_safe, ai_logs, ai_eval), a scheduler, files in git.</td></tr>
+<tr><td><b>ai_safe</b></td><td>dbt-built copy, explicit columns, separate project, read-only.</td></tr>
+<tr><td><b>Journey</b></td><td>SSO → understand → retrieve → plan → validate → execute → answer → log.</td></tr>
+<tr><td><b>Options</b></td><td>Native, BI-tool or thin custom. Test against golden questions; the core assets are the same.</td></tr>
+<tr><td><b>LLM</b></td><td>Behind an adapter; picked by test, not opinion.</td></tr>
+<tr><td><b>8/8 principles</b></td><td>Each maps to a specific box.</td></tr>
+<tr><td><b>Phase 2</b></td><td>Add tables, metrics, tasks, roles. Never replace a box.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Our architecture answers questions when asked. But the brief also wants the system to <b>come to them</b>: <i>"surfaces relevant information and trends to us, rather than us always having to pull it."</i> In <b>Chapter 24</b> we build <b>proactive insight</b>: Monday digests, alerts and early signals, without drowning leaders in noise.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

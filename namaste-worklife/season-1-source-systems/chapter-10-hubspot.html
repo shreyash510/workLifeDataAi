@@ -28,9 +28,9 @@
 <p>Ben Carter from Ortho Robotics fills in the "Book a tour" form on the Work.Life website.</p>
 
 <ul>
-    <li><b>Today (HubSpot world):</b> the form creates a <b>contact</b> in HubSpot, a sales rep gets a task, the tour gets logged, a <b>deal</b> moves through the pipeline. Marketing knows Ben came from a LinkedIn ad.</li>
-    <li><b>He signs:</b> the deal is "Closed Won". Now he must exist in <b>Nexudus</b> too, to get a contract, a key card and invoices.</li>
-    <li><b>A year later:</b> his renewal is a new deal in HubSpot, while his contract lives in Nexudus.</li>
+    <li><b>In the HubSpot world (where Work.Life is heading; HubSpot "is being integrated"):</b> the form creates a <b>contact</b> in HubSpot, a sales rep gets a task, the tour gets logged, a <b>deal</b> moves through the pipeline. The lead source is recorded too (in our lab data Ben came via a broker, OfficeFinder).</li>
+    <li><b>They sign:</b> the deal is "Closed Won". Now they must exist in <b>Nexudus</b> too, to get a contract, a key card and invoices.</li>
+    <li><b>A year later:</b> their renewal is a new deal in HubSpot, while their contract lives in Nexudus.</li>
 </ul>
 
 <p>Two systems, one customer, both "the truth" about different things. Let's see how to tame that.</p>
@@ -151,7 +151,7 @@
     <li>Note the merged record's ID. The other ID is now gone (HubSpot keeps a list of merged IDs on the surviving record).</li>
 </ol>
 
-<p>Why this matters for the warehouse: if yesterday's load had contact ID 101 and 102 for Priya, and today 102 is merged into 101, your pipeline must handle <b>disappearing IDs</b>. Otherwise "Priya" is counted twice in history, or her old activities point to a contact that no longer exists.</p>
+<p>Why this matters for the warehouse: if yesterday's load had contact ID 101 and 102 for Priya, and today 102 is merged into 101, your pipeline must handle <b>disappearing IDs</b>. Otherwise "Priya" is counted twice in history, or their old activities point to a contact that no longer exists.</p>
 
 <hr/>
 
@@ -168,7 +168,7 @@
 
 <h3>10. The Nexudus ↔ HubSpot Sync</h3>
 
-<p>Nexudus has a native HubSpot integration (listed at £50 per location per month). Per Nexudus's docs:</p>
+<p>Nexudus has a native HubSpot integration (listed at £50 per location per month at the time of writing). Per Nexudus's docs (vendor facts; whether Work.Life uses this integration or another route is a question for the client):</p>
 
 <table border="1" cellpadding="10">
 <tr><th>HubSpot</th><th>↔</th><th>Nexudus</th><th>Direction</th></tr>
@@ -314,6 +314,6 @@ for c in fetch_all():
 
 <h3>What's Next?</h3>
 
-<p>Chapter 11 is the Season 1 finale. We take Priya, Emma and Fatima and follow each one through <b>all five systems</b>, build a matching table by hand, and then answer the 10 "final exam" questions from Chapter 05. After this, you'll understand Work.Life's data better than most people who work there. 😉</p>
+<p>Chapter 11 is the Season 1 finale. We take Priya, Emma and Fatima and follow each one through <b>all five systems</b>, build a matching table by hand, and then answer the 10 "final exam" questions from Chapter 05. After this, you'll know how one member's data is spread across every source system.</p>
 
 <p>Keep learning, keep building! See you in the next one!</p>

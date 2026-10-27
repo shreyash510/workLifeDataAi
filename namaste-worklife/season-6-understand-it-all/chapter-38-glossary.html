@@ -1,0 +1,410 @@
+<h2>Chapter 38 — The Work.Life Glossary: Every Term, One Page</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>Season 6 is different. No new tools, no new labs. This season exists for one reason: so that when you walk into the Work.Life project, <b>no word in any meeting surprises you</b>. Not "resident", not "deferred revenue", not "Tariff", not "MAR", not "golden question".</p>
+
+<p>This chapter is the dictionary. Every term used across the series, grouped by area. For each one: what it means in plain English, what it looks like at Work.Life (or in our Mini Work.Life lab), and where we covered it in depth. Bookmark it. Come back to it before every client call.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>How to use this glossary</li>
+    <li>The business and its products</li>
+    <li>The member lifecycle</li>
+    <li>The KPIs</li>
+    <li>Finance and accounting</li>
+    <li>Nexudus terms (including the old API names)</li>
+    <li>ACT: door access and CRM terms</li>
+    <li>HubSpot and CRM terms</li>
+    <li>NetSuite terms</li>
+    <li>Data pipeline and warehouse terms</li>
+    <li>AI layer terms</li>
+    <li>Project and delivery terms</li>
+    <li>The "same word, different meaning" trap list</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>First week on the project. In one morning stand-up you hear:</p>
+
+<p><i>"The Tariff on Coworker 4471 changed, so the resident MRR in fct_contract_month dropped, but NetSuite recognised the full amount because it was deferred. Can you check if Reading's period is closed before the board pack?"</i></p>
+
+<p>That's one sentence with <b>eight</b> domain terms from four different worlds: Nexudus (Tariff, Coworker), the business (resident, MRR), the warehouse (fct_contract_month), and finance (recognised, deferred, period closed, board pack). If any one of those words is fuzzy, you'll nod, go back to your desk and query the wrong thing. 😅</p>
+
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│   RULE OF THIS CHAPTER                                      │
+│                                                             │
+│   On this project, most mistakes are VOCABULARY mistakes.   │
+│   The same word means different things in different         │
+│   systems and teams. Know which world a word comes from     │
+│   before you write a single line of SQL.                    │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<hr/>
+
+<h3>2. How to Use This Glossary</h3>
+
+<p>Each table has four columns: the <b>term</b>, the <b>meaning</b>, a <b>Work.Life example</b>, and the <b>chapter</b> where it's explained properly. Where a fact comes from the client's brief, it's real. Where it comes from our lab, it says "lab". Where nobody knows yet, it says "ask".</p>
+
+<p>Tip: read it once top to bottom now. Then use Ctrl+F when a word comes up in a meeting.</p>
+
+<hr/>
+
+<h3>3. The Business and Its Products</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life example</th><th>Ch</th></tr>
+<tr><td><b>Flexible workspace / flex</b></td><td>Renting desks and offices on short, flexible terms instead of a long lease</td><td>Work.Life's whole business: 14 UK sites</td><td>01</td></tr>
+<tr><td><b>Coworking</b></td><td>Shared open-plan workspace; members use any free desk</td><td>"Unlimited Coworking" plan, £320/month (lab)</td><td>01</td></tr>
+<tr><td><b>Hot desk</b></td><td>A desk with no owner; first come, first served</td><td>Soho has 20 hot desks (lab)</td><td>01, 02</td></tr>
+<tr><td><b>Private office</b></td><td>A lockable room for one team, on a contract, usually 3 months or more</td><td>Office 101, 4 desks, Pixel Chai, £2,400 (lab)</td><td>01</td></tr>
+<tr><td><b>Meeting room</b></td><td>Bookable room, charged by the hour or day</td><td>Brick Lane, 8 people, £45/hour (lab)</td><td>01, 07</td></tr>
+<tr><td><b>Event space</b></td><td>Venue hired for launches, talks, parties</td><td>One of the 5 products</td><td>01</td></tr>
+<tr><td><b>Day pass / on-demand</b></td><td>Pay once, use a desk for a day, booked online</td><td>From ~£35 (public site, changes over time)</td><td>01</td></tr>
+<tr><td><b>Site / location / building</b></td><td>One physical workspace. Work.Life has 14.</td><td>Soho, Farringdon... Lab: SOHO, RDG</td><td>01, 06</td></tr>
+<tr><td><b>Member</b></td><td>A person using Work.Life under a plan or contract</td><td>~8,000 members (brief)</td><td>01</td></tr>
+<tr><td><b>Resident</b></td><td>A member with an <i>ongoing</i> contract (office or membership), as opposed to day-pass users</td><td>"Resident revenue projection" (brief, Phase 2)</td><td>01</td></tr>
+<tr><td><b>Team / company</b></td><td>The organisation a member belongs to; usually the bill payer</td><td>Pixel Chai Studio (C001, lab)</td><td>07</td></tr>
+<tr><td><b>Recurring revenue</b></td><td>Money that comes every month from contracts</td><td>Office fees, memberships</td><td>01</td></tr>
+<tr><td><b>Non-recurring / ancillary revenue</b></td><td>Money from bookings and one-off purchases</td><td>Meeting rooms, events, day passes</td><td>01, 02</td></tr>
+<tr><td><b>Add-on / product</b></td><td>Extras sold on top of a plan</td><td>Lockers, parking, mail handling</td><td>01, 07</td></tr>
+<tr><td><b>Lease</b></td><td>Work.Life's own contract with the landlord for a building</td><td>Rent is the biggest cost</td><td>01</td></tr>
+<tr><td><b>Rent, rates, service charge</b></td><td>Payment to landlord; UK business property tax; building maintenance fee to landlord</td><td>Accounts 5000–5300 in the lab GL</td><td>01, 09</td></tr>
+<tr><td><b>Fit-out</b></td><td>Furniture and refurbishment, depreciated over years</td><td>A capital cost</td><td>01</td></tr>
+<tr><td><b>Broker</b></td><td>An agent who brings office customers in exchange for commission</td><td>Lead source "Broker" (lab: 2 deals)</td><td>01, 08</td></tr>
+<tr><td><b>B Corp</b></td><td>Certification for social and environmental standards</td><td>Work.Life, since 2022. Shapes the strict data principles.</td><td>01</td></tr>
+<tr><td><b>Overselling ratio</b></td><td>Selling more hot-desk memberships than seats, since not everyone comes daily</td><td>60 seats sold to 90 members = 1.5× (made up)</td><td>02</td></tr>
+</table>
+
+<hr/>
+
+<h3>4. The Member Lifecycle</h3>
+
+<pre>
+   LEAD ─► TOUR ─► PROPOSAL ─► SIGN ─► ONBOARD ─► ACTIVE ─► NOTICE ─► RENEW / LEAVE
+                                                     │
+                                       upgrade · downgrade · transfer (NOT churn)
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life example</th><th>Ch</th></tr>
+<tr><td><b>Lead / enquiry</b></td><td>Someone who showed interest but hasn't signed</td><td>Ben Carter, Ortho Robotics, tour form (lab)</td><td>01, 10</td></tr>
+<tr><td><b>Tour</b></td><td>A site visit by a prospect</td><td>"Tour Reading 202, 2 Sep" (lab)</td><td>08</td></tr>
+<tr><td><b>Proposal / quote</b></td><td>Price and terms sent before signing</td><td>GreenRoot renewal proposal at £2,800 (lab)</td><td>07, 08</td></tr>
+<tr><td><b>Prospect</b></td><td>A company in the sales pipeline, not yet a member</td><td>Ortho Robotics; Lumen Yoga (lost) (lab)</td><td>11</td></tr>
+<tr><td><b>Onboarding</b></td><td>Contract created, key card issued, Wi-Fi, welcome</td><td>Nexudus adds member to an ACT365 access group</td><td>01, 08</td></tr>
+<tr><td><b>Term / minimum term</b></td><td>How long a contract runs before it can end</td><td>Private Office: 3 months minimum (lab)</td><td>07</td></tr>
+<tr><td><b>Rolling contract</b></td><td>No end date; continues until notice</td><td>Ravi's coworking contract K004 (lab)</td><td>07</td></tr>
+<tr><td><b>Notice</b></td><td>The member says "we're leaving at end of term"</td><td>Brightline gave notice 30 Apr 2026 (lab)</td><td>01, 07</td></tr>
+<tr><td><b>Renewal</b></td><td>Member re-signs when the term ends</td><td>GreenRoot, ends 31 Dec 2026 (lab)</td><td>01, 08</td></tr>
+<tr><td><b>Upgrade / downgrade</b></td><td>Same team moves to a bigger / smaller or pricier / cheaper space</td><td>Priya: hot desk → Office 101 (K001 → K002)</td><td>07</td></tr>
+<tr><td><b>Transfer</b></td><td>Same team moves to a different site</td><td>K006 (lab)</td><td>07</td></tr>
+<tr><td><b>Churn</b></td><td>A member or company leaves with no follow-on contract</td><td>Brightline: 2 people, £1,400 MRR (lab)</td><td>02, 07</td></tr>
+<tr><td><b>Lost reason / churn reason</b></td><td>Why a deal was lost or a member left</td><td>"Moving to hybrid" (only in the CRM)</td><td>08, 10</td></tr>
+<tr><td><b>Referral</b></td><td>A member brings in another member</td><td>Ravi referred Emma (lab)</td><td>08</td></tr>
+<tr><td><b>Context pack</b></td><td>A brief a team member takes into a renewal conversation</td><td>Brief Phase 2 item</td><td>03, 30</td></tr>
+</table>
+
+<hr/>
+
+<h3>5. The KPIs</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Formula / meaning</th><th>Work.Life example</th><th>Ch</th></tr>
+<tr><td><b>Capacity</b></td><td>How much you can sell: desks, offices, sq ft</td><td>Soho: 34 sellable desks (lab Excel)</td><td>02, 06</td></tr>
+<tr><td><b>Sellable desks / sellable sq ft</b></td><td>The occupancy denominator</td><td>Often kept in Excel, not Nexudus (ask)</td><td>02, 06</td></tr>
+<tr><td><b>Desk occupancy</b></td><td>Desks under active contract / sellable desks</td><td>Soho 30 Sep: 6 / 34 = 17.6% (lab)</td><td>02, 11</td></tr>
+<tr><td><b>Office occupancy</b></td><td>Occupied offices / total offices</td><td>Soho: 1 / 3 = 33% (lab)</td><td>02, 11</td></tr>
+<tr><td><b>Area occupancy</b></td><td>Sq ft under contract / sellable sq ft</td><td>Third way to measure occupancy</td><td>02</td></tr>
+<tr><td><b>Contracted vs physical occupancy</b></td><td>Who pays vs who actually comes in</td><td>GreenRoot pays 100%, badges in 23% (lab)</td><td>02, 08</td></tr>
+<tr><td><b>Badge-in rate</b></td><td>Person-days ÷ (contracted desks × working days)</td><td>GreenRoot week 2: 73%; week 4: 23% (lab)</td><td>08</td></tr>
+<tr><td><b>MRR</b></td><td>Monthly Recurring Revenue: sum of monthly price of active contracts</td><td>Soho Sep: £3,040 (lab)</td><td>02, 06</td></tr>
+<tr><td><b>Revenue per desk / per sq ft</b></td><td>Revenue ÷ occupied desks / sellable sq ft</td><td>Compares sites of different size</td><td>02</td></tr>
+<tr><td><b>Average discount</b></td><td>(List price − actual price) / list price</td><td>Pixel Chai: 7.7% (lab)</td><td>02, 08</td></tr>
+<tr><td><b>List price</b></td><td>The advertised price before discount</td><td>Office 101: £2,600 (lab)</td><td>07</td></tr>
+<tr><td><b>Net member movement</b></td><td>New members − members left, excluding internal moves</td><td>Named in the brief (Phase 2 forecasting)</td><td>02</td></tr>
+<tr><td><b>Logo / desk / revenue churn</b></td><td>Companies lost / desks lost / MRR lost, ÷ the start-of-period figure</td><td>Revenue churn is "the most honest"</td><td>02</td></tr>
+<tr><td><b>Net revenue retention (NRR)</b></td><td>(Start MRR − churn − downgrades + upgrades) / start MRR</td><td>&gt;100% means existing members grow</td><td>02</td></tr>
+<tr><td><b>Renewal rate</b></td><td>Renewed contracts / contracts that reached their end date</td><td></td><td>02</td></tr>
+<tr><td><b>Tenure</b></td><td>How long a member stays</td><td></td><td>02</td></tr>
+<tr><td><b>Room utilisation</b></td><td>Hours booked / hours available</td><td>Brick Lane Sep: 9 / 220 = 4.1% (lab)</td><td>02, 07</td></tr>
+<tr><td><b>Booking credits</b></td><td>Free meeting-room hours included in a plan</td><td>4 free hours on Private Office (lab exercise)</td><td>07</td></tr>
+<tr><td><b>Site contribution</b></td><td>Site revenue − site direct costs</td><td>Soho Sep: −£4,175 (lab)</td><td>02, 11</td></tr>
+<tr><td><b>Central costs / allocation</b></td><td>HQ costs (sales, marketing, IT) shared out to sites</td><td>Soho after central: −£5,175 (lab)</td><td>02, 09</td></tr>
+<tr><td><b>EBITDA</b></td><td>Earnings before interest, tax, depreciation, amortisation; here, profit after central allocation</td><td>"Before or after central costs?" Always ask.</td><td>02</td></tr>
+<tr><td><b>Budget / target</b></td><td>The planned value of a KPI per site per month</td><td>Soho Sep revenue −62% vs budget (lab)</td><td>02, 06</td></tr>
+<tr><td><b>Pipeline value</b></td><td>Sum of open deal amounts</td><td>£7,000/month (lab)</td><td>02, 08</td></tr>
+<tr><td><b>Conversion / win rate</b></td><td>Won deals / closed deals (or / leads)</td><td>3 / 5 = 60% (lab)</td><td>02, 08</td></tr>
+<tr><td><b>Leading indicator</b></td><td>Signals the future: tours, notices, falling usage</td><td>"Foresight over time" in the brief</td><td>02</td></tr>
+<tr><td><b>Lagging indicator</b></td><td>Already happened: revenue, churn, profit</td><td></td><td>02</td></tr>
+<tr><td><b>Board pack</b></td><td>The monthly KPI and financial report for the board/leadership</td><td>The "business context" the AI must understand (brief)</td><td>02, 03, 22</td></tr>
+<tr><td><b>KPI dictionary</b></td><td>One written definition per KPI: formula, source, grain, inclusions</td><td>Rule #1 of the project</td><td>02</td></tr>
+</table>
+
+<hr/>
+
+<h3>6. Finance and Accounting</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life example</th><th>Ch</th></tr>
+<tr><td><b>ERP</b></td><td>Enterprise Resource Planning: the official accounting system plus purchasing, billing</td><td>NetSuite</td><td>09</td></tr>
+<tr><td><b>General ledger (GL)</b></td><td>The master record of every accounting line</td><td>netsuite_gl_sep2026.csv (lab)</td><td>09</td></tr>
+<tr><td><b>Double entry</b></td><td>Every money event is recorded as equal debits and credits</td><td>Invoice: Dr AR / Cr Revenue</td><td>09</td></tr>
+<tr><td><b>Debit / credit</b></td><td>The two sides. Assets and expenses go up with debits; income and liabilities go up with credits.</td><td>Income = Cr − Dr; Expense = Dr − Cr</td><td>09</td></tr>
+<tr><td><b>Trial balance</b></td><td>Total debits = total credits. The first test of any finance model.</td><td>Lab 9.1</td><td>09</td></tr>
+<tr><td><b>Chart of accounts (CoA)</b></td><td>The list of every account "bucket"</td><td>4xxx revenue, 5xxx site costs, 6xxx central (lab)</td><td>09</td></tr>
+<tr><td><b>Accounts receivable (AR)</b></td><td>Money customers owe us (asset)</td><td>1100 (lab)</td><td>09</td></tr>
+<tr><td><b>Accounts payable (AP)</b></td><td>Money we owe suppliers (liability)</td><td>2000 (lab)</td><td>09</td></tr>
+<tr><td><b>P&amp;L</b></td><td>Profit and loss: income minus expenses for a period</td><td>Site P&amp;L for Soho (lab)</td><td>06, 09</td></tr>
+<tr><td><b>Balance sheet</b></td><td>What the company owns and owes at a point in time</td><td>Deferred revenue, deposits, VAT live here</td><td>09</td></tr>
+<tr><td><b>Accrual accounting</b></td><td>Record revenue when earned, costs when incurred, not when cash moves</td><td></td><td>09</td></tr>
+<tr><td><b>Recognised revenue</b></td><td>Revenue posted to income accounts for a period</td><td>Soho Sep: £3,475 (lab)</td><td>02, 09</td></tr>
+<tr><td><b>Invoiced revenue</b></td><td>What was billed (Nexudus view)</td><td>Soho Sep: £3,565 (lab)</td><td>09</td></tr>
+<tr><td><b>Deferred revenue</b></td><td>Cash/invoice received for future months; a liability until earned</td><td>Prepaid year: £32,400 billed, £2,700/month recognised (example)</td><td>09</td></tr>
+<tr><td><b>Deposit</b></td><td>Money held as security; a liability, never revenue</td><td></td><td>09</td></tr>
+<tr><td><b>VAT</b></td><td>UK sales tax (20%); owed to HMRC, never revenue</td><td></td><td>07, 09</td></tr>
+<tr><td><b>Credit note / credit memo</b></td><td>Reduces what a customer owes</td><td>CN-2609-01, −£90 for AV failure (lab)</td><td>07, 09</td></tr>
+<tr><td><b>Vendor bill</b></td><td>A supplier invoice to us</td><td>Soho rent £4,500 (lab)</td><td>09</td></tr>
+<tr><td><b>Journal entry (JE)</b></td><td>A manual adjustment by finance: accruals, allocations, corrections</td><td>JE-2609-01 to 04 (lab)</td><td>09</td></tr>
+<tr><td><b>Accrual (the entry)</b></td><td>Recording a cost or income for the period before the invoice arrives</td><td>Why open periods change</td><td>09</td></tr>
+<tr><td><b>Accounting period</b></td><td>Usually a month; finance "closes" it when final</td><td></td><td>09</td></tr>
+<tr><td><b>Month-end close</b></td><td>Finance finishes adjustments and locks the period</td><td>Typically working day 5–10 of next month (illustrative; ask)</td><td>09</td></tr>
+<tr><td><b>Open vs closed period</b></td><td>Provisional vs final numbers</td><td>The AI must say "September isn't closed yet"</td><td>09</td></tr>
+<tr><td><b>Reconciliation</b></td><td>Explaining every difference between two numbers that should match</td><td>Nexudus vs NetSuite: −£90, fully explained (lab)</td><td>09</td></tr>
+<tr><td><b>Previous ledger</b></td><td>An accounting system used before the current one; its history may live elsewhere</td><td>Whether Work.Life had one before NetSuite is unknown (ask)</td><td>09</td></tr>
+<tr><td><b>Cut-over date</b></td><td>The day one system stops and the other starts</td><td>Relevant if finance history spans two ledgers (ask)</td><td>09</td></tr>
+</table>
+
+<hr/>
+
+<h3>7. Nexudus Terms</h3>
+
+<p>Nexudus screens use new names, but the API and data use old ones. You'll see the old names in BigQuery.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Screen name</th><th>API / data name</th><th>Meaning</th><th>Ch</th></tr>
+<tr><td>Location</td><td><b>Business</b></td><td>A site (BusinessId on many tables)</td><td>07</td></tr>
+<tr><td>Customer</td><td><b>Coworker</b></td><td>A person (or company account)</td><td>07</td></tr>
+<tr><td>Team</td><td>Team</td><td>A company grouping customers</td><td>07</td></tr>
+<tr><td>Plan</td><td><b>Tariff</b></td><td>Membership type and price</td><td>07</td></tr>
+<tr><td>Contract</td><td><b>CoworkerContract</b></td><td>Customer + plan + term + price (+ dedicated resource)</td><td>07</td></tr>
+<tr><td>Resource</td><td>Resource / ResourceType</td><td>Meeting room, desk, office</td><td>07</td></tr>
+<tr><td>Booking</td><td>Booking (+ <b>CancelledBookings</b>)</td><td>Reservation; cancellations live in a separate entity</td><td>07</td></tr>
+<tr><td>Invoice</td><td>CoworkerInvoice + Lines</td><td>The bill and its lines</td><td>07</td></tr>
+<tr><td>Booking credits</td><td>TariffBookingCredits, CoworkerBookingCredits</td><td>Free hours included in a plan</td><td>07</td></tr>
+<tr><td>Plan history</td><td>CoworkerPricePlanHistories</td><td>Which plan a customer had when</td><td>07</td></tr>
+<tr><td>Proposal</td><td>Proposals, ProposalContracts</td><td>A quote before signing</td><td>07</td></tr>
+<tr><td>Financial account</td><td>FinancialAccounts</td><td>Maps products/plans to accounting codes. <b>The bridge to NetSuite.</b></td><td>07</td></tr>
+<tr><td>Check-in</td><td>Checkins</td><td>Someone entered the building</td><td>07</td></tr>
+</table>
+
+<table border="1" cellpadding="10">
+<tr><th>Other Nexudus term</th><th>Meaning</th><th>Ch</th></tr>
+<tr><td><b>Admin portal vs member portal</b></td><td>Staff screens vs member app. Same database; staff-entered rows are messier.</td><td>07</td></tr>
+<tr><td><b>Billing run</b></td><td>Monthly invoice generation (~8,000 invoices on the 1st)</td><td>07</td></tr>
+<tr><td><b>Dedicated resource</b></td><td>The office assigned to a contract</td><td>07</td></tr>
+<tr><td><b>Native BigQuery integration</b></td><td>Nexudus sends data to BigQuery itself (listed at £100/location/month)</td><td>07</td></tr>
+<tr><td><b>Archived</b></td><td>A soft-deleted record; filter explicitly</td><td>07</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. ACT: Door Access and CRM Terms</h3>
+
+<p>"ACT" in the brief is ambiguous. It could be the <b>ACT365</b> door system or the <b>Act!</b> CRM. Learn both, then ask.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Lab example</th><th>Ch</th></tr>
+<tr><td><b>ACT365</b></td><td>Cloud door access control. Nexudus has a native integration (£50/location/month listed).</td><td></td><td>08</td></tr>
+<tr><td><b>Cardholder</b></td><td>A person with a credential</td><td>CH-1001 Priya</td><td>08</td></tr>
+<tr><td><b>Card / fob / credential</b></td><td>What opens doors</td><td>04A1B2C301</td><td>08</td></tr>
+<tr><td><b>Reader / controller</b></td><td>Device on the door / box that decides and logs</td><td></td><td>08</td></tr>
+<tr><td><b>Cardholder group</b></td><td>Which doors at what times. Nexudus adds/removes members.</td><td>"Soho Office 101"</td><td>08</td></tr>
+<tr><td><b>Door event</b></td><td>One tap: granted or denied</td><td>276 events in Sep</td><td>08</td></tr>
+<tr><td><b>Person-day</b></td><td>One person seen on one day (main entrance only). The right unit for footfall.</td><td></td><td>08</td></tr>
+<tr><td><b>Footfall / attendance</b></td><td>How many people came in</td><td></td><td>08</td></tr>
+<tr><td><b>Act!</b></td><td>A sales CRM: contacts, companies, opportunities, activities, history</td><td></td><td>08</td></tr>
+<tr><td><b>Opportunity</b></td><td>A potential deal with stage, value, close date</td><td>"Ortho Robotics – Office 202", £4,200</td><td>08</td></tr>
+<tr><td><b>Activity / history</b></td><td>Scheduled tasks / what happened, in free text</td><td>"Call Emma re renewal"</td><td>08</td></tr>
+<tr><td><b>Sales stage</b></td><td>Enquiry → Tour Booked → Tour Done → Proposal Sent → Closed Won/Lost</td><td></td><td>08</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. HubSpot and CRM Terms</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Example</th><th>Ch</th></tr>
+<tr><td><b>CRM</b></td><td>Customer Relationship Management: the sales and marketing system</td><td>HubSpot (new), Act! (maybe old)</td><td>08, 10</td></tr>
+<tr><td><b>Contact / company / deal</b></td><td>Person (unique by email) / organisation (matched by domain) / opportunity</td><td>Priya / Pixel Chai / Office 101 deal</td><td>10</td></tr>
+<tr><td><b>Pipeline / stage</b></td><td>A set of steps a deal moves through</td><td>"New Business", "Renewals"</td><td>10</td></tr>
+<tr><td><b>Association</b></td><td>Many-to-many link between records</td><td>Contact ↔ company ↔ deal</td><td>10</td></tr>
+<tr><td><b>Property / custom property</b></td><td>A field; you can add your own</td><td>nexudus_customer_id</td><td>10</td></tr>
+<tr><td><b>Lifecycle stage</b></td><td>Funnel position: Lead → MQL → SQL → Opportunity → Customer → Evangelist. Only moves forward by default.</td><td>Churned members still show "Customer"</td><td>10</td></tr>
+<tr><td><b>MQL / SQL</b></td><td>Marketing / Sales Qualified Lead</td><td></td><td>10</td></tr>
+<tr><td><b>Member status</b></td><td>Active or left. Derived from Nexudus contracts, not lifecycle stage.</td><td>Custom property in the lab</td><td>10</td></tr>
+<tr><td><b>Merge</b></td><td>Combining duplicate records; one ID disappears</td><td>Two Priyas → one</td><td>10</td></tr>
+<tr><td><b>Hubs</b></td><td>Paid add-ons: Marketing, Sales, Service, Operations/Data</td><td></td><td>10</td></tr>
+<tr><td><b>Source of truth</b></td><td>The system that owns a field. Decided <i>per field</i>, not per system.</td><td>Email → HubSpot; contract → Nexudus</td><td>10</td></tr>
+<tr><td><b>Two-way sync</b></td><td>Changes flow both directions</td><td>HubSpot contacts ↔ Nexudus customers</td><td>10</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. NetSuite Terms</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Ch</th></tr>
+<tr><td><b>Subsidiary</b></td><td>A legal entity with its own books</td><td>09</td></tr>
+<tr><td><b>Location / Department / Class</b></td><td>Segments used to slice the P&amp;L. Which one is "site" at Work.Life? Ask.</td><td>09</td></tr>
+<tr><td><b>Segment</b></td><td>Any tag on a transaction line for reporting</td><td>09</td></tr>
+<tr><td><b>Transaction / line / accounting line</b></td><td>Header; its lines; each line's GL impact</td><td>09</td></tr>
+<tr><td><b>Posting</b></td><td>Lines that actually hit the GL (exclude estimates, sales orders)</td><td>09</td></tr>
+<tr><td><b>Saved search</b></td><td>A NetSuite report built in the UI, often exported to Excel</td><td>09</td></tr>
+<tr><td><b>SuiteAnalytics Connect</b></td><td>ODBC/JDBC SQL access to "NetSuite2.com"; used by Fivetran</td><td>09</td></tr>
+<tr><td><b>SuiteQL</b></td><td>SQL over the NetSuite REST API</td><td>09</td></tr>
+<tr><td><b>SuiteTalk</b></td><td>Record-level web services API (can also write)</td><td>09</td></tr>
+<tr><td><b>Accounting book</b></td><td>A set of books; filter to the primary one</td><td>09</td></tr>
+</table>
+
+<hr/>
+
+<h3>11. Data Pipeline and Warehouse Terms</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life</th><th>Ch</th></tr>
+<tr><td><b>Source system</b></td><td>Where data is created</td><td>Nexudus, NetSuite, ACT, Excel, HubSpot</td><td>01, 03</td></tr>
+<tr><td><b>Data warehouse</b></td><td>Central store for analysis, separate from source systems</td><td>Google BigQuery</td><td>15</td></tr>
+<tr><td><b>ETL / ELT</b></td><td>Extract-Transform-Load vs Extract-Load-Transform (transform inside the warehouse)</td><td>Work.Life's stack is ELT</td><td>12</td></tr>
+<tr><td><b>Extract &amp; load (EL)</b></td><td>Copy data from sources into the warehouse</td><td>Fivetran + Python (brief)</td><td>12–14</td></tr>
+<tr><td><b>Connector</b></td><td>A pre-built extractor for one source</td><td>Fivetran NetSuite / HubSpot connectors</td><td>13</td></tr>
+<tr><td><b>MAR</b></td><td>Monthly Active Rows: Fivetran's usage-based pricing unit</td><td></td><td>13</td></tr>
+<tr><td><b>API</b></td><td>A program interface to read/write a system's data</td><td>Nexudus REST API</td><td>07, 14</td></tr>
+<tr><td><b>Pagination</b></td><td>APIs return data page by page (page numbers or cursors)</td><td>Nexudus: pages; HubSpot: cursor "after"</td><td>07, 10</td></tr>
+<tr><td><b>Incremental load</b></td><td>Only fetch what changed since the last run</td><td>from_Coworker_UpdatedOn</td><td>07, 14</td></tr>
+<tr><td><b>Full refresh</b></td><td>Reload everything; catches deletes</td><td></td><td>07</td></tr>
+<tr><td><b>Webhook</b></td><td>A system calls your URL when something happens</td><td></td><td>07</td></tr>
+<tr><td><b>JSONL</b></td><td>One JSON object per line; easy to load into BigQuery</td><td></td><td>07</td></tr>
+<tr><td><b>Dataset</b></td><td>A BigQuery folder of tables</td><td>raw_nexudus, ai_safe</td><td>15</td></tr>
+<tr><td><b>dbt</b></td><td>Tool that turns SQL SELECTs into tested, documented tables</td><td>Raw → intermediate → modelled (brief)</td><td>16, 17</td></tr>
+<tr><td><b>Raw / staging / intermediate / marts</b></td><td>Layers: as loaded / cleaned and renamed / joined logic / business-ready tables</td><td></td><td>16</td></tr>
+<tr><td><b>Model</b></td><td>One dbt SQL file = one table/view</td><td></td><td>16</td></tr>
+<tr><td><b>Fact / dimension</b></td><td>Events or measures (fct_) / descriptive things (dim_)</td><td>fct_contract_month, dim_site</td><td>16</td></tr>
+<tr><td><b>Grain</b></td><td>What one row means</td><td>The #1 source of wrong numbers</td><td>11</td></tr>
+<tr><td><b>Crosswalk / xref / identity map</b></td><td>Table linking each system's ID to our own key</td><td>member_xref</td><td>11</td></tr>
+<tr><td><b>Surrogate key</b></td><td>Our own stable key, not from any source</td><td>member_key MBR-0001</td><td>11</td></tr>
+<tr><td><b>Normalised key / fuzzy match</b></td><td>Clean text then match / similarity scoring with human review</td><td>"greenrootfoods"</td><td>11</td></tr>
+<tr><td><b>Master data / site mapping</b></td><td>One agreed list of sites and codes across systems</td><td>Soho = SOHO = Nexudus Business</td><td>06, 11</td></tr>
+<tr><td><b>dbt test</b></td><td>An automatic check: unique, not null, relationships, custom</td><td>Trial balance as a test</td><td>17</td></tr>
+<tr><td><b>Lineage</b></td><td>Which tables feed which</td><td></td><td>17</td></tr>
+<tr><td><b>BI tool</b></td><td>Dashboards and reports</td><td>Tableau today; a BI tooling review is running (brief)</td><td>18</td></tr>
+<tr><td><b>Power Query</b></td><td>Excel's built-in mini ETL</td><td>Lab 6.1</td><td>06</td></tr>
+</table>
+
+<hr/>
+
+<h3>12. AI Layer Terms</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life</th><th>Ch</th></tr>
+<tr><td><b>LLM</b></td><td>Large language model: the AI that reads questions and writes answers/SQL</td><td>Vendor to be chosen</td><td>20</td></tr>
+<tr><td><b>Natural language query</b></td><td>Asking in plain English</td><td>"Is Soho profitable?"</td><td>03, 20</td></tr>
+<tr><td><b>Text-to-SQL</b></td><td>LLM turns a question into SQL, runs it, explains the result</td><td></td><td>20</td></tr>
+<tr><td><b>Semantic layer</b></td><td>Central metric definitions the AI and BI both use</td><td>One definition of "revenue"</td><td>21</td></tr>
+<tr><td><b>Business context</b></td><td>Board pack, KPIs, definitions, targets given to the AI</td><td>Brief Phase 1 capability</td><td>22</td></tr>
+<tr><td><b>Controlled copy</b></td><td>A separate copy of approved data the AI reads</td><td>Dataset <code>ai_safe</code></td><td>03, 23</td></tr>
+<tr><td><b>Allow-list</b></td><td>Explicit list of tables/columns permitted</td><td>Safe data only</td><td>26</td></tr>
+<tr><td><b>Hallucination / confidently wrong</b></td><td>The AI states a wrong figure as fact</td><td>"Trust is lost" (brief)</td><td>03, 25</td></tr>
+<tr><td><b>Golden questions</b></td><td>Test questions with hand-verified answers</td><td>Ch 11's 10 exam questions = v1</td><td>11, 25</td></tr>
+<tr><td><b>Launch gate</b></td><td>A test that must pass before go-live</td><td>Accuracy vs actuals (brief)</td><td>25</td></tr>
+<tr><td><b>Proactive insight</b></td><td>The system pushes alerts, digests and trends</td><td>Brief Phase 1 capability</td><td>24</td></tr>
+<tr><td><b>Tokens</b></td><td>Units LLMs are billed by (pieces of text in and out)</td><td>Must be capped (brief)</td><td>27</td></tr>
+<tr><td><b>Bytes scanned</b></td><td>How BigQuery on-demand queries are billed</td><td></td><td>27</td></tr>
+<tr><td><b>SSO</b></td><td>Single sign-on with company accounts</td><td>"Work.Life accounts only" (brief)</td><td>26</td></tr>
+<tr><td><b>IAM / service account</b></td><td>Google Cloud permissions / a non-human identity</td><td>AI's account reads ai_safe only</td><td>26</td></tr>
+<tr><td><b>Source agnostic</b></td><td>Swap a source system without rebuilding the AI layer</td><td>Nexudus → HubSpot for members</td><td>10, 28</td></tr>
+<tr><td><b>RBAC / row-level security</b></td><td>Role-based access; users see only rows they're allowed</td><td>Phase 2: wider teams by site</td><td>32</td></tr>
+<tr><td><b>Agent</b></td><td>An AI that takes multi-step actions with tools</td><td>Phase 2</td><td>32</td></tr>
+<tr><td><b>Analytics maturity ladder</b></td><td>Descriptive → diagnostic → predictive → prescriptive → activation</td><td>Brief §3 self-assessment</td><td>03, 19</td></tr>
+</table>
+
+<hr/>
+
+<h3>13. Project and Delivery Terms</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Work.Life</th><th>Ch</th></tr>
+<tr><td><b>Scoping brief / RFI</b></td><td>"Tell us your thinking", not a purchase</td><td>July 2026 brief</td><td>03</td></tr>
+<tr><td><b>RFP / SOW</b></td><td>Formal proposal request / statement of work in a contract</td><td>Not this stage</td><td>03</td></tr>
+<tr><td><b>Phase 1 / Phase 2</b></td><td>Build now (leadership Q&amp;A) / design for, don't price (reporting, churn, forecasting, RBAC, agents)</td><td>Brief §4</td><td>03</td></tr>
+<tr><td><b>Data partner</b></td><td>The external company that keeps the pipeline running today</td><td>Unnamed in the brief</td><td>04</td></tr>
+<tr><td><b>Support / maintenance</b></td><td>Ongoing work to keep pipelines and models running when APIs change</td><td>Brief §7 Q9 asks what support looks like</td><td>04, 35</td></tr>
+<tr><td><b>Stakeholder</b></td><td>Anyone affected by or with power over the project</td><td>Leadership, Ops &amp; IT, Finance, data partner</td><td>04</td></tr>
+<tr><td><b>RACI</b></td><td>Responsible, Accountable, Consulted, Informed</td><td>Ch 04 proposal</td><td>04</td></tr>
+<tr><td><b>Handover</b></td><td>Docs and training so nobody is a single point of failure</td><td>Brief principle</td><td>36</td></tr>
+<tr><td><b>Runbook</b></td><td>Step-by-step instructions for operating or fixing something</td><td></td><td>36</td></tr>
+</table>
+
+<hr/>
+
+<h3>14. The "Same Word, Different Meaning" Trap List</h3>
+
+<p>These are the words that will cause real bugs. When you hear one, ask "which one do you mean?"</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>Meaning A</th><th>Meaning B</th><th>Meaning C</th></tr>
+<tr><td><b>Revenue</b></td><td>Invoiced (Nexudus)</td><td>Recognised (NetSuite)</td><td>Cash received</td></tr>
+<tr><td><b>Occupancy</b></td><td>By office</td><td>By desk</td><td>By area · or physical (door data)</td></tr>
+<tr><td><b>Churn</b></td><td>Contract ended (naive)</td><td>Company left (correct)</td><td>Logo / desk / revenue churn</td></tr>
+<tr><td><b>Member</b></td><td>A person</td><td>A company (team)</td><td>A resident vs a day-pass user</td></tr>
+<tr><td><b>Customer</b></td><td>Nexudus person (Coworker)</td><td>NetSuite company (bill payer)</td><td>HubSpot lifecycle stage</td></tr>
+<tr><td><b>Site</b></td><td>Nexudus Business</td><td>NetSuite Location/Dept/Class (ask)</td><td>Excel site code</td></tr>
+<tr><td><b>Profitable</b></td><td>Positive contribution</td><td>Positive after central costs</td><td>Positive EBITDA</td></tr>
+<tr><td><b>ACT</b></td><td>ACT365 door access</td><td>Act! CRM</td><td>Something else (ask)</td></tr>
+<tr><td><b>Deal amount</b></td><td>Monthly value</td><td>Whole contract value</td><td>(Define it!)</td></tr>
+<tr><td><b>Month</b></td><td>Calendar month (transaction date)</td><td>Accounting period (posting)</td><td>UTC vs London time boundary</td></tr>
+<tr><td><b>Active</b></td><td>Contract active on date</td><td>HubSpot "Customer"</td><td>Has badged in recently</td></tr>
+</table>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Someone says "Soho's revenue was £3,565 in September". What do you ask?</b></p>
+<p><i>"Is that invoiced from Nexudus or recognised in NetSuite, and is September closed? In our lab, invoiced is £3,565 and recognised is £3,475; the £90 gap is a credit memo that exists only in NetSuite. For the board pack, recognised revenue from a closed period is the number."</i></p>
+
+<p><b>Q: What's the difference between a Coworker and a Customer in Nexudus?</b></p>
+<p><i>"None. Coworker is the old API and database name; Customer is what the screens show. Same with Business for Location and Tariff for Plan. You rename them once in dbt staging."</i></p>
+
+<p><b>Q: Explain deferred revenue to a non-accountant.</b></p>
+<p><i>"If a member prepays a year, we haven't earned it yet. Finance records it as a liability and moves one month into revenue each month as we deliver the space. So the invoice is big in January, but recognised revenue is the same every month."</i></p>
+
+<p><b>Q: Why is "source of truth" decided per field rather than per system?</b></p>
+<p><i>"Because each system is best at different facts. HubSpot owns names, emails and sales data; Nexudus owns contracts, bookings and invoices; NetSuite owns recognised revenue and costs. Saying 'HubSpot is the truth' for everything would break billing."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Four worlds</b></td><td>Business, finance, systems, data/AI. Know which world a word comes from.</td></tr>
+<tr><td><b>Old names</b></td><td>Business, Coworker, Tariff = Location, Customer, Plan.</td></tr>
+<tr><td><b>Revenue</b></td><td>Invoiced ≠ recognised ≠ cash. Board pack = recognised, closed period.</td></tr>
+<tr><td><b>Churn</b></td><td>Only a company leaving with no follow-on contract.</td></tr>
+<tr><td><b>Trap words</b></td><td>Revenue, occupancy, churn, member, customer, site, profitable, ACT, month, active.</td></tr>
+<tr><td><b>When unsure</b></td><td>Ask "which one do you mean?" It's the most valuable question on this project.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>You know the words. In Chapter 39 we draw <b>every integration</b> at Work.Life: which system sends what to which, in which direction, how often, who owns it, what breaks, and which parts we still don't know.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

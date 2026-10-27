@@ -1,0 +1,253 @@
+<h2>Chapter 27 — Cost Control: Tokens, BigQuery Bytes &amp; Caps</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>The brief is blunt about money: <i>"Cost conscious: This cannot become a six figure operation needing a large data team to run. We need realistic, managed ongoing cost, including how usage and token costs are controlled."</i> And Section 7, Q4 asks: <i>"How would you manage and cap usage or token costs?"</i></p>
+
+<p>Today we find every place money leaks out of the Phase 1 design, estimate each one with a formula you can rerun with real prices, and put a cap on each. The split between the two cost chapters is deliberate. <b>Chapter 35</b> is the full build-and-run cost: people, support, build effort and the yearly total at both usage levels. <b>This chapter</b> is the mechanics underneath it: what one question costs in tokens and bytes, why, and the caps that stop the variable part running away. Every price here is illustrative: check current pricing before quoting anything.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Where the money goes (it's not where people think)</li>
+    <li>LLM tokens: what a token is, and what one question costs</li>
+    <li>Lab 27.1: Estimate monthly token cost at two usage levels</li>
+    <li>The surprise: testing costs more than using</li>
+    <li>BigQuery bytes: why Work.Life's warehouse is cheap</li>
+    <li>Hosting: serverless means idle is nearly free</li>
+    <li>Seven levers to cut cost</li>
+    <li>Caps: hard limits at every layer</li>
+    <li>Watching the bill: the cost dashboard</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>A finance director at another company opens the cloud bill. The AI assistant cost <b>ten times</b> more than the month before. Nobody can say why.</p>
+
+<p>The investigation finds three things. A developer left a test loop running over a weekend. One user pasted a 40-page document into every question. And a query with no filter scanned a huge table hundreds of times a day.</p>
+
+<p>None of these is "the AI is expensive". All three are "<b>nothing was capped and nothing was watched</b>". That's the real lesson of this chapter. For a business Work.Life's size, the risk isn't a high <i>average</i> cost. It's an <b>uncapped</b> one.</p>
+
+<hr/>
+
+<h3>2. Where the Money Goes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Cost</th><th>What drives it</th><th>Size for Work.Life</th></tr>
+<tr><td><b>People</b> (support, changes, reviews)</td><td>Hours per month</td><td>🔴 Biggest by far (Chapter 35)</td></tr>
+<tr><td><b>LLM tokens</b></td><td>Questions × tokens per question × price</td><td>🟡 Small, but variable: needs caps</td></tr>
+<tr><td><b>Test runs</b> (golden set)</td><td>Questions × variants × runs per month</td><td>🟡 Can exceed real usage (section 5)</td></tr>
+<tr><td><b>BigQuery</b> (AI queries + copy job)</td><td>Bytes scanned</td><td>🟢 Tiny: small data</td></tr>
+<tr><td><b>Hosting</b> (Cloud Run, scheduler, logs)</td><td>Requests and seconds of compute</td><td>🟢 Near zero when idle</td></tr>
+<tr><td>Existing pipeline (Fivetran, dbt, partner)</td><td>Already paid today</td><td>Unchanged by Phase 1</td></tr>
+</table>
+
+<p>💡 This changes the conversation with the client. "Six figures" would never come from tokens or BigQuery at this scale. It would come from a design that needs a big team to babysit it. So the best cost control is a <b>simple design</b> (Chapter 23) plus caps on the variable parts.</p>
+
+<hr/>
+
+<h3>3. LLM Tokens: What One Question Costs</h3>
+
+<p>A <b>token</b> is a chunk of text, roughly ¾ of an English word. Models charge per million tokens, usually with output tokens priced higher than input tokens. Every LLM call has:</p>
+
+<pre>
+   cost of a call = input_tokens × input_price  +  output_tokens × output_price
+</pre>
+
+<p>Our pipeline (Chapter 20) makes about three LLM calls per question. A rough budget per question:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Call</th><th>Input tokens (instructions + context + question)</th><th>Output tokens</th></tr>
+<tr><td>① Understand</td><td>~2,000</td><td>~200</td></tr>
+<tr><td>③ Plan (metric request)</td><td>~4,000 (definitions retrieved, Ch 21–22)</td><td>~300</td></tr>
+<tr><td>⑦ Answer</td><td>~5,000 (cards + result rows)</td><td>~500</td></tr>
+<tr><td><b>Total, first try</b></td><td><b>~11,000</b></td><td><b>~1,000</b></td></tr>
+<tr><td>With one retry (some questions)</td><td>+ ~4,000</td><td>+ ~300</td></tr>
+</table>
+
+<p>Now apply a price. Prices vary a lot by model and change often, so we use an <b>illustrative</b> price and keep the formula:</p>
+
+<pre>
+   ILLUSTRATIVE PRICES (made up: check current pricing for the chosen model)
+     input:  £2 per million tokens
+     output: £10 per million tokens
+
+   One question ≈ 11,000 × £2/1M  +  1,000 × £10/1M
+                = £0.022          +  £0.010
+                ≈ £0.03
+</pre>
+
+<p>Three pence a question. Even if the real price is several times higher, a leadership team won't run up a big bill <b>by asking questions</b>. The risk is the uncapped cases from the story.</p>
+
+<hr/>
+
+<h3>4. Lab 27.1 — Estimate Monthly Token Cost</h3>
+
+<p>The brief asks for running cost at <b>two levels</b>: leadership team only, and wider team access. Fill in this table. The user counts are our standard <b>assumptions</b>, used in every cost chapter: 10 leadership users asking 8 questions a day, and a wider team of 70 users asking 3 a day. The real leadership size is unknown (client question #13); the brief only says "a team of roughly 70".</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Leadership only</th><th>Wider team</th></tr>
+<tr><td>Users (assumption)</td><td>10</td><td>70</td></tr>
+<tr><td>Questions per user per working day (assumption)</td><td>8</td><td>3</td></tr>
+<tr><td>Working days per month</td><td>21</td><td>21</td></tr>
+<tr><td>Questions per month</td><td>10 × 8 × 21 = <b>1,680</b></td><td>70 × 3 × 21 = <b>4,410</b></td></tr>
+<tr><td>Cost per question (illustrative)</td><td>£0.03</td><td>£0.03</td></tr>
+<tr><td><b>Question tokens per month (estimate)</b></td><td><b>≈ £50</b> (1,680 × £0.03)</td><td><b>≈ £130</b> (4,410 × £0.03)</td></tr>
+<tr><td>Digest + alerts (narration only, ~50 calls/week)</td><td>≈ £5</td><td>≈ £10</td></tr>
+</table>
+
+<p>Now stress-test it. What if the real model is <b>5× the illustrative price</b>? Leadership ≈ £250/month (about £3,000 a year), wider team ≈ £660/month (about £8,000 a year). These are estimates built on assumptions; Chapter 35 adds them to the people and hosting costs. Still nowhere near six figures a year. That's the honest headline for the response: <b>token cost is real but small, and we cap it anyway.</b></p>
+
+<hr/>
+
+<h3>5. The Surprise: Testing Costs More Than Using</h3>
+
+<p>Now add the accuracy gate from Chapter 25:</p>
+
+<pre>
+   Golden set:          150 questions × 4 variants   = 600 questions per run
+   If run nightly:      600 × 30                     = 18,000 questions/month
+   At £0.03 each:                                    ≈ £540/month
+
+   vs leadership usage (estimate):                   ≈ £50/month
+</pre>
+
+<p>The test suite would cost <b>more than ten times</b> what the leadership team does! This catches teams out. The fix is to run the <b>right amount</b> of testing at the right time:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>When</th><th>What runs</th><th>≈ Questions/month</th></tr>
+<tr><td>Nightly</td><td>Tier 1 only, one variant each (catches data surprises)</td><td>~90 × 30 = 2,700</td></tr>
+<tr><td>On every change (dbt, semantic, prompt, model)</td><td>Full set, all variants</td><td>~600 × changes</td></tr>
+<tr><td>Weekly</td><td>Full set (catches slow drift)</td><td>~600 × 4 = 2,400</td></tr>
+<tr><td>Model comparison</td><td>Full set × candidate models</td><td>Occasional</td></tr>
+</table>
+
+<p>Two more savings: run tests against a cheaper model tier for the <b>understand</b> step, and <b>cache</b> results (section 8). The gate stays strict; the bill stays sensible.</p>
+
+<hr/>
+
+<h3>6. BigQuery Bytes: Why the Warehouse Is Cheap</h3>
+
+<p>With on-demand pricing, BigQuery charges per byte <b>scanned</b> by a query, with a free allowance each month. Work.Life's data is small: about 8,000 members, 14 sites and a few years of monthly finance. The whole <code>ai_safe</code> dataset is likely to be <b>megabytes to a few gigabytes</b>.</p>
+
+<pre>
+   Rough check (illustrative):
+     a metric query on fct_site_month_kpis      scans  ~ a few MB
+     (BigQuery bills a small minimum per table referenced)
+     1,680 questions × ~2 queries × ~20 MB  ≈  67 GB/month
+
+   That's well inside the free tier BigQuery offers each month at the time of
+   writing. Check current pricing and region.
+</pre>
+
+<p>So BigQuery cost is mostly about <b>preventing accidents</b>, not about the average. The accident would be an unfiltered query over a large table, and in <code>ai_safe</code> there are no large tables. Raw door events, the only big-ish data, aren't there (Chapter 26). Security and cost point the same way.</p>
+
+<p>Habits that keep it that way:</p>
+<ul>
+    <li><b>Partition</b> monthly facts by <code>month_start</code> and cluster by <code>site_code</code>, so queries scan only what they need.</li>
+    <li><b>Never <code>SELECT *</code></b> in generated SQL. The validator rejects it.</li>
+    <li><b>Dry-run every query</b> (step ⑤): BigQuery reports the bytes it <i>would</i> scan before running it.</li>
+</ul>
+
+<hr/>
+
+<h3>7. Hosting: Serverless Means Idle Is Nearly Free</h3>
+
+<p>Leaders ask questions in bursts: Monday mornings and before board meetings. A server that runs 24/7 would be paid for while idle most of the week. Cloud Run scales to <b>zero</b> when no one is using it and bills per request-second when they are. The scheduler, the small logging dataset and secret storage add a few pounds a month.</p>
+
+<p>The trade-off: the first question after a quiet period can take a second or two longer while the service starts (a "cold start"). If leaders notice, keep one instance warm during working hours. It's a small, predictable cost.</p>
+
+<hr/>
+
+<h3>8. Seven Levers to Cut Cost</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Lever</th><th>How</th><th>Effect</th></tr>
+<tr><td>1</td><td><b>Retrieve, don't paste</b></td><td>Only relevant definitions and cards per question (Ch 22)</td><td>Fewer input tokens on every call</td></tr>
+<tr><td>2</td><td><b>Right-size models per task</b></td><td>Cheap model for "understand", stronger one for "answer" (adapter, Ch 23)</td><td>Big saving on the simplest calls</td></tr>
+<tr><td>3</td><td><b>Cache results</b></td><td>Same metric request + same data version → reuse the result. The board-pack KPIs get asked a lot on Mondays.</td><td>Skip both BigQuery and LLM calls</td></tr>
+<tr><td>4</td><td><b>Prompt caching</b></td><td>Where the model provider supports it, the fixed instructions block is billed at a reduced rate on repeat calls</td><td>Cheaper repeated input tokens</td></tr>
+<tr><td>5</td><td><b>Limit retries</b></td><td>Max 2, then an honest "couldn't answer" (Ch 20)</td><td>No runaway loops</td></tr>
+<tr><td>6</td><td><b>Small results to the LLM</b></td><td>Send aggregated rows; never more than the 200-row cap (Ch 20)</td><td>Fewer tokens in the answer step</td></tr>
+<tr><td>7</td><td><b>Sensible test schedule</b></td><td>Section 5</td><td>Often the biggest single saving</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. Caps: Hard Limits at Every Layer</h3>
+
+<p>Levers lower the <b>average</b>. Caps protect against the <b>worst case</b>. Like security, caps live in infrastructure and code, not in good intentions.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Layer</th><th>Cap</th><th>Where it's enforced</th></tr>
+<tr><td>Per query</td><td>Maximum bytes billed (e.g. 1 GB). Larger queries fail instead of running.</td><td>BigQuery job setting <code>maximum_bytes_billed</code></td></tr>
+<tr><td>Per question</td><td>Token budget (e.g. 20k input); max 2 retries; capped input length</td><td>AI service</td></tr>
+<tr><td>Per user per day</td><td>Question limit (e.g. 100/day); friendly message when reached</td><td>AI service, counted in <code>ai_logs</code></td></tr>
+<tr><td>Per project per day</td><td>BigQuery custom quota on bytes scanned per day</td><td>Google Cloud quotas</td></tr>
+<tr><td>Per month</td><td>Budget alerts at 50 / 90 / 100% of the agreed amount</td><td>Google Cloud Billing budgets</td></tr>
+<tr><td>Per month (hard)</td><td>At 100%, the service switches to "digests only" until reviewed</td><td>AI service reads its own monthly spend from <code>ai_logs</code></td></tr>
+</table>
+
+<p>⚠️ Cloud billing budgets <b>alert</b>; on their own they don't stop spending. That's why the last row exists: the app checks its own tracked spend and degrades gracefully. The client gets a guaranteed ceiling, which is exactly what "realistic, managed ongoing cost" means.</p>
+
+<hr/>
+
+<h3>10. Watching the Bill</h3>
+
+<p>Every interaction is already logged with tokens and bytes (Chapter 26). One small dashboard on <code>ai_logs</code> (and <code>ai_eval</code> for test-run cost) answers the questions Finance will ask:</p>
+
+<pre>
+   AI LAYER · COST · October 2026 (made up)
+   ─────────────────────────────────────────────────────────
+   Questions asked             1,210     (cap: 100/user/day)
+   LLM cost                      £36     ▓▓▓░░░░░░░  budget £100
+   BigQuery scanned            41 GB     (within free tier)
+   Test runs                     £64     nightly Tier 1 + 3 full runs
+   Hosting                        £9
+   ─────────────────────────────────────────────────────────
+   Total run (excl. people)     £109     ▓▓▓▓▓░░░░░  budget £250
+   Cost per question          £0.03      top user: 18% of questions
+</pre>
+
+<p>Review it monthly with Finance alongside the accuracy reconciliation (Chapter 25). Same meeting, two numbers: <b>is it right, and is it affordable?</b></p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: How do you estimate and control the running cost of an LLM analytics assistant?</b></p>
+<p><i>"Estimate questions per month at each usage level × tokens per question × model price, plus test runs, warehouse and hosting. Reduce the average with retrieval, model right-sizing, caching and limited retries. Then cap the worst case at every layer: bytes per query, tokens per question, questions per user per day, a daily warehouse quota, and a monthly hard ceiling the app enforces itself."</i></p>
+
+<p><b>Q: What's usually the biggest variable cost, and what surprises people?</b></p>
+<p><i>"For a small team, real usage is cheap. The surprise is automated testing: a full golden set with variants run nightly can cost more than all the users together. Run Tier 1 nightly and the full set on change and weekly."</i></p>
+
+<p><b>Q: BigQuery is pay per byte. How do you stop an AI from running an expensive query?</b></p>
+<p><i>"Expose only small modelled tables to the AI, partition and cluster them, reject SELECT * in validation, dry-run every query to see bytes before running, and set maximum bytes billed on every job plus a daily custom quota."</i></p>
+
+<p><b>Q: Do cloud budget alerts cap spending?</b></p>
+<p><i>"No, they notify. For a hard ceiling, the application should track its own spend and degrade, for example to scheduled digests only, when the monthly limit is reached."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Real risk</b></td><td>Uncapped cost, not high average cost.</td></tr>
+<tr><td><b>Per question</b></td><td>~11k input + ~1k output tokens ≈ pennies (illustrative).</td></tr>
+<tr><td><b>Two levels</b></td><td>Leadership vs wider team: small either way; formula, not guesswork.</td></tr>
+<tr><td><b>Testing</b></td><td>Can cost more than usage. Schedule it sensibly.</td></tr>
+<tr><td><b>BigQuery</b></td><td>Small data + small tables + byte caps = negligible.</td></tr>
+<tr><td><b>Levers</b></td><td>Retrieve, right-size, cache, limit retries, small results.</td></tr>
+<tr><td><b>Caps</b></td><td>Per query, question, user, day and month, with a hard ceiling in the app.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>One principle left: <b>source agnostic</b>. HubSpot is becoming the member source of truth, and Nexudus could be replaced one day. In <b>Chapter 28</b>, the Season 3 finale, we prove the AI layer survives a source swap without a rebuild, and we walk through the HubSpot change step by step.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

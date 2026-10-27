@@ -2,7 +2,7 @@
 
 <p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
 
-<p>In Chapter 01 we learned how Work.Life makes money. Now we learn the <b>language the leadership team speaks</b>. When the CEO asks the AI <i>"how's the business right now?"</i>, she means a handful of numbers. If we don't know exactly how each one is calculated, our dashboards and our AI will give wrong answers with a straight face. That is the #1 risk in this whole project.</p>
+<p>In Chapter 01 we learned how Work.Life makes money. Now we learn the <b>language the leadership team speaks</b>. When a leader asks the AI <i>"what is the state of the business right now?"</i> (the brief's own example), they mean a handful of numbers. If we don't know exactly how each one is calculated, our dashboards and our AI will give wrong answers with a straight face. That is the #1 risk in this whole project.</p>
 
 <p>What we will cover:</p>
 <ul>
@@ -23,7 +23,7 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>Monday leadership meeting. The Ops Director says <i>"Soho is 92% occupied."</i> The Finance Director says <i>"Soho is 78% occupied."</i> Both are looking at "occupancy". Both are right. 😅</p>
+<p>An imaginary Monday leadership meeting (made-up numbers). The ops lead says <i>"Soho is 92% occupied."</i> The finance lead says <i>"Soho is 78% occupied."</i> Both are looking at "occupancy". Both are right. 😅</p>
 
 <ul>
     <li>Ops counted <b>offices</b>: 23 of 25 offices have someone in them = 92%.</li>
@@ -88,7 +88,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Type</th><th>Answers</th><th>Source</th></tr>
 <tr><td>Contracted occupancy</td><td>How much are we selling?</td><td>Nexudus contracts</td></tr>
-<tr><td>Physical occupancy</td><td>How much is it actually used?</td><td>Nexudus access logs / check-ins</td></tr>
+<tr><td>Physical occupancy</td><td>How much is it actually used?</td><td>Door-access events (e.g. ACT365, if that's what "ACT" is) or Nexudus check-ins</td></tr>
 </table>
 
 <hr/>
@@ -105,7 +105,7 @@
 <tr><td><b>Ancillary revenue %</b></td><td>Non-membership revenue / total</td><td>How much comes from meeting rooms, events, extras</td></tr>
 </table>
 
-<p><b>⚠️ Trap:</b> MRR in Nexudus (what we <i>invoiced</i>) ≠ revenue in NetSuite (what accountants <i>recognised</i>). Credit notes, prepayments, deposits and month-end adjustments make them differ. For "is the site profitable", finance's number wins. For "how many members on which plan", Nexudus wins. We'll come back to this in the NetSuite lab.</p>
+<p><b>⚠️ Trap:</b> MRR and invoices in Nexudus (what is <i>contracted</i> and <i>billed</i>) ≠ revenue in NetSuite (what accountants <i>recognised</i>). Credit notes, prepayments, deposits and month-end adjustments make them differ. For "is the site profitable", finance's number wins. For "how many members on which plan", Nexudus wins. We'll come back to this in the NetSuite lab.</p>
 
 <hr/>
 
@@ -122,7 +122,7 @@
    MONTHLY CHURN RATE  = 45 / 1,000 = 4.5%
 </pre>
 
-<p>"Net Member Movements" is literally named in the 173tech deck as something Work.Life wanted. Now you know what it is.</p>
+<p>"Net member movements" is named in the brief's Phase 2 list: <i>"resident revenue projection, net member movements, seasonality and meeting room demand"</i>. Now you know what it is.</p>
 
 <table border="1" cellpadding="10">
 <tr><th>KPI</th><th>Formula</th><th>Watch out for</th></tr>
@@ -143,11 +143,13 @@
 <pre>
    UTILISATION = hours booked / hours available
 
-   Room "Brick Lane" (8 people)
+   A busy 8-person room (made-up numbers)
    Available: 10 hours/day × 22 working days = 220 hours
    Booked:    132 hours
    Utilisation = 132 / 220 = 60%
 </pre>
+
+<p><i>In our lab (Chapter 07) the Soho room "Brick Lane" has only 9 hours booked in September: 9 / 220 = 4.1%.</i></p>
 
 <p>Split it two ways: <b>paid vs free</b> (members often get free credits on their plan) and <b>by hour of day</b> (10am–3pm are full, 5pm is empty). This is the "meeting room demand" forecasting from Phase 2.</p>
 
@@ -183,8 +185,8 @@
 
 <table border="1" cellpadding="10">
 <tr><th>KPI</th><th>Meaning</th><th>Source</th></tr>
-<tr><td>Leads</td><td>New enquiries</td><td>ACT / HubSpot</td></tr>
-<tr><td>Tours booked / done</td><td>Site visits</td><td>ACT / HubSpot activities</td></tr>
+<tr><td>Leads</td><td>New enquiries</td><td>CRM (Act!, if that's what "ACT" means / HubSpot)</td></tr>
+<tr><td>Tours booked / done</td><td>Site visits</td><td>CRM activities</td></tr>
 <tr><td>Conversion rate</td><td>Deals won / leads (or tours)</td><td>CRM</td></tr>
 <tr><td>Pipeline value</td><td>Sum of open deal values</td><td>CRM</td></tr>
 <tr><td>Time to close</td><td>Days from enquiry to signed</td><td>CRM</td></tr>
@@ -222,7 +224,7 @@
 <tr><td>Revenue churn</td><td>MRR from contracts ended in month / MRR at start of month</td><td>Site × month</td><td>Nexudus</td></tr>
 <tr><td>Room utilisation</td><td>Hours booked / hours available</td><td>Room × day</td><td>Nexudus bookings</td></tr>
 <tr><td>Site contribution</td><td>Site revenue − site direct costs</td><td>Site × month</td><td>NetSuite</td></tr>
-<tr><td>Pipeline value</td><td>Sum of open deal amounts</td><td>Snapshot</td><td>ACT → HubSpot</td></tr>
+<tr><td>Pipeline value</td><td>Sum of open deal amounts</td><td>Snapshot</td><td>CRM (today's tool to confirm; HubSpot incoming)</td></tr>
 <tr><td>Budget / target</td><td>Planned value of each KPI</td><td>Site × month</td><td>Excel</td></tr>
 </table>
 
@@ -261,6 +263,6 @@
 
 <h3>What's Next?</h3>
 
-<p>Enough theory. In Chapter 05 we set up our <b>hands-on lab</b>: a "Mini Work.Life" with 2 sites, 6 companies and 14 members that we'll load into Excel, Nexudus, ACT, HubSpot and a finance system ourselves, so you can feel how the real business is managed.</p>
+<p>We now speak the leadership team's language. In Chapter 03 we read the client's <b>scoping brief</b> line by line: what they have, what they want, the principles they set, and the questions they ask suppliers. After that, Chapter 04 covers who's who, and Chapter 05 builds our hands-on "Mini Work.Life" lab.</p>
 
 <p>Keep learning, keep building! See you in the next one!</p>
