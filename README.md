@@ -8,6 +8,25 @@ The series covers the business, every source system, the pipeline, the AI layer 
 
 ---
 
+## Reading order (most important first)
+
+The series index and the viewer's nav list the seasons in this order. Chapter numbers stay as they are.
+
+| Priority | Season | Chapters | Why |
+|---|---|---|---|
+| 🔴 Must read | 0 · The Business & the Brief | 01–04 | How Work.Life makes money, the KPIs, the brief, the people |
+| 🔴 Must read | 6 · Understand It All | 38–40 | Glossary, every integration, a month in the life |
+| 🔴 Must read | 7 · Deep Dives | 41–44 | Site economics, billing, month-end close, sales & renewals |
+| 🟠 Important | 1 · Source Systems | 05–11 | How each system works inside (07 Nexudus and 11 matching are key) |
+| 🟡 Useful | 2 · The Pipeline | 12–18 | How data moves into the warehouse |
+| 🟡 Useful | 3 · The AI Layer | 19–28 | What the client wants built (23 is key) |
+| ⚪ Optional | 4 · Phase 2 | 29–32 | Future ideas, not in scope yet |
+| ⚪ Optional | 5 · Delivery | 33–37 | Writing the response, plan, cost, handover |
+
+**Only have one hour?** Read 01, 02, 38, 39, 40.
+
+---
+
 ## Repository layout
 
 ```

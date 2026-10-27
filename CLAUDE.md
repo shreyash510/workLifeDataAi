@@ -52,6 +52,8 @@ namaste-worklife/
 
 The viewer works out which files exist from the GitHub tree API on `*.github.io`. Otherwise it probes each file the index links to. A new lab CSV must be added to `LAB_FILES` in `app.js`.
 
+**Reading order** (the order in `namaste-worklife/index.html` and the nav, most important first): Season 0 → 6 → 7 → 1 → 2 → 3 → 4 → 5. Each season block carries a priority tag (🔴 MUST READ / 🟠 IMPORTANT / 🟡 USEFUL / ⚪ OPTIONAL). Keep this order when you add chapters.
+
 ## 4. Chapter list and status (as of 2026-10-27)
 
 | Season | Ch | Files | Status |
