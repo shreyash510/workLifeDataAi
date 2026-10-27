@@ -475,20 +475,34 @@ function onRoute() {
 
 /* ---------- theme ---------- */
 
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
+
+// The button names the mode it switches to; the icon is swapped by CSS from data-theme.
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme
-  $('.dark-switch span').textContent = theme === 'dark' ? 'Dark' : 'Light'
-  $('.dark-switch i').classList.toggle('on', theme === 'dark')
-  try { localStorage.setItem('nv-theme', theme) } catch {}
+  const next = theme === 'dark' ? 'light' : 'dark'
+  const btn = $('.dark-switch')
+  btn.title = `Switch to ${next} mode`
+  btn.setAttribute('aria-label', btn.title)
+  $('.dark-switch span').textContent = next === 'dark' ? 'Dark mode' : 'Light mode'
+}
+
+// Only an explicit click is remembered; until then the site follows the OS setting.
+function storedTheme() {
+  try {
+    const saved = localStorage.getItem('nv-theme')
+    if (saved === 'dark' || saved === 'light') return saved
+  } catch {}
+  return null
 }
 
 function savedTheme() {
-  try {
-    const saved = localStorage.getItem('nv-theme')
-    if (saved) return saved
-  } catch {}
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return storedTheme() || (systemDark.matches ? 'dark' : 'light')
 }
+
+systemDark.addEventListener('change', (e) => {
+  if (!storedTheme()) applyTheme(e.matches ? 'dark' : 'light')
+})
 
 /* ---------- events ---------- */
 
@@ -528,7 +542,9 @@ document.addEventListener('click', (e) => {
   } else if (t.closest('.nav-overlay')) {
     document.body.classList.remove('nav-open')
   } else if (t.closest('.dark-switch')) {
-    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+    applyTheme(theme)
+    try { localStorage.setItem('nv-theme', theme) } catch {}
   }
 })
 
