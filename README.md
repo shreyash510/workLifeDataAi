@@ -2,6 +2,14 @@
 
 A tutorial series that takes one real client project and explains every piece of it, end to end.
 
+**🌐 Read it online: [shreyash510.github.io/workLifeDataAi](https://shreyash510.github.io/workLifeDataAi/)**
+
+> ⚠️ **For educational purposes only.** This is a personal learning resource, not an official Work.Life document and not affiliated with or endorsed by Work.Life or any supplier.
+> - All lab data, names, companies and figures are **made up** for practice.
+> - Designs, table names, costs and plans are **our own proposals**, not what Work.Life uses or has agreed to.
+> - Vendor features and prices may be out of date; check the vendors' current docs.
+> - Nothing here is financial, legal or accounting advice.
+
 **The project:** Work.Life is a UK coworking company (B Corp, 14 sites, about 8,000 members, about 70 staff). They want their leadership team to **ask questions about the business in plain English and trust the answers**. That AI layer sits on top of their existing data stack: Nexudus, NetSuite, ACT, Excel and HubSpot → Fivetran/Python → BigQuery → dbt → BI.
 
 The series covers the business, every source system, the pipeline, the AI layer and how to deliver the project, in simple language with one topic per chapter.

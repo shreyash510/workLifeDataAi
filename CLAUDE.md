@@ -8,7 +8,8 @@ Read this whole file before doing anything. It holds everything a new agent or s
 
 - **The project.** Work.Life is a UK flexible workspace / coworking company. Its leadership team wants to **ask questions about the business in plain English and trust the answers**: an AI layer on top of their BigQuery warehouse.
 - **The user.** The repo owner will work on this real project next. **The goal is to deeply understand the domain, the business and how it works internally**: every term, every system, every integration. Accuracy and depth matter more than polish.
-- **The series.** "Namaste Work.Life: Zero to Hero" is a tutorial series of Blogger-style HTML chapters. It is published on GitHub Pages through a small static viewer.
+- **The series.** "Namaste Work.Life: Zero to Hero" is a tutorial series of Blogger-style HTML chapters. It is published on GitHub Pages through a small static viewer: https://shreyash510.github.io/workLifeDataAi/
+- **Educational purposes only.** Keep the disclaimer in README.md and on the series home (namaste-worklife/index.html).
 
 ## 2. Hard rules
 
