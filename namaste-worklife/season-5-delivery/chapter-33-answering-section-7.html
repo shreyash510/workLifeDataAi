@@ -41,7 +41,7 @@
 
 <table border="1" cellpadding="10">
 <tr><th>The brief says</th><th>So each answer…</th></tr>
-<tr><td>"A request for your thinking, not a commitment to purchase"</td><td>Explains the approach and trade-offs, not features</td></tr>
+<tr><td>"A request for your thinking, not a commitment to purchase"</td><td>Explains the approach and its pros and cons, not features</td></tr>
 <tr><td>"Compare responses on a like for like basis"</td><td>Uses their 10 headings, in order, with numbers where they asked for numbers</td></tr>
 <tr><td>"Tell us what you would need from us to firm it up"</td><td>Names the open decisions and who at Work.Life owns each one</td></tr>
 <tr><td>"Do not price [Phase 2] now"</td><td>Explains how Phase 2 fits, with no price</td></tr>
@@ -159,7 +159,7 @@
     <li><b>Prevent:</b> the AI never does its own arithmetic. Every figure comes from a query against an agreed KPI definition. Answers show the definition, the period and the data's freshness ("September is not yet closed in NetSuite").</li>
     <li><b>Refuse:</b> if a question can't be answered reliably (missing definition, unclosed period, data not in the copy) the assistant says so instead of guessing. An honest "I can't answer that reliably" is a pass. A confident wrong number is a fail.</li>
     <li><b>Test:</b> we build a set of <b>50 golden questions</b> with you: 30 board-pack KPI questions (tier 1), 15 "why" questions (tier 2) and 5 questions it must refuse (tier 3). Finance and Operations write down the correct answers from closed months in NetSuite and the board pack.</li>
-    <li><b>Gate:</b> our proposed bar, to agree with your leadership team: tier 1 <b>all 30 correct</b> for the last 3 closed months; tier 2 at least 90% judged correct by your reviewers, with every miss a refusal or a caveat, never a wrong figure; tier 3 refused every time; <b>zero confidently wrong answers</b>; and every question asked three times gives the same figure.</li>
+    <li><b>Gate:</b> our proposed bar, to agree with your leadership team: tier 1 <b>all 30 correct</b> for the last 3 closed months; tier 2 at least 90% judged correct by your reviewers, with every miss a refusal or a warning note, never a wrong figure; tier 3 refused every time; <b>zero confidently wrong answers</b>; and every question asked three times gives the same figure.</li>
     <li><b>Keep checking:</b> after go-live, the golden set re-runs automatically after every change and every month after Finance closes the period. A failure stops the release.</li>
 </ol>
 <p>In practice, the "accuracy against actuals" check is simple: each month, when Finance closes the books, the assistant answers the tier 1 questions for that month and the results are compared with the board pack figures. Any difference is investigated before the board pack goes out.</p>

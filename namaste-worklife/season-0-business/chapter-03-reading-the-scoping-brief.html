@@ -7,7 +7,7 @@
 <p>What we will cover:</p>
 <ul>
     <li>What a scoping brief is (and what it is not)</li>
-    <li>The brief's 8 sections at a glance</li>
+    <li>A quick look at the brief's 8 sections</li>
     <li>The 4-highlighter method: facts, wants, rules, unknowns</li>
     <li>The facts: size, stack and maturity</li>
     <li>The one thing they want (and everything they don't)</li>
@@ -71,7 +71,7 @@
 
 <hr/>
 
-<h3>3. The Brief's 8 Sections at a Glance</h3>
+<h3>3. A Quick Look at the Brief's 8 Sections</h3>
 
 <table border="1" cellpadding="10">
 <tr><th>#</th><th>Section</th><th>What it really tells us</th><th>Highlighter</th></tr>
@@ -193,7 +193,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Principle (their words)</th><th>What it means technically</th><th>How we prove it</th><th>Chapter</th></tr>
 <tr><td><b>Warehouse first, on a copy</b></td><td>AI reads only from a separate BigQuery dataset/project with copies of approved marts. Never from Nexudus, NetSuite etc. directly. Never from raw.</td><td>AI service account has read access to the copy only. Show the IAM policy.</td><td>23</td></tr>
-<tr><td><b>Source agnostic</b></td><td>The AI talks to stable business models (e.g. <code>fct_contract_month</code>, <code>dim_site</code>), never source-shaped tables. Swapping Nexudus → HubSpot changes dbt staging, not the AI layer.</td><td>Show that no AI prompt, metric or test mentions a source system name.</td><td>21, 28</td></tr>
+<tr><td><b>Source agnostic</b></td><td>The AI talks to stable business models (for example <code>fct_contract_month</code>, <code>dim_site</code>), never source-shaped tables. Swapping Nexudus → HubSpot changes dbt staging, not the AI layer.</td><td>Show that no AI prompt, metric or test mentions a source system name.</td><td>21, 28</td></tr>
 <tr><td><b>Safe data only</b></td><td>An allow-list of tables and columns. Personal data (names, emails, phones, card numbers) excluded or aggregated.</td><td>A column-level inventory, signed off by Work.Life.</td><td>26</td></tr>
 <tr><td><b>People data excluded</b></td><td>HR system never connected. Staff cost may appear only as a finance total, never per person.</td><td>No connector, no dataset, no credentials for the HR system exist.</td><td>26</td></tr>
 <tr><td><b>Accuracy is a launch gate</b></td><td>A "golden questions" test set with hand-verified answers from actuals. Go-live only when pass rate hits an agreed bar. Answers show their SQL and definitions.</td><td>Published test results; re-run on every change.</td><td>25</td></tr>
@@ -216,7 +216,7 @@
 <tr><td>"Kept running by an external data partner"</td><td>Someone outside Work.Life already knows the pipeline: how each source is extracted, what the dbt models do, where the quirks are. The brief doesn't name them or say whether they are one of the suppliers being asked.</td><td>We need that partner's knowledge (handover, documentation, access), or we must rediscover it ourselves. Ask how they will be involved (Chapter 04).</td></tr>
 <tr><td>"Please do not assume Tableau is fixed."</td><td>The BI tool might change. Don't tie the AI to Tableau.</td><td>Keep the AI layer independent of the BI tool. Both read the same models.</td></tr>
 <tr><td>"Often rebuilt manually", "sits in spreadsheets"</td><td>The models don't cover everything. Some KPIs live only in Excel.</td><td>Expect to model missing KPIs in dbt before the AI can answer them (Chapter 06).</td></tr>
-<tr><td>"HubSpot is expected to become the source of truth for member data over time"</td><td>A migration is in flight. Member data will move during our project.</td><td>Source-agnostic design is not theory here; it will be tested in year one.</td></tr>
+<tr><td>"HubSpot is expected to become the source of truth for member data over time"</td><td>A migration is already happening. Member data will move during our project.</td><td>Source-agnostic design is not theory here; it will be tested in year one.</td></tr>
 <tr><td>"If it confidently returns a wrong figure, trust is lost."</td><td>They've seen AI hallucinate. One bad number in a board meeting ends the project.</td><td>Lead with accuracy. Show SQL, definitions and a refusal mode ("I can't answer that reliably").</td></tr>
 <tr><td>"Cannot become a six figure operation"</td><td>Total yearly running cost must be well under £100k, probably far under.</td><td>Give real numbers at two usage levels with caps (Q4).</td></tr>
 <tr><td>"Honest feedback on what is and is not realistic is more useful to us than an optimistic pitch."</td><td>They've received optimistic pitches before. Over-promising will lose.</td><td>Say clearly what's hard (prescriptive answers, end-of-2026 timing).</td></tr>
@@ -339,7 +339,7 @@
 <p><i>"For a narrow, well-tested set of leadership questions, yes, because the warehouse and models already exist. For broad coverage, probably not. The real risk is agreeing definitions and getting access in time, so I'd say that honestly and plan the first release around the board-pack KPIs."</i></p>
 
 <p><b>Q: Why would you avoid pricing churn prediction in your response?</b></p>
-<p><i>"Because the brief explicitly says Phase 2 is context only and not to price it. Responses are compared like for like, so adding it would confuse the comparison and suggest we didn't read the brief. Instead I'd explain how the Phase 1 design makes churn prediction easy to add later."</i></p>
+<p><i>"Because the brief clearly says Phase 2 is context only and not to price it. Responses are compared like for like, so adding it would confuse the comparison and suggest we didn't read the brief. Instead I'd explain how the Phase 1 design makes churn prediction easy to add later."</i></p>
 
 <hr/>
 

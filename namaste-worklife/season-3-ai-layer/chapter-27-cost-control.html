@@ -157,7 +157,7 @@
 
 <p>Leaders ask questions in bursts: Monday mornings and before board meetings. A server that runs 24/7 would be paid for while idle most of the week. Cloud Run scales to <b>zero</b> when no one is using it and bills per request-second when they are. The scheduler, the small logging dataset and secret storage add a few pounds a month.</p>
 
-<p>The trade-off: the first question after a quiet period can take a second or two longer while the service starts (a "cold start"). If leaders notice, keep one instance warm during working hours. It's a small, predictable cost.</p>
+<p>The catch: the first question after a quiet period can take a second or two longer while the service starts (a "cold start"). If leaders notice, keep one instance warm during working hours. It's a small, predictable cost.</p>
 
 <hr/>
 
@@ -182,9 +182,9 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Layer</th><th>Cap</th><th>Where it's enforced</th></tr>
-<tr><td>Per query</td><td>Maximum bytes billed (e.g. 1 GB). Larger queries fail instead of running.</td><td>BigQuery job setting <code>maximum_bytes_billed</code></td></tr>
-<tr><td>Per question</td><td>Token budget (e.g. 20k input); max 2 retries; capped input length</td><td>AI service</td></tr>
-<tr><td>Per user per day</td><td>Question limit (e.g. 100/day); friendly message when reached</td><td>AI service, counted in <code>ai_logs</code></td></tr>
+<tr><td>Per query</td><td>Maximum bytes billed (for example 1 GB). Larger queries fail instead of running.</td><td>BigQuery job setting <code>maximum_bytes_billed</code></td></tr>
+<tr><td>Per question</td><td>Token budget (for example 20k input); max 2 retries; capped input length</td><td>AI service</td></tr>
+<tr><td>Per user per day</td><td>Question limit (for example 100/day); friendly message when reached</td><td>AI service, counted in <code>ai_logs</code></td></tr>
 <tr><td>Per project per day</td><td>BigQuery custom quota on bytes scanned per day</td><td>Google Cloud quotas</td></tr>
 <tr><td>Per month</td><td>Budget alerts at 50 / 90 / 100% of the agreed amount</td><td>Google Cloud Billing budgets</td></tr>
 <tr><td>Per month (hard)</td><td>At 100%, the service switches to "digests only" until reviewed</td><td>AI service reads its own monthly spend from <code>ai_logs</code></td></tr>

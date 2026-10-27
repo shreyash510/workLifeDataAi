@@ -88,7 +88,7 @@
 <tr><td>1</td><td><b>Wrong source</b> for the metric</td><td>"Soho revenue, September"</td><td>£3,565 (Nexudus invoices)</td><td>£3,475 (NetSuite recognised)</td></tr>
 <tr><td>2</td><td><b>Grain fan-out</b>: join at the wrong level</td><td>"GreenRoot's MRR": join members (6 people) to contracts</td><td>£16,200</td><td>£2,700</td></tr>
 <tr><td>3</td><td><b>Wrong definition</b></td><td>"How many members churned in 2026?" counting every ended contract</td><td>3 contracts</td><td>1 company (Brightline), 2 people. K001 was an upgrade, K006 a transfer.</td></tr>
-<tr><td>4</td><td><b>Silent ambiguity</b></td><td>"Is Soho profitable?"</td><td>"Yes/No" with no basis</td><td>"Before central costs: −£4,175. After: −£5,175."</td></tr>
+<tr><td>4</td><td><b>Hidden double meaning</b></td><td>"Is Soho profitable?"</td><td>"Yes/No" with no basis</td><td>"Before central costs: −£4,175. After: −£5,175."</td></tr>
 <tr><td>5</td><td><b>Wrong join key</b></td><td>"Soho actual vs budget": join NetSuite <code>Soho</code> to Excel <code>SOHO</code> on text</td><td>No rows, so "no budget set"</td><td>−£5,725 vs budget (−62%)</td></tr>
 </table>
 
@@ -105,7 +105,7 @@
           │
           ▼
    ① UNDERSTAND     Classify the question. Which metrics? Which site? Which period?
-          │         Is it ambiguous?  → ask back: "Before or after central costs?"
+          │         Two meanings?     → ask back: "Before or after central costs?"
           │                             (or answer both, clearly labelled)
           │         No period given?  → default to the LAST CLOSED month
           ▼         Open month asked for → answer it, labelled PROVISIONAL
@@ -135,7 +135,7 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Step</th><th>Which naive failure it fixes</th></tr>
-<tr><td>① Understand (ask back on ambiguity)</td><td>#4 silent ambiguity</td></tr>
+<tr><td>① Understand (ask back when unclear)</td><td>#4 hidden double meaning</td></tr>
 <tr><td>② Retrieve (definitions, not just schema)</td><td>#1 wrong source, #3 wrong definition</td></tr>
 <tr><td>③ Plan (metric first)</td><td>#2 grain fan-out, #5 wrong join key, because the metric is pre-built at the right grain with the site mapping already applied</td></tr>
 <tr><td>⑤ Validate</td><td>Runaway cost, writes, access to the wrong data</td></tr>
@@ -305,7 +305,7 @@ WHERE resource_code = 'SOHO-MR-BRICK'
 <table border="1" cellpadding="10">
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Golden rule</b></td><td>The LLM translates; the warehouse calculates.</td></tr>
-<tr><td><b>Naive failures</b></td><td>Wrong source, fan-out, wrong definition, silent ambiguity, wrong join key. All business logic, not syntax.</td></tr>
+<tr><td><b>Naive failures</b></td><td>Wrong source, fan-out, wrong definition, hidden double meaning, wrong join key. All business logic, not syntax.</td></tr>
 <tr><td><b>7 steps</b></td><td>Understand → retrieve → plan → generate → validate → execute → answer.</td></tr>
 <tr><td><b>Metric first</b></td><td>Governed metrics for KPIs; free SQL only for exploration, labelled.</td></tr>
 <tr><td><b>Guardrails in code</b></td><td>Read-only, ai_safe only, byte caps, 200-row cap, bounded retries.</td></tr>

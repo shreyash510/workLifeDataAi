@@ -210,14 +210,14 @@
 <tr><td><b>Billing run</b></td><td>Monthly invoice generation (~8,000 invoices on the 1st)</td><td>07</td></tr>
 <tr><td><b>Dedicated resource</b></td><td>The office assigned to a contract</td><td>07</td></tr>
 <tr><td><b>Native BigQuery integration</b></td><td>Nexudus sends data to BigQuery itself (listed at £100/location/month)</td><td>07</td></tr>
-<tr><td><b>Archived</b></td><td>A soft-deleted record; filter explicitly</td><td>07</td></tr>
+<tr><td><b>Archived</b></td><td>A soft-deleted record; always filter it out</td><td>07</td></tr>
 </table>
 
 <hr/>
 
 <h3>8. ACT: Door Access and CRM Terms</h3>
 
-<p>"ACT" in the brief is ambiguous. It could be the <b>ACT365</b> door system or the <b>Act!</b> CRM. Learn both, then ask.</p>
+<p>"ACT" in the brief is unclear. It could be the <b>ACT365</b> door system or the <b>Act!</b> CRM. Learn both, then ask.</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Term</th><th>Meaning</th><th>Lab example</th><th>Ch</th></tr>
@@ -319,7 +319,7 @@
 <tr><td><b>Semantic layer</b></td><td>Central metric definitions the AI and BI both use</td><td>One definition of "revenue"</td><td>21</td></tr>
 <tr><td><b>Business context</b></td><td>Board pack, KPIs, definitions, targets given to the AI</td><td>Brief Phase 1 capability</td><td>22</td></tr>
 <tr><td><b>Controlled copy</b></td><td>A separate copy of approved data the AI reads</td><td>Dataset <code>ai_safe</code></td><td>03, 23</td></tr>
-<tr><td><b>Allow-list</b></td><td>Explicit list of tables/columns permitted</td><td>Safe data only</td><td>26</td></tr>
+<tr><td><b>Allow-list</b></td><td>A written list of the tables/columns that are allowed</td><td>Safe data only</td><td>26</td></tr>
 <tr><td><b>Hallucination / confidently wrong</b></td><td>The AI states a wrong figure as fact</td><td>"Trust is lost" (brief)</td><td>03, 25</td></tr>
 <tr><td><b>Golden questions</b></td><td>Test questions with hand-verified answers</td><td>Ch 11's 10 exam questions = v1</td><td>11, 25</td></tr>
 <tr><td><b>Launch gate</b></td><td>A test that must pass before go-live</td><td>Accuracy vs actuals (brief)</td><td>25</td></tr>
@@ -381,7 +381,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Category</th><th>Terms</th><th>What it means for you</th></tr>
 <tr><td>✅ <b>In Work.Life's stack</b> (confirmed by the brief)</td><td>Nexudus, NetSuite, "ACT", Excel, HubSpot (being integrated), Fivetran, Python, Google BigQuery, dbt, Tableau</td><td>These are real. Learn them deeply (Seasons 1–2).</td></tr>
-<tr><td>❓ <b>Ambiguous</b></td><td>ACT365 (door access) vs Act! (CRM)</td><td>The brief only says "ACT". We teach both; only one (or neither) is real. Ask.</td></tr>
+<tr><td>❓ <b>Unclear</b></td><td>ACT365 (door access) vs Act! (CRM)</td><td>The brief only says "ACT". We teach both; only one (or neither) is real. Ask.</td></tr>
 <tr><td>🧪 <b>Practice tools only</b> (used in our labs, not by Work.Life as far as we know)</td><td>Xero demo company, Excel Power Query, Google Sheets, Looker Studio, Metabase in Docker, the BigQuery sandbox, free trials</td><td>Learning aids. Don't present them as Work.Life's tools.</td></tr>
 <tr><td>⚖️ <b>Alternatives, for comparison only</b></td><td>Looker, Metabase, Power BI, QuickBooks, Zapier, Airflow, Airbyte, Snowflake, Redshift, Databricks, Cube, MetricFlow, dbt Cloud, Salesforce</td><td>Named to explain choices. Not in the project. (The brief says a BI review is running, so the BI tool may change; that's their decision.)</td></tr>
 <tr><td>💡 <b>Our proposals for the AI layer</b> (not built, not agreed)</td><td>Dataset names (raw_*, staging, marts, <code>ai_safe</code>, <code>ai_logs</code>, <code>ai_eval</code>), all mart names (dim_*, fct_*, member_xref), tools (query_metrics, run_sql, get_business_context), Cloud Run, Cloud Scheduler, Identity-Aware Proxy, Microsoft Entra, Secret Manager, GitHub Actions, Vertex AI, Claude models, BigQuery ML (ARIMA_PLUS, LOGISTIC_REG), Slack/Teams digests</td><td>Our design. Work.Life's real dataset, model and table names are unknown until you get access. Expect them to differ.</td></tr>
@@ -389,7 +389,7 @@
 <tr><td>📚 <b>General industry or vendor knowledge</b></td><td>Leases, management agreements, brokers and commission, FRS 102 / IFRS 16, Nexudus and HubSpot features and prices</td><td>True in general, but whether Work.Life uses or does it is unknown. Ask.</td></tr>
 </table>
 
-<p><b>Rule of thumb:</b> if a term isn't in the first row, say "in our design" or "for example" when you use it with the client.</p>
+<p><b>Simple rule:</b> if a term isn't in the first row, say "in our design" or "for example" when you use it with the client.</p>
 
 <hr/>
 

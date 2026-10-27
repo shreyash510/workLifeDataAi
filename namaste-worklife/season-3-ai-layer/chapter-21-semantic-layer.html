@@ -34,7 +34,7 @@
 
 <ul>
     <li><b>£3,040 MRR</b> (Ops, from Nexudus contracts): £2,400 Office 101 + £320 + £320 hot desks. It leaves out meeting rooms, because they're pay-as-you-go, not contracted.</li>
-    <li><b>£3,565 invoiced</b>: everything billed for September, i.e. the MRR plus £525 of meeting-room bookings.</li>
+    <li><b>£3,565 invoiced</b>: everything billed for September, that is, the MRR plus £525 of meeting-room bookings.</li>
     <li><b>£3,475 recognised</b> (Finance, from the NetSuite GL): invoiced minus the £90 goodwill credit memo CN-2609-01 for the AV failure on 24 September. This is the number a site P&amp;L uses.</li>
 </ul>
 
@@ -208,9 +208,9 @@ metrics:
 
 <table border="1" cellpadding="10">
 <tr><th>Option</th><th>Pros</th><th>Cons</th><th>Fit for Work.Life</th></tr>
-<tr><td><b>dbt semantic models (MetricFlow)</b></td><td>Lives next to the dbt models it depends on. Same repo, same review, same tests.</td><td>Vendor fact (check current dbt plans): the hosted Semantic Layer query API is a dbt Cloud feature. Without it, you need some glue (e.g. compile metrics to views).</td><td>✅ Best fit: same place as the marts</td></tr>
+<tr><td><b>dbt semantic models (MetricFlow)</b></td><td>Lives next to the dbt models it depends on. Same repo, same review, same tests.</td><td>Vendor fact (check current dbt plans): the hosted Semantic Layer query API is a dbt Cloud feature. Without it, you need some glue (for example compile metrics to views).</td><td>✅ Best fit: same place as the marts</td></tr>
 <tr><td><b>Inside the BI tool</b> (Tableau, Looker, Metabase)</td><td>Easy for analysts</td><td>Tied to a tool that's under review. The AI may not be able to read it.</td><td>❌ BI tool may change</td></tr>
-<tr><td><b>Separate semantic service</b> (e.g. Cube)</td><td>Tool-neutral API for every consumer</td><td>Another system to run and pay for</td><td>🟡 Overkill for 14 sites and a small team</td></tr>
+<tr><td><b>Separate semantic service</b> (for example Cube)</td><td>Tool-neutral API for every consumer</td><td>Another system to run and pay for</td><td>🟡 Overkill for 14 sites and a small team</td></tr>
 <tr><td><b>Lightweight: YAML + metric views</b></td><td>Simplest. The definitions YAML is compiled into BigQuery views in <code>ai_safe</code> (one view per metric family).</td><td>Less flexible slicing; more views to maintain</td><td>✅ Good fallback if dbt Cloud isn't wanted</td></tr>
 </table>
 
@@ -302,7 +302,7 @@ metrics:
 <p><i>"One mapping in the dbt model or measure definition, approved by Finance, with a version bump. Tests and the golden questions re-run, expected answers are updated with Finance, and every dashboard and AI answer reflects the change together. Nothing in the AI prompts changes."</i></p>
 
 <p><b>Q: How do you handle a leader using a word that maps to two metrics?</b></p>
-<p><i>"Keep synonyms in the metric metadata. Where a word is genuinely ambiguous, like 'sales' meaning revenue or won deals, the AI asks back or answers both clearly labelled. Every confusion gets logged and becomes a synonym update and a golden test."</i></p>
+<p><i>"Keep synonyms in the metric metadata. Where a word is truly unclear, like 'sales' meaning revenue or won deals, the AI asks back or answers both clearly labelled. Every confusion gets logged and becomes a synonym update and a golden test."</i></p>
 
 <hr/>
 
@@ -315,7 +315,7 @@ metrics:
 <tr><td><b>Metrics reuse measures</b></td><td>Fix "direct costs" once and contribution is fixed everywhere.</td></tr>
 <tr><td><b>Home</b></td><td>dbt project, next to the marts. Not the BI tool.</td></tr>
 <tr><td><b>AI usage</b></td><td>LLM picks metrics and filters; the layer writes the SQL.</td></tr>
-<tr><td><b>Synonyms</b></td><td>Map leadership language; ask back when ambiguous.</td></tr>
+<tr><td><b>Synonyms</b></td><td>Map leadership language; ask back when unclear.</td></tr>
 <tr><td><b>Ownership</b></td><td>Finance, Ops and Sales own their metrics. Shown on every answer.</td></tr>
 </table>
 

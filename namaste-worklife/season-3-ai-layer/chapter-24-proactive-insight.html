@@ -240,7 +240,7 @@ WHERE k.month_start = DATE '2026-09-01'
 <h3>Interview Questions</h3>
 
 <p><b>Q: How would you build proactive insights with an LLM without generating noise or hallucinations?</b></p>
-<p><i>"Deterministic rules in SQL decide what's worth saying, with thresholds from the business's own targets. The LLM only narrates each finding, and every number is checked against the finding. Group findings per subject, alert on change not state, route to an owner, and measure precision so noisy rules get retired."</i></p>
+<p><i>"Fixed rules in SQL decide what's worth saying, with thresholds from the business's own targets. The LLM only narrates each finding, and every number is checked against the finding. Group findings per subject, alert on change not state, route to an owner, and measure precision so noisy rules get retired."</i></p>
 
 <p><b>Q: The client asks for 'foresight'. Do they need machine learning?</b></p>
 <p><i>"Not in Phase 1. Most foresight comes from watching leading indicators, like attendance falling before a renewal, notices given or pipeline drying up, and joining signals that sit in different systems. That's explainable and immediately useful. Prediction models come in Phase 2, trained on the same signals."</i></p>
@@ -256,7 +256,7 @@ WHERE k.month_start = DATE '2026-09-01'
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Three products</b></td><td>Weekly digest, threshold alert, early signal.</td></tr>
 <tr><td><b>Rules decide</b></td><td>SQL rules choose what to say; the LLM only writes it.</td></tr>
-<tr><td><b>Foresight</b></td><td>Leading indicators joined across systems, e.g. GreenRoot attendance + renewal date.</td></tr>
+<tr><td><b>Foresight</b></td><td>Leading indicators joined across systems, for example GreenRoot attendance + renewal date.</td></tr>
 <tr><td><b>Budget = expectation</b></td><td>Best Phase 1 anomaly detector, seasonality included.</td></tr>
 <tr><td><b>No fatigue</b></td><td>Group, alert on change, owner + next step, cap volume, measure precision.</td></tr>
 <tr><td><b>Privacy</b></td><td>Attendance only aggregated (company × week). Never per person.</td></tr>

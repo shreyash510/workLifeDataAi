@@ -92,7 +92,7 @@
 <tr><td>Raw (Fivetran / Python loads)</td><td>✅ Yes, it's a copy of the source</td><td><code>raw_nexudus.coworkers</code></td></tr>
 <tr><td>Staging</td><td>✅ Yes: one model per source table, renamed and typed</td><td><code>stg_nexudus__members</code></td></tr>
 <tr><td>Intermediate</td><td>✅ Yes, where sources are combined and the crosswalk is applied</td><td><code>int_members_unioned</code></td></tr>
-<tr><td>Marts</td><td>⚠️ Only as lineage columns (e.g. <code>source_system</code> for audit)</td><td><code>dim_member</code></td></tr>
+<tr><td>Marts</td><td>⚠️ Only as lineage columns (for example <code>source_system</code> for audit)</td><td><code>dim_member</code></td></tr>
 <tr><td><code>ai_safe</code></td><td>❌ No</td><td>—</td></tr>
 <tr><td>Semantic layer</td><td>❌ No. Metrics reference marts only.</td><td><code>mrr</code></td></tr>
 <tr><td>Context cards, prompts, golden questions</td><td>❌ No. They speak business language.</td><td>"Desk occupancy, Operations, v1.0"</td></tr>
@@ -158,7 +158,7 @@ models:
 <tr><td>1</td><td>Fivetran HubSpot connector already loads contacts and companies (Chapter 10). Confirm the fields are mapped, including <code>nexudus_customer_id</code>.</td><td>Raw</td><td>No</td></tr>
 <tr><td>2</td><td>Build <code>stg_hubspot__contacts</code> and <code>stg_hubspot__companies</code>: rename, type, normalise emails</td><td>Staging</td><td>No</td></tr>
 <tr><td>3</td><td>Update <code>member_xref</code>: HubSpot ID becomes the primary match, Nexudus ID secondary. <code>member_key</code> values <b>do not change</b>.</td><td>Intermediate</td><td>No</td></tr>
-<tr><td>4</td><td>Change the intermediate member model (e.g. <code>int_members_unioned</code>): attributes from HubSpot from the cut-over date, Nexudus before it</td><td>Intermediate</td><td>No</td></tr>
+<tr><td>4</td><td>Change the intermediate member model (for example <code>int_members_unioned</code>): attributes from HubSpot from the cut-over date, Nexudus before it</td><td>Intermediate</td><td>No</td></tr>
 <tr><td>5</td><td><code>dim_member</code> and <code>dim_company</code> build with the <b>same contract</b>. dbt contract + tests pass.</td><td>Marts</td><td>No</td></tr>
 <tr><td>6</td><td><code>ai_safe</code> copy job runs unchanged (it never copied <code>dim_member</code> anyway; <code>dim_company</code> keeps the same columns)</td><td>ai_safe</td><td>No</td></tr>
 <tr><td>7</td><td>Golden set runs in CI. Tier 1 answers for past closed months must be <b>identical</b>.</td><td>Test</td><td>No (it's the proof)</td></tr>
@@ -239,7 +239,7 @@ echo "✅ AI layer is source agnostic"
 │ People data excluded         │ No HR connector, dataset or credential;   │
 │                              │ payroll only as site totals (26)          │
 │ Accuracy is a launch gate    │ Tier 1 100% on last 3 closed months; tier │
-│                              │ 2 ≥ 90%, misses caveated; tier 3 100%;    │
+│                              │ 2 ≥ 90%, misses flagged; tier 3 100%;     │
 │                              │ monthly reconciliation with Finance (25)  │
 │ Cost conscious               │ Serverless; caps per query/user/day/month │
 │                              │ (27)                                      │

@@ -32,7 +32,6 @@ const state = {
   data: [],
   order: [],
   query: '',
-  toc: [],
   open: new Map(),
   csv: null,
   token: 0,
@@ -182,15 +181,14 @@ function preparePost(html, path, existing) {
     wrap.appendChild(table)
   })
 
+  // Heading ids so in-page "#section" links can scroll to them.
   const used = new Map()
-  const toc = []
   doc.querySelectorAll('h3, h4').forEach((h) => {
     let id = slugify(h.textContent)
     const n = used.get(id) || 0
     used.set(id, n + 1)
     if (n) id += '-' + n
     h.id = id
-    toc.push({ id, text: h.textContent.trim(), level: h.tagName === 'H3' ? 3 : 4 })
   })
 
   doc.querySelectorAll('a[href]').forEach((a) => {
@@ -220,7 +218,7 @@ function preparePost(html, path, existing) {
   const words = (doc.textContent || '').trim().split(/\s+/).length
   const box = document.createElement('div')
   box.appendChild(doc)
-  return { title, html: box.innerHTML, toc, minutes: Math.max(1, Math.round(words / 220)) }
+  return { title, html: box.innerHTML, minutes: Math.max(1, Math.round(words / 220)) }
 }
 
 function parseCsv(text) {
@@ -309,110 +307,93 @@ function renderNav() {
     '</ul>'
 }
 
-/* ---------- right sidebar ---------- */
+/* ---------- sidebar footer ---------- */
 
-function renderSidebar() {
-  const items = state.series.seasons.flatMap((s) => s.items)
-  const ready = items.filter((i) => i.state === 'ready').length + state.series.unlisted.length
-  const missing = items.filter((i) => i.state === 'missing').length
-  const planned = items.filter((i) => i.state === 'planned').length
-  const total = ready + missing + planned
-
-  const toc = state.toc.length
-    ? '<section class="widget toc"><h3 class="widget-title">On this page</h3><ol>' +
-      state.toc.map((t) => `<li class="lvl-${t.level}"><button data-toc="${esc(t.id)}">${esc(t.text)}</button></li>`).join('') +
-      '</ol></section>'
-    : ''
-
-  $('.sidebar').innerHTML =
-    toc +
-    '<section class="widget"><h3 class="widget-title">Series progress</h3>' +
-    `<div class="progress"><span class="ready" style="flex:${ready}"></span><span class="missing" style="flex:${missing}"></span><span class="planned" style="flex:${planned}"></span></div>` +
-    '<ul class="legend">' +
-    `<li><i class="ready"></i>${ready} written</li>` +
-    `<li><i class="missing"></i>${missing} linked, not written</li>` +
-    `<li><i class="planned"></i>${planned} planned</li></ul>` +
-    '<div class="stat-row">' +
-    `<div><b>${total}</b><span>chapters</span></div>` +
-    `<div><b>${state.series.seasons.length}</b><span>seasons</span></div>` +
-    `<div><b>${state.data.length}</b><span>datasets</span></div></div></section>` +
-    '<section class="widget source"><h3 class="widget-title">Source</h3>' +
-    `<a href="https://github.com/${REPO}/tree/${BRANCH}/${CONTENT}" target="_blank" rel="noopener"><code>${REPO}/${CONTENT}</code></a>` +
-    '<p>Push a chapter to GitHub and it shows up here.</p></section>'
-
-  updateActiveHeading()
+function renderStats() {
+  const chapters = state.order.length - 1
+  $('.side-stats').textContent = `${chapters} chapters · ${state.data.length} datasets`
 }
 
-function updateActiveHeading() {
-  if (!state.toc.length) return
-  let current = state.toc[0].id
-  for (const t of state.toc) {
-    const el = document.getElementById(t.id)
-    if (el && el.getBoundingClientRect().top < 120) current = t.id
-  }
-  document.querySelectorAll('.toc li').forEach((li) => {
-    li.classList.toggle('active', li.firstElementChild.dataset.toc === current)
-  })
+/* ---------- main: chat-style thread ---------- */
+
+const ICON_CLOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>'
+const ICON_FILE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" /><path d="M14 3v5h5" /></svg>'
+const ICON_LINK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>'
+const ICON_LEFT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>'
+const ICON_UP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>'
+
+// The page title is shown as the "question" bubble; the content is the "answer" below it.
+function thread(crumb, title, body, actions) {
+  return (
+    '<div class="thread">' +
+    `<div class="msg-user">${crumb ? `<span class="msg-crumb">${esc(crumb)}</span>` : ''}<div class="bubble">${esc(title)}</div></div>` +
+    `<div class="msg-ai">${body}${actions ? `<div class="msg-actions">${actions}</div>` : ''}</div>` +
+    '</div>'
+  )
 }
 
-/* ---------- main: posts ---------- */
-
-function setToc(toc) {
-  state.toc = toc
-  renderSidebar()
+function setTopbar(crumb, path) {
+  $('.top-crumb').textContent = crumb ? '› ' + crumb : ''
+  $('.top-share').href = path ? githubUrl(path) : `https://github.com/${REPO}`
 }
 
-function postNav(prev, next) {
-  if (!prev && !next) return ''
-  const link = (it, cls, label) =>
-    it
-      ? `<a class="${cls}" href="${esc(routeHref(it.path))}"><span class="nav-label">${label}</span>` +
-        `<span class="nav-title">${it.num ? esc(it.num) + ' — ' : ''}${esc(it.name)}</span></a>`
-      : '<span></span>'
-  return `<div class="post-nav">${link(prev, 'prev', '← Previous')}${link(next, 'next', 'Next →')}</div>`
+// Composer-style bar at the bottom: previous chapter, and a "continue to" link to the next one.
+function setComposer(prev, next) {
+  const target = next || { path: INDEX, name: 'Series home' }
+  const label = next ? 'Continue to' : 'Back to'
+  $('.composer-box').innerHTML =
+    (prev
+      ? `<a class="c-btn" href="${esc(routeHref(prev.path))}" title="Previous: ${esc(prev.name)}" aria-label="Previous chapter">${ICON_LEFT}</a>`
+      : `<span class="c-btn disabled">${ICON_LEFT}</span>`) +
+    `<a class="c-input" href="${esc(routeHref(target.path))}">${label} <b>${target.num ? esc(target.num) + ' — ' : ''}${esc(target.name)}</b></a>` +
+    `<a class="c-send" href="${esc(routeHref(target.path))}" aria-label="${label} ${esc(target.name)}">${ICON_UP}</a>`
 }
 
 async function showPost(path, token) {
   const where = state.order.findIndex((o) => o.path === path)
-  const crumbs = where > 0 ? state.order[where].season : null
+  const crumb = where > 0 ? state.order[where].season : null
+  const prev = where > 0 ? state.order[where - 1] : null
+  const next = where >= 0 && where < state.order.length - 1 ? state.order[where + 1] : null
   let post
   try {
     post = preparePost(await fetchText(path), path, state.files)
   } catch {
     if (token !== state.token) return
-    $('.main').innerHTML =
-      '<article class="post-card empty"><div class="empty-icon">✍️</div>' +
-      '<h1 class="post-title">Not written yet</h1>' +
-      `<p>The index links to <code class="code">${esc(path)}</code>, but that file is not in the repo yet.</p>` +
-      '<p>Once it is written and pushed, it will appear here.</p>' +
-      `<a class="button" href="${routeHref(INDEX)}">Back to series home</a></article>`
-    setToc([])
+    $('.main').innerHTML = thread(
+      null,
+      path,
+      '<div class="post-body"><p>✍️ <b>Not written yet.</b> The index links to ' +
+        `<code class="code">${esc(path)}</code>, but that file is not in the repo yet. Once it is written and pushed, it will appear here.</p>` +
+        `<a class="button" href="${routeHref(INDEX)}">Back to series home</a></div>`
+    )
+    setTopbar(null, null)
+    setComposer(null, null)
     return
   }
   if (token !== state.token) return
 
-  $('.main').innerHTML =
-    '<article class="post-card">' +
-    `<div class="breadcrumbs"><a href="${routeHref(INDEX)}">Home</a>${crumbs ? `<span>›</span><span>${esc(crumbs)}</span>` : ''}</div>` +
-    `<h1 class="post-title">${esc(post.title)}</h1>` +
-    '<div class="post-meta">' +
-    `<span>⏱ ${post.minutes} min read</span><span>📄 ${esc(path)}</span>` +
-    `<a href="${esc(githubUrl(path))}" target="_blank" rel="noopener">View on GitHub</a></div>` +
-    `<div class="post-body">${post.html}</div></article>` +
-    postNav(where > 0 ? state.order[where - 1] : null, where >= 0 && where < state.order.length - 1 ? state.order[where + 1] : null)
-  setToc(post.toc)
+  $('.main').innerHTML = thread(
+    crumb,
+    post.title,
+    `<div class="post-body">${post.html}</div>`,
+    `<span>${ICON_CLOCK}${post.minutes} min read</span><span>${ICON_FILE}${esc(path)}</span>` +
+      `<a href="${esc(githubUrl(path))}" target="_blank" rel="noopener">${ICON_LINK}View on GitHub</a>`
+  )
+  setTopbar(crumb, path)
+  setComposer(prev, next)
 }
 
 /* ---------- main: CSV explorer ---------- */
 
 async function showCsv(path, token) {
-  setToc([])
+  setTopbar('Lab data', path)
+  setComposer(null, null)
   let rows
   try {
     rows = parseCsv(await fetchText(path))
   } catch {
     if (token !== state.token) return
-    $('.main').innerHTML = `<div class="post-card empty"><h1 class="post-title">File not found</h1><p>${esc(path)}</p></div>`
+    $('.main').innerHTML = thread('Lab data', path.split('/').pop(), '<div class="post-body"><p>File not found.</p></div>')
     return
   }
   if (token !== state.token) return
@@ -421,15 +402,14 @@ async function showCsv(path, token) {
   const numeric = head.map((_, c) => body.length > 0 && body.every((r) => r[c] === '' || isNum(r[c])))
   state.csv = { head, body, numeric, filter: '', sort: { col: -1, dir: 1 } }
 
-  $('.main').innerHTML =
-    '<article class="post-card">' +
-    `<div class="breadcrumbs"><a href="${routeHref(INDEX)}">Home</a><span>›</span><span>Lab data</span></div>` +
-    `<h1 class="post-title">${esc(path.split('/').pop())}</h1>` +
-    '<div class="post-meta">' +
-    `<span>▦ ${body.length} rows · ${head.length} columns</span><span>📄 ${esc(path)}</span>` +
-    `<a href="${esc(githubUrl(path))}" target="_blank" rel="noopener">View on GitHub</a></div>` +
+  $('.main').innerHTML = thread(
+    'Lab data',
+    path.split('/').pop(),
     '<div class="csv-tools"><input id="csv-filter" type="text" placeholder="Filter rows…" /><span id="csv-count"></span></div>' +
-    '<div class="post-body"><div class="table"><table class="csv"><thead></thead><tbody></tbody></table></div></div></article>'
+      '<div class="post-body"><div class="table"><table class="csv"><thead></thead><tbody></tbody></table></div></div>',
+    `<span>▦ ${body.length} rows · ${head.length} columns</span>` +
+      `<a href="${esc(githubUrl(path))}" target="_blank" rel="noopener">${ICON_LINK}View on GitHub</a>`
+  )
   renderCsvRows()
 }
 
@@ -468,7 +448,7 @@ function onRoute() {
   renderNav()
 
   state.csv = null
-  $('.main').innerHTML = '<div class="post-card skeleton">Loading…</div>'
+  $('.main').innerHTML = '<div class="thread skeleton">Loading…</div>'
   if (route.toLowerCase().endsWith('.csv')) showCsv(route, token)
   else showPost(route, token)
 }
@@ -506,6 +486,8 @@ systemDark.addEventListener('change', (e) => {
 
 /* ---------- events ---------- */
 
+const mobile = window.matchMedia('(max-width: 860px)')
+
 document.addEventListener('click', (e) => {
   const t = e.target
 
@@ -516,11 +498,11 @@ document.addEventListener('click', (e) => {
     return
   }
 
-  // In-page "#section" links and TOC entries scroll instead of changing the route.
-  const anchor = t.closest('a[data-anchor]') || t.closest('[data-toc]')
+  // In-page "#section" links scroll instead of changing the route.
+  const anchor = t.closest('a[data-anchor]')
   if (anchor) {
     e.preventDefault()
-    document.getElementById(anchor.dataset.anchor || anchor.dataset.toc)?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById(anchor.dataset.anchor)?.scrollIntoView({ behavior: 'smooth' })
     return
   }
 
@@ -537,8 +519,10 @@ document.addEventListener('click', (e) => {
     state.query = ''
     $('#search').value = ''
     renderNav()
-  } else if (t.closest('.burger')) {
-    document.body.classList.toggle('nav-open')
+  } else if (t.closest('.side-toggle')) {
+    // Phones slide the sidebar over the page; wider screens collapse it.
+    if (mobile.matches) document.body.classList.toggle('nav-open')
+    else document.body.classList.toggle('side-closed')
   } else if (t.closest('.nav-overlay')) {
     document.body.classList.remove('nav-open')
   } else if (t.closest('.dark-switch')) {
@@ -565,7 +549,6 @@ $('#search').addEventListener('keydown', (e) => {
   renderNav()
 })
 
-window.addEventListener('scroll', updateActiveHeading, { passive: true })
 window.addEventListener('hashchange', onRoute)
 
 /* ---------- start ---------- */
@@ -574,9 +557,12 @@ async function init() {
   applyTheme(savedTheme())
   const indexHtml = await fetchText(INDEX).catch(() => '')
   if (!indexHtml && location.protocol === 'file:') {
-    $('.main').innerHTML =
-      '<article class="post-card empty"><div class="empty-icon">🌐</div><h1 class="post-title">Open this through a web server</h1>' +
-      '<p>Browsers block reading local files from <code class="code">file://</code>. Run <code class="code">npx serve</code> in the repo folder, or use the GitHub Pages site.</p></article>'
+    $('.main').innerHTML = thread(
+      null,
+      'Open this through a web server',
+      '<div class="post-body"><p>🌐 Browsers block reading local files from <code class="code">file://</code>. ' +
+        'Run <code class="code">npx serve</code> in the repo folder, or use the GitHub Pages site.</p></div>'
+    )
     return
   }
 
@@ -589,6 +575,7 @@ async function init() {
   for (const s of state.series.seasons) for (const it of s.items) if (it.state === 'ready') state.order.push({ ...it, season: s.title })
   for (const it of state.series.unlisted) state.order.push({ ...it, season: 'Not in index yet' })
 
+  renderStats()
   onRoute()
 }
 

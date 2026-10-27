@@ -310,7 +310,7 @@ where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
 <tr><td>Bridge reconciles (above)</td><td>A classification rule that drops or double-counts money</td></tr>
 <tr><td><code>accepted_values</code> on <code>movement_type</code></td><td>A new kind of change nobody classified</td></tr>
 <tr><td>Source freshness on Nexudus</td><td>A stalled sync. The report would show "no change" when really there's no data.</td></tr>
-<tr><td>MRR vs NetSuite within tolerance</td><td>Drift between contracted and recognised revenue (a small gap is expected, e.g. Soho's −£90 credit memo, but not a big one)</td></tr>
+<tr><td>MRR vs NetSuite within tolerance</td><td>Drift between contracted and recognised revenue (a small gap is expected, for example Soho's −£90 credit memo, but not a big one)</td></tr>
 <tr><td>No test/staff accounts</td><td>Inflated member counts (Chapter 11, question 9)</td></tr>
 </table>
 
@@ -330,7 +330,7 @@ where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
 <tr><td>Semantic layer</td><td>✅ Metric definitions</td><td>Add <code>net_member_movements</code>, <code>logo_retention</code>, <code>nrr</code>, <code>revenue_churn</code></td></tr>
 <tr><td>KPI dictionary &amp; business context</td><td>✅</td><td>Add the gap-window rule and retention definitions</td></tr>
 <tr><td>Proactive digests</td><td>✅ Chapter 24</td><td>One new digest template</td></tr>
-<tr><td>Golden-question tests</td><td>✅ Chapter 25</td><td>Add retention questions with hand-checked answers, e.g. "MRR churned in 2026 = £1,400, not £1,900"</td></tr>
+<tr><td>Golden-question tests</td><td>✅ Chapter 25</td><td>Add retention questions with hand-checked answers, for example "MRR churned in 2026 = £1,400, not £1,900"</td></tr>
 <tr><td>Security &amp; SSO</td><td>✅</td><td>Nothing (still leadership only)</td></tr>
 </table>
 

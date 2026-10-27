@@ -139,7 +139,7 @@ UNION ALL SELECT
 <tr><td>Excel budget</td><td>one site × month</td></tr>
 </table>
 
-<p>Example bug: join <code>members</code> (6 GreenRoot people) to <code>contracts</code> (1 GreenRoot contract) on company, then <code>SUM(monthly_price)</code> → £2,700 × 6 = <b>£16,200</b> "MRR". 💥 The fix: aggregate to the same grain <b>before</b> joining. In the warehouse we'll build facts at a clear grain (e.g. <code>fct_contract_month</code>, <code>fct_site_month_kpis</code>) and the AI will query those, not raw joins.</p>
+<p>Example bug: join <code>members</code> (6 GreenRoot people) to <code>contracts</code> (1 GreenRoot contract) on company, then <code>SUM(monthly_price)</code> → £2,700 × 6 = <b>£16,200</b> "MRR". 💥 The fix: aggregate to the same grain <b>before</b> joining. In the warehouse we'll build facts at a clear grain (for example <code>fct_contract_month</code>, <code>fct_site_month_kpis</code>) and the AI will query those, not raw joins.</p>
 
 <hr/>
 

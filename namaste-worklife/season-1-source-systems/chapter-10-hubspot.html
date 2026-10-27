@@ -177,7 +177,7 @@
 <tr><td>Deals</td><td>→</td><td>Opportunities</td><td>HubSpot → Nexudus (documented direction)</td></tr>
 </table>
 
-<p>You choose <b>which</b> records sync ("only if" rules, e.g. deals in a certain pipeline) and <b>map each property</b>. Unmapped properties don't sync. The docs don't spell out what happens when the same field changes on both sides at once. That's a question to test, not assume.</p>
+<p>You choose <b>which</b> records sync ("only if" rules, for example deals in a certain pipeline) and <b>map each property</b>. Unmapped properties don't sync. The docs don't spell out what happens when the same field changes on both sides at once. That's a question to test, not assume.</p>
 
 <pre>
    Ben's deal → Closed Won in HubSpot
@@ -234,7 +234,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Way</th><th>Notes</th></tr>
 <tr><td><b>Fivetran HubSpot connector</b></td><td>Standard, managed. Likely what Work.Life would use, since Fivetran is already in the stack.</td></tr>
-<tr><td><b>CRM API (v3)</b></td><td>REST endpoints per object, e.g. <code>/crm/v3/objects/contacts</code>, cursor pagination with <code>after</code>, auth with a private app token</td></tr>
+<tr><td><b>CRM API (v3)</b></td><td>REST endpoints per object, for example <code>/crm/v3/objects/contacts</code>, cursor pagination with <code>after</code>, auth with a private app token</td></tr>
 <tr><td>Exports</td><td>CSV from any view. Manual.</td></tr>
 <tr><td>Webhooks / workflows</td><td>Real-time events (paid tiers for some features)</td></tr>
 </table>
@@ -272,7 +272,7 @@ for c in fetch_all():
 <h3>13. HubSpot Data Gotchas</h3>
 
 <table border="1" cellpadding="10">
-<tr><th>Gotcha</th><th>What happens</th><th>Fix</th></tr>
+<tr><th>Trap</th><th>What happens</th><th>Fix</th></tr>
 <tr><td>Merged records</td><td>IDs disappear; history points to a dead ID</td><td>Use the merged-IDs list to remap; build member_key in the warehouse</td></tr>
 <tr><td>Lifecycle only goes forward</td><td>Churned members still "Customer"</td><td>Use member_status derived from Nexudus contracts</td></tr>
 <tr><td>Dropdown value vs label</td><td>API returns internal value (<code>hybrid_remote</code>), UI shows label ("Hybrid / remote")</td><td>Load the property definitions too, map in staging</td></tr>

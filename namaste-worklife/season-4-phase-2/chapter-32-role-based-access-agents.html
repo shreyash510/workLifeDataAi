@@ -166,7 +166,7 @@ FILTER USING (
 <table border="1" cellpadding="10">
 <tr><th>Option</th><th>How it works</th><th>Pros</th><th>Cons</th></tr>
 <tr><td><b>A. One shared service account</b></td><td>The AI app queries as itself</td><td>Simple. Fine for Phase 1 (everyone sees everything)</td><td>BigQuery sees one user, so row policies can't tell people apart. ❌ for Phase 2</td></tr>
-<tr><td><b>B. One service account per role</b></td><td>The app maps the signed-in user to a role, then queries as that role's account</td><td>Few accounts; policies by role</td><td>Can't do per-person rules (e.g. "my assigned companies"). The app's mapping must be right.</td></tr>
+<tr><td><b>B. One service account per role</b></td><td>The app maps the signed-in user to a role, then queries as that role's account</td><td>Few accounts; policies by role</td><td>Can't do per-person rules (for example "my assigned companies"). The app's mapping must be right.</td></tr>
 <tr><td><b>C. The user's own identity</b></td><td>The user signs in with SSO; the app queries BigQuery with the user's credentials</td><td>BigQuery enforces everything per person. Audit logs show the real user.</td><td>More setup; every user needs BigQuery read permissions on <code>ai_safe</code></td></tr>
 </table>
 
@@ -186,7 +186,7 @@ FILTER USING (
 <tr><th>Agent</th><th>Goal</th><th>Steps</th><th>Output goes to</th></tr>
 <tr><td><b>Renewal prep</b></td><td>No renewal conversation happens without a context pack</td><td>Every Monday: find office contracts ending in 60–120 days → build each context pack (Chapter 30) → check against CRM for an open deal</td><td>The assigned account manager (draft for review)</td></tr>
 <tr><td><b>Weekly retention</b></td><td>Leadership never rebuilds the member report</td><td>Run Chapter 29's report → compare with last week → explain the biggest changes in plain English</td><td>Leadership digest</td></tr>
-<tr><td><b>Data watchdog</b></td><td>Wrong data is caught before a leader sees it</td><td>After each refresh: check row counts, freshness, dbt test results, sudden jumps (e.g. Soho MRR −40% overnight) → hold the digest if something looks broken</td><td>The named data owner at Work.Life and the support partner</td></tr>
+<tr><td><b>Data watchdog</b></td><td>Wrong data is caught before a leader sees it</td><td>After each refresh: check row counts, freshness, dbt test results, sudden jumps (for example Soho MRR −40% overnight) → hold the digest if something looks broken</td><td>The named data owner at Work.Life and the support partner</td></tr>
 </table>
 
 <p>Notice the third one. It doesn't add insight; it protects <b>trust</b>. One broken overnight sync that says "Reading revenue: £0" in a leadership email does more damage than ten clever insights do good.</p>
@@ -202,7 +202,7 @@ FILTER USING (
 <table border="1" cellpadding="10">
 <tr><th>Guardrail</th><th>What it means at Work.Life</th></tr>
 <tr><td><b>Read-only by default</b></td><td>Agents query <code>ai_safe</code>. They cannot write to Nexudus, NetSuite, HubSpot, ACT or any source system.</td></tr>
-<tr><td><b>Human in the loop for actions</b></td><td>Any action beyond "send a draft to a staff member" (e.g. creating a CRM task) needs a person to approve it.</td></tr>
+<tr><td><b>Human in the loop for actions</b></td><td>Any action beyond "send a draft to a staff member" (for example creating a CRM task) needs a person to approve it.</td></tr>
 <tr><td><b>Own identity, least privilege</b></td><td>Each agent runs as its own service account, with only the tables it needs and the same row policies as the role it serves.</td></tr>
 <tr><td><b>Action allow-list</b></td><td>A short, written list of tools each agent may call. Nothing else.</td></tr>
 <tr><td><b>Budgets and caps</b></td><td>Token and BigQuery byte limits per run and per day (Chapter 27). An agent stuck in a loop must hit a wall, not a bill.</td></tr>
@@ -265,7 +265,7 @@ FILTER USING (
 <p><i>"A shared service account is fine when every user may see everything, like a small leadership group. Once access differs per person, I'd use end-user credentials from SSO so row and column policies apply per person and the audit log shows the real user. Per-role service accounts are a middle ground, but they can't do per-person rules."</i></p>
 
 <p><b>Q: What guardrails would you put on an agent that runs on business data?</b></p>
-<p><i>"Read-only access through its own least-privilege identity, an explicit allow-list of tools, human approval for any action, token and query cost caps, full logging, no contact with customers, and a kill switch. And it must never be connected to data that's out of scope, like HR."</i></p>
+<p><i>"Read-only access through its own least-privilege identity, a fixed list of allowed tools, human approval for any action, token and query cost caps, full logging, no contact with customers, and a kill switch. And it must never be connected to data that's out of scope, like HR."</i></p>
 
 <hr/>
 

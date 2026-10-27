@@ -278,7 +278,7 @@ WHERE DATE(event_time_utc) BETWEEN '2026-09-14' AND '2026-09-18'
 GROUP BY site;
 </pre>
 
-<p>⚠️ <b>Sandbox gotcha:</b> according to Google's sandbox docs (check the current page), the sandbox applies a 60-day expiration to <b>partitions</b> too, counted from each partition's date, not from when you created it. If you run this lab more than 60 days after September 2026, those partitions expire straight away and the new table looks empty. If that happens, drop the <code>PARTITION BY</code> line (keep <code>CLUSTER BY</code>) or use a billing-enabled project. A good reminder to always check a table's expiration settings in its Details tab.</p>
+<p>⚠️ <b>Sandbox trap:</b> according to Google's sandbox docs (check the current page), the sandbox applies a 60-day expiration to <b>partitions</b> too, counted from each partition's date, not from when you created it. If you run this lab more than 60 days after September 2026, those partitions expire straight away and the new table looks empty. If that happens, drop the <code>PARTITION BY</code> line (keep <code>CLUSTER BY</code>) or use a billing-enabled project. A good reminder to always check a table's expiration settings in its Details tab.</p>
 
 <p>For tiny tables, partitioning doesn't help (there's a minimum amount BigQuery bills per query anyway). The habit matters for the real, multi-year tables. And notice we <b>dropped the person's name</b> while we were there. Chapter 08 showed door logs are personal data. Only ever move what you need.</p>
 
@@ -321,7 +321,7 @@ GROUP BY site;
                   ✗ no access to raw_*, staging, marts
 </pre>
 
-<p>Finer controls exist too: <b>column-level security</b> (policy tags hide columns like emails), <b>row-level security</b> (e.g. a site manager sees only their site, useful for Phase 2's role-based access, <a href="../season-4-phase-2/chapter-32-role-based-access-agents.html">Chapter 32</a>), and <b>authorized views</b> (below).</p>
+<p>Finer controls exist too: <b>column-level security</b> (policy tags hide columns like emails), <b>row-level security</b> (for example a site manager sees only their site, useful for Phase 2's role-based access, <a href="../season-4-phase-2/chapter-32-role-based-access-agents.html">Chapter 32</a>), and <b>authorized views</b> (below).</p>
 
 <hr/>
 

@@ -79,6 +79,7 @@ Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter 
 - Ending sections: "Interview Questions" (Q in bold, answer in italics), a "Key Points to Remember" table, and "What's Next?"
 - Sign-off: "Keep learning, keep building! See you in the next one!"
 - Simple language, about 15–25 KB per chapter. Relative links between chapters.
+- **Plain, simple words only** (the user asked for this). No heavy or idiomatic words: write "a quick look", not "at a glance"; "for example", not "e.g."; "unclear", not "ambiguous"; "warning note", not "caveat"; "the catch", not "trade-off". Keep real domain terms (MRR, dbt, reconcile, stakeholder) but explain them simply.
 
 ## 6. Key facts from the brief
 
@@ -117,7 +118,7 @@ Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter 
 - **AI tools:** `query_metrics` (first choice), `run_sql` (fallback, answers labelled "Exploratory", max 200 rows), `get_business_context` (text only, never figures). The default period is the last closed month; an open month is labelled PROVISIONAL.
 - **Launch gate:**
   - Tier 1 (core KPIs): 100% correct on the last 3 closed months.
-  - Tier 2: at least 90% correct, with every miss a refusal or a caveat.
+  - Tier 2: at least 90% correct, with every miss a refusal or a warning note.
   - Tier 3 (must refuse): 100%.
   - Zero confidently wrong answers.
   - Finance signs off money answers; Ops signs off member and occupancy answers.

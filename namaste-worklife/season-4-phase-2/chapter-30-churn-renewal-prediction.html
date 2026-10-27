@@ -287,7 +287,7 @@ SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
 
 <p>The pack is built in two parts:</p>
 <ol>
-    <li><b>Facts</b>: fixed SQL queries through the semantic layer fill a template. Deterministic, testable, the same every time.</li>
+    <li><b>Facts</b>: fixed SQL queries through the semantic layer fill a template. Fixed rules, testable, the same every time.</li>
     <li><b>Words</b>: the LLM writes the reasons and suggested questions <b>only from those facts</b>. If a number isn't in the facts, it can't appear in the text. This is called <b>grounding</b>.</li>
 </ol>
 

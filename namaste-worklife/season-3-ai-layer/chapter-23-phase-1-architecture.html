@@ -124,7 +124,7 @@
     <li><b>Clean permissions:</b> the AI's service account needs access to <b>one dataset in one project</b>, nothing else.</li>
 </ul>
 
-<p>The copy is just more dbt models with an <b>explicit column list</b> for every table that holds anything sensitive (no <code>SELECT *</code> there), materialised as tables in <code>ai_safe</code>, with tests. At Work.Life's size (thousands of rows, not billions) the copy takes seconds and costs pennies.</p>
+<p>The copy is just more dbt models with a <b>written list of allowed columns</b> for every table that holds anything sensitive (no <code>SELECT *</code> there), materialised as tables in <code>ai_safe</code>, with tests. At Work.Life's size (thousands of rows, not billions) the copy takes seconds and costs pennies.</p>
 
 <pre>
 -- models/ai_safe/ai_safe__fct_contract_month.sql   (as in Chapter 17)
@@ -204,9 +204,9 @@ from {{ ref('fct_contract_month') }}
 <tr><th>Principle</th><th>Where the design meets it</th></tr>
 <tr><td><b>Warehouse first, on a copy</b></td><td>③ <code>ai_safe</code>: a dbt-built copy of approved marts in a separate project. The AI never touches sources or raw.</td></tr>
 <tr><td><b>Source agnostic</b></td><td>The AI only knows marts and metrics. Source changes stay in dbt staging (Ch 28).</td></tr>
-<tr><td><b>Safe data only</b></td><td>Explicit column allow-list in the copy models; PII dropped or aggregated.</td></tr>
+<tr><td><b>Safe data only</b></td><td>A written list of allowed columns in the copy models; PII dropped or aggregated.</td></tr>
 <tr><td><b>People data excluded</b></td><td>No HR connector, dataset or credentials. Payroll only as site totals.</td></tr>
-<tr><td><b>Accuracy is a launch gate</b></td><td>Golden set in <code>ai_eval</code>, run nightly by ⑧. Go-live blocked until the gate passes: tier 1 (board-pack KPIs) 100% correct on the last 3 closed months, tier 2 (diagnostic) at least 90% with every miss a refusal or caveat, tier 3 (must-refuse) 100% (Ch 25).</td></tr>
+<tr><td><b>Accuracy is a launch gate</b></td><td>Golden set in <code>ai_eval</code>, run nightly by ⑧. Go-live blocked until the gate passes: tier 1 (board-pack KPIs) 100% correct on the last 3 closed months, tier 2 (diagnostic) at least 90% with every miss a refusal or warning note, tier 3 (must-refuse) 100% (Ch 25).</td></tr>
 <tr><td><b>Cost conscious</b></td><td>Serverless, idle ≈ £0, byte caps, token budgets per user (Ch 27).</td></tr>
 <tr><td><b>Secure by design</b></td><td>① SSO + allow-list; read-only service account on one dataset; audit log (Ch 26).</td></tr>
 <tr><td><b>Documented, handover ready</b></td><td>Everything in git: dbt, definitions, context, infrastructure-as-code, runbooks (Ch 36).</td></tr>
@@ -221,9 +221,9 @@ from {{ ref('fct_contract_month') }}
 <table border="1" cellpadding="10">
 <tr><th>Phase 2 use case</th><th>What's added</th><th>What's reused unchanged</th></tr>
 <tr><td>Real-time member &amp; retention reporting (Ch 29)</td><td>More frequent dbt runs; retention metrics</td><td>Semantic layer, BI, ai_safe pattern</td></tr>
-<tr><td>Churn &amp; renewal prediction + context packs (Ch 30)</td><td>A model (e.g. BigQuery ML) writing scores into <code>ai_safe</code>; a "context pack" task</td><td>AI service, context library, golden-test approach</td></tr>
+<tr><td>Churn &amp; renewal prediction + context packs (Ch 30)</td><td>A model (for example BigQuery ML) writing scores into <code>ai_safe</code>; a "context pack" task</td><td>AI service, context library, golden-test approach</td></tr>
 <tr><td>Forecasting (Ch 31)</td><td>Forecast tables in <code>ai_safe</code> + forecast metrics</td><td>Semantic layer, answer cards (with ranges)</td></tr>
-<tr><td>Role-based access, wider teams (Ch 32)</td><td>User roles; BigQuery row-level policies (e.g. site managers see their site)</td><td>Access gate, ai_safe, audit</td></tr>
+<tr><td>Role-based access, wider teams (Ch 32)</td><td>User roles; BigQuery row-level policies (for example site managers see their site)</td><td>Access gate, ai_safe, audit</td></tr>
 <tr><td>Agents &amp; automations (Ch 32)</td><td>New "tasks" in the AI service; scheduler jobs</td><td>Everything</td></tr>
 </table>
 
@@ -254,7 +254,7 @@ from {{ ref('fct_contract_month') }}
 <p><i>"A separate dataset holding a dbt-built copy of approved marts with PII removed; a semantic layer with the business definitions; a small serverless service that turns questions into metric queries, validates and runs them read-only, and writes answers only from the results; SSO in front; logs and feedback in <code>ai_logs</code>, golden tests in <code>ai_eval</code>; and a scheduler for digests and nightly accuracy runs."</i></p>
 
 <p><b>Q: Why copy data into a separate dataset instead of using views on the marts?</b></p>
-<p><i>"The brief asks for a controlled copy, and it gives a smaller blast radius: a new sensitive column in a mart doesn't reach the AI until it's explicitly allowed. It also gives a stable snapshot and one simple permission boundary. At this data size, the copy is cheap."</i></p>
+<p><i>"The brief asks for a controlled copy, and it gives a smaller blast radius: a new sensitive column in a mart doesn't reach the AI until someone adds it to the allowed list. It also gives a stable snapshot and one simple permission boundary. At this data size, the copy is cheap."</i></p>
 
 <p><b>Q: Would you build custom or use a vendor's built-in AI analytics?</b></p>
 <p><i>"I'd test the built-in options against the golden questions first, because less to maintain is better for a client without a data team. But the definitions, the safe dataset, the context and the accuracy tests are built either way. I'd only go custom if the native options can't meet the accuracy gate, the shared definitions or source agnosticism."</i></p>
@@ -269,7 +269,7 @@ from {{ ref('fct_contract_month') }}
 <table border="1" cellpadding="10">
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Small on purpose</b></td><td>One small app, three datasets (ai_safe, ai_logs, ai_eval), a scheduler, files in git.</td></tr>
-<tr><td><b>ai_safe</b></td><td>dbt-built copy, explicit columns, separate project, read-only.</td></tr>
+<tr><td><b>ai_safe</b></td><td>dbt-built copy, allowed columns only, separate project, read-only.</td></tr>
 <tr><td><b>Journey</b></td><td>SSO → understand → retrieve → plan → validate → execute → answer → log.</td></tr>
 <tr><td><b>Options</b></td><td>Native, BI-tool or thin custom. Test against golden questions; the core assets are the same.</td></tr>
 <tr><td><b>LLM</b></td><td>Behind an adapter; picked by test, not opinion.</td></tr>

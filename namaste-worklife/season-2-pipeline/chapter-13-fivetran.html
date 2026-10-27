@@ -37,7 +37,7 @@
 
 <p>Now multiply that by HubSpot, Google Sheets and every other source. That's weeks of work and a permanent maintenance job. Fivetran's pitch is simple: <b>someone else already wrote and maintains all of that</b>. You click "add connector", sign in to the source, pick a destination, and data starts arriving.</p>
 
-<p>Remember the brief: <i>"We are not a data business, and we do not want to become one."</i> Managed connectors are exactly how a small company avoids hiring data engineers. The trade-off is cost, which is why we spend half this chapter on pricing.</p>
+<p>Remember the brief: <i>"We are not a data business, and we do not want to become one."</i> Managed connectors are exactly how a small company avoids hiring data engineers. The catch is cost, which is why we spend half this chapter on pricing.</p>
 
 <hr/>
 
@@ -135,7 +135,7 @@ WHERE NOT COALESCE(_fivetran_deleted, FALSE)     -- drop rows deleted in the sou
 <tr><td>New column</td><td>Adds it to the raw table (depending on your schema settings)</td><td>Nothing breaks. Add it to staging when you need it.</td></tr>
 <tr><td>New table</td><td>Can add it automatically, or wait for approval</td><td>Decide if it's needed. Is it safe?</td></tr>
 <tr><td>Column renamed</td><td>Often looks like "old column stops, new column starts"</td><td>Staging breaks or goes NULL. <b>Tests catch this.</b></td></tr>
-<tr><td>Data type change</td><td>May widen the type (e.g. number → string)</td><td>Casts in staging may fail. <b>Tests catch this.</b></td></tr>
+<tr><td>Data type change</td><td>May widen the type (for example number → string)</td><td>Casts in staging may fail. <b>Tests catch this.</b></td></tr>
 </table>
 
 <p>⚠️ <b>Security setting to check:</b> many teams let connectors add new tables and columns automatically. Convenient, but if HR or payroll fields suddenly appear in a finance connector, they'd land in raw. The brief says <i>"Our people and HR data must not be connected to this capability."</i> So for Work.Life we'd recommend: block new tables by default, review them, and keep the AI on <code>ai_safe</code> only. More in <a href="../season-3-ai-layer/chapter-26-security.html">Chapter 26</a>.</p>
@@ -163,7 +163,7 @@ WHERE NOT COALESCE(_fivetran_deleted, FALSE)     -- drop rows deleted in the sou
 <p>What this means in practice:</p>
 <ul>
     <li><b>Big but quiet tables are cheap.</b> 10 years of closed invoices that never change cost almost nothing after the first load.</li>
-    <li><b>Busy tables cost the most.</b> A table where every row is touched daily (e.g. a "last seen" field on every member) counts every row, every month.</li>
+    <li><b>Busy tables cost the most.</b> A table where every row is touched daily (for example a "last seen" field on every member) counts every row, every month.</li>
     <li><b>Initial syncs</b> have historically been excluded from MAR. Recent third-party write-ups also say <b>deletes count</b> toward MAR from 2026. Pricing rules change often: <b>always check Fivetran's current pricing page</b> before putting a number in a proposal.</li>
     <li>Fivetran has offered a <b>free plan</b> with a MAR cap and a free trial. Check the current limits and trial length on their site.</li>
 </ul>
@@ -269,7 +269,7 @@ ORDER BY site_code, month;
 <tr><td>Is there a maintained connector?</td><td>Yes</td><td>No, or it's missing what you need</td></tr>
 <tr><td>Row volume and change rate?</td><td>Low/medium</td><td>Very high (events, logs)</td></tr>
 <tr><td>Who maintains it?</td><td>Nobody in-house (fits "not a data business")</td><td>A partner or engineer is on the hook for API changes</td></tr>
-<tr><td>Need custom logic at extract time?</td><td>No</td><td>Yes (e.g. aggregate door events before loading)</td></tr>
+<tr><td>Need custom logic at extract time?</td><td>No</td><td>Yes (for example aggregate door events before loading)</td></tr>
 <tr><td>Cost shape</td><td>Pay per active row</td><td>Pay for a little compute + maintenance time</td></tr>
 </table>
 

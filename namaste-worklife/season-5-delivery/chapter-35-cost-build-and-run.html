@@ -228,7 +228,7 @@
 <tr><th>#</th><th>Control</th><th>Example setting (estimate)</th><th>Stops</th></tr>
 <tr><td>1</td><td>Per-user daily question limit</td><td>50/day leadership, 20/day wider team</td><td>One user or a script looping</td></tr>
 <tr><td>2</td><td>Monthly spending cap at the AI provider</td><td>£300 leadership, £800 wider team; alerts at 50% and 80%</td><td>Any runaway month. Service pauses and says so instead of billing more.</td></tr>
-<tr><td>3</td><td>BigQuery maximum bytes billed per query</td><td>e.g. 1 GB per AI query</td><td>One accidental full-table scan</td></tr>
+<tr><td>3</td><td>BigQuery maximum bytes billed per query</td><td>for example 1 GB per AI query</td><td>One accidental full-table scan</td></tr>
 <tr><td>4</td><td>Google Cloud budget alerts</td><td>Project budget with email alerts</td><td>Surprise hosting or BigQuery costs</td></tr>
 <tr><td>5</td><td>Caching (prompt + answer)</td><td>Cache context; reuse answers until next refresh</td><td>Paying twice for the same work</td></tr>
 <tr><td>6</td><td>Model routing</td><td>Cheaper model tier for simple steps</td><td>Using the expensive model for everything</td></tr>
@@ -249,7 +249,7 @@
 <tr><td>VAT</td><td>Quote ex-VAT and say so</td></tr>
 </table>
 
-<p>Say all of this explicitly. Otherwise another supplier's "cheaper" number may simply be leaving more out. Like-for-like works both ways.</p>
+<p>Say all of this clearly. Otherwise another supplier's "cheaper" number may simply be leaving more out. Like-for-like works both ways.</p>
 
 <p><b>Where to check current prices</b> (before sending anything): the AI provider's official API pricing page, the <a href="https://cloud.google.com/bigquery/pricing">BigQuery pricing page</a> and the <a href="https://cloud.google.com/run/pricing">Cloud Run pricing page</a>.</p>
 

@@ -101,7 +101,7 @@
 
 <table border="1" cellpadding="10">
 <tr><th>You see on screen</th><th>API / data name</th><th>What it is</th></tr>
-<tr><td>Location</td><td><code>Business</code></td><td>A site, e.g. Soho</td></tr>
+<tr><td>Location</td><td><code>Business</code></td><td>A site, for example Soho</td></tr>
 <tr><td>Customer</td><td><code>Coworker</code></td><td>A person (or a company account)</td></tr>
 <tr><td>Team</td><td><code>Team</code></td><td>A company that groups customers</td></tr>
 <tr><td>Plan</td><td><code>Tariff</code></td><td>Membership type and price</td></tr>
@@ -173,7 +173,7 @@
     <li>Make Priya the <b>team admin / billing contact</b> for Pixel Chai.</li>
 </ol>
 
-<p>Notice: one team, one bill payer, many people. In the API, a customer has a <code>CoworkerType</code> (individual or company) and a <code>CompanyName</code> text field <i>as well as</i> team membership. So "which company is this person in?" can have two different answers. Classic data gotcha. Note it.</p>
+<p>Notice: one team, one bill payer, many people. In the API, a customer has a <code>CoworkerType</code> (individual or company) and a <code>CompanyName</code> text field <i>as well as</i> team membership. So "which company is this person in?" can have two different answers. A classic data trap. Note it.</p>
 
 <hr/>
 
@@ -258,7 +258,7 @@
 <ol>
     <li>Open the built-in reports/analytics. Look at occupancy, revenue and member reports.</li>
     <li>Export <b>customers, contracts, bookings and invoices</b> to CSV.</li>
-    <li>Open your exports next to the lab CSVs. Compare the columns. Which extra columns does Nexudus have? Which of ours are missing (e.g. <code>end_reason</code>)?</li>
+    <li>Open your exports next to the lab CSVs. Compare the columns. Which extra columns does Nexudus have? Which of ours are missing (for example <code>end_reason</code>)?</li>
     <li>Save the exports in <code>lab-data/my-exports/nexudus/</code>. You'll load them into BigQuery in Season 2.</li>
 </ol>
 
@@ -278,7 +278,7 @@
 
 <p>Work.Life's brief says their extract layer is <b>"Fivetran, Python"</b>. A sensible guess: Fivetran handles systems with standard connectors (NetSuite, HubSpot), and <b>Python handles Nexudus via the API</b>. Confirm it with the client and the data partner before designing anything. Never assume.</p>
 
-<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~£16.8k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (today, presumably the external data partner's job). That trade-off belongs in the supplier response.</p>
+<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~£16.8k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (today, presumably the external data partner's job). That choice belongs in the supplier response.</p>
 
 <hr/>
 
@@ -335,17 +335,17 @@ with open("coworkers.jsonl", "w") as f:
 <h3>16. The Data Gotchas That Will Bite You</h3>
 
 <table border="1" cellpadding="10">
-<tr><th>Gotcha</th><th>Why it happens</th><th>Fix in the model</th></tr>
+<tr><th>Trap</th><th>Why it happens</th><th>Fix in the model</th></tr>
 <tr><td>List endpoint returns a <b>summary</b> of each customer</td><td>Nexudus docs: many fields aren't filled in list results</td><td>Fetch full records for fields you need, or use the BigQuery integration</td></tr>
 <tr><td>Old names (Coworker, Tariff, Business)</td><td>API predates UI rename</td><td>Rename in dbt staging: <code>coworker → customer</code></td></tr>
 <tr><td>Upgrades/transfers look like churn</td><td>Contract ends + new contract</td><td>Classify contract ends (Lab 7.5 rule)</td></tr>
 <tr><td>Cancelled bookings vanish</td><td>Separate <code>CancelledBookings</code> entity</td><td>Load both; union with a status</td></tr>
-<tr><td>Deleted / archived customers</td><td>Incremental loads miss deletes; <code>Archived</code> flag</td><td>Periodic full refresh; filter archived explicitly</td></tr>
+<tr><td>Deleted / archived customers</td><td>Incremental loads miss deletes; <code>Archived</code> flag</td><td>Periodic full refresh; always filter out archived records</td></tr>
 <tr><td>Test / staff accounts</td><td>Staff create fake members to test things</td><td>An exclusion list (owned by ops, written down)</td></tr>
 <tr><td>Team vs CompanyName</td><td>Two ways to say "company"</td><td>Pick team as truth; document it</td></tr>
 <tr><td>Time zones</td><td>API times may be UTC; the site is Europe/London</td><td>Convert once in staging</td></tr>
 <tr><td>Invoiced ≠ recognised revenue</td><td>Credit notes, deferrals, finance adjustments</td><td>Use NetSuite for P&amp;L, Nexudus for operations</td></tr>
-<tr><td>Price stored per contract, discount implicit</td><td>Staff type £2,400 instead of £2,600</td><td>Compare to list price from resource/plan to compute discount</td></tr>
+<tr><td>Price stored per contract, discount hidden</td><td>Staff type £2,400 instead of £2,600</td><td>Compare to list price from resource/plan to compute discount</td></tr>
 </table>
 
 <hr/>

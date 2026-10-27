@@ -266,11 +266,11 @@ group by 1, 2
 <p>Look closer at Brick Lane: all 9 hours are Pixel Chai, and <b>8 of them</b> are one slot: member M001, every Thursday, 10:00–12:00 (3, 10, 17 and 24 September). That's a <b>recurring</b> booking: it's almost "contracted" demand. October 2026 has five Thursdays, so if the habit continues, that's 10 hours and £450 (an assumption, not a booking).</p>
 
 <pre>
-   MEETING ROOM FORECAST = KNOWN + PATTERN + AD HOC
+   MEETING ROOM FORECAST = KNOWN + PATTERN + ONE-OFF
 
    KNOWN     future bookings already in Nexudus
    PATTERN   recurring habits (same team, same slot, every week)
-   AD HOC    everything else → statistical model by room, weekday, hour,
+   ONE-OFF   everything else → statistical model by room, weekday, hour,
              with yearly seasonality (section 10)
 </pre>
 
@@ -317,7 +317,7 @@ FROM ML.FORECAST(MODEL `ml.room_hours_forecast`,
 <table border="1" cellpadding="10">
 <tr><th>Habit</th><th>How</th></tr>
 <tr><td><b>Store every forecast</b></td><td>Save each month's forecast as a snapshot (<code>fct_forecast_snapshot</code>) instead of overwriting it. Otherwise you can never check yourself.</td></tr>
-<tr><td><b>Score against actuals</b></td><td>Each month, compare last month's forecast with NetSuite / Nexudus actuals. Track the error (e.g. average % error) per forecast type and site.</td></tr>
+<tr><td><b>Score against actuals</b></td><td>Each month, compare last month's forecast with NetSuite / Nexudus actuals. Track the error (for example average % error) per forecast type and site.</td></tr>
 <tr><td><b>Say it in the answer</b></td><td>The AI always labels forecasts, shows the known vs assumed split, the range, and recent accuracy: "our Q3 forecasts for Reading were within 5% (made up)".</td></tr>
 </table>
 
@@ -370,7 +370,7 @@ FROM ML.FORECAST(MODEL `ml.room_hours_forecast`,
 <tr><td><b>Calendar</b></td><td>Normalise by number of weekdays/working days before comparing.</td></tr>
 <tr><td><b>Renewals vs pipeline</b></td><td>Different kinds of uncertainty. Keep them on separate lines.</td></tr>
 <tr><td><b>Seasonality</b></td><td>Hits usage and sales, not contracted revenue. Forecast per site.</td></tr>
-<tr><td><b>Meeting rooms</b></td><td>Known bookings + recurring patterns + ad hoc. Forecast by hour.</td></tr>
+<tr><td><b>Meeting rooms</b></td><td>Known bookings + recurring patterns + one-off bookings. Forecast by hour.</td></tr>
 <tr><td><b>ARIMA_PLUS</b></td><td>Time series in BigQuery ML, with ranges and UK holidays.</td></tr>
 <tr><td><b>Honesty</b></td><td>Label forecasts, show ranges, snapshot and score against actuals.</td></tr>
 </table>

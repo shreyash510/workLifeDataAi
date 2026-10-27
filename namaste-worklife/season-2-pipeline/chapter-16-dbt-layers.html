@@ -123,7 +123,7 @@ worklife_lab:
 {%- endmacro %}
 </pre>
 
-<p>⚠️ In a real team every developer needs their <b>own</b> datasets (e.g. <code>dbt_&lt;yourname&gt;_marts</code>) so they don't overwrite production. Keep dbt's default there, or use plain names only for the production target. For a solo lab, plain names are simpler.</p>
+<p>⚠️ In a real team every developer needs their <b>own</b> datasets (for example <code>dbt_&lt;yourname&gt;_marts</code>) so they don't overwrite production. Keep dbt's default there, or use plain names only for the production target. For a solo lab, plain names are simpler.</p>
 
 <pre>
 cd worklife_lab
@@ -405,7 +405,7 @@ with members as (
     from {{ ref('stg_nexudus__members') }}),
 act365 as (
     select cardholder_id, member_email from {{ ref('stg_act365__cardholders') }}
-    where member_email is not null),          -- contractors (e.g. cleaners) have no member
+    where member_email is not null),          -- contractors (for example cleaners) have no member
 act as (
     select contact_name, split(email, '@')[safe_offset(1)] as email_domain,
            lower(regexp_replace(contact_name, r'[^A-Za-z]', '')) as name_key

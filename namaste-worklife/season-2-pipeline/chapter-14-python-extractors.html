@@ -345,7 +345,7 @@ if __name__ == "__main__":
 <p>Design choices worth saying out loud in an interview:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Choice</th><th>Why</th><th>Trade-off</th></tr>
+<tr><th>Choice</th><th>Why</th><th>The catch</th></tr>
 <tr><td>Store the <b>whole record as JSON</b> in <code>payload</code></td><td>Nexudus adds a field? Nothing breaks. It's already in the JSON.</td><td>Staging must parse JSON (<code>JSON_VALUE</code>). Slightly more SQL.</td></tr>
 <tr><td><b>Append</b>, never update</td><td>Load jobs work everywhere (even the sandbox). Full history of every version.</td><td>Duplicates by design; staging must de-duplicate.</td></tr>
 <tr><td>Watermark from <code>MAX(updated_on)</code></td><td>No state file to lose; the warehouse is the truth.</td><td>Re-fetches the boundary row each run (harmless after de-dup).</td></tr>

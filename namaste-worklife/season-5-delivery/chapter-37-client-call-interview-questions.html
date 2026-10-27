@@ -48,8 +48,8 @@
 <pre>
    1. ANSWER       Yes / no / a number, first.
    2. WHY / HOW    One or two plain sentences about the mechanism.
-   3. EXAMPLE      From THEIR business ("e.g. Soho occupancy").
-   4. CAVEAT       What depends on them, or what we don't know yet.
+   3. EXAMPLE      From THEIR business ("for example Soho occupancy").
+   4. LIMITS       What depends on them, or what we don't know yet.
 </pre>
 
 <p>Example. <b>They ask:</b> <i>"Could we swap Nexudus next year without breaking this?"</i></p>
@@ -69,7 +69,7 @@
 <tr><td>4</td><td>"Why is support the biggest cost?"</td><td>The data is small and tokens are cheap. What costs money is keeping definitions and answers right as the business changes. Good docs keep it small.</td><td>35</td></tr>
 <tr><td>5</td><td>"Do we need to hire a data person?"</td><td>No data engineer. You need owners for definitions (existing roles) and someone who owns reporting today to review answers. (Whether Work.Life has an in-house data role is unknown: ask.)</td><td>33</td></tr>
 <tr><td>6</td><td>"Does our member data go to the AI company?"</td><td>Only the question and a small aggregated result. Personal details aren't in the safe copy at all. Provider terms must exclude training on your data.</td><td>26</td></tr>
-<tr><td>7</td><td>"Can it tell us what to do?"</td><td>It can show drivers and options, e.g. which offices drove a drop. Recommendations should stay with you in Phase 1. We won't over-promise prescriptive AI.</td><td>19</td></tr>
+<tr><td>7</td><td>"Can it tell us what to do?"</td><td>It can show drivers and options, for example which offices drove a drop. Recommendations should stay with you in Phase 1. We won't over-promise prescriptive AI.</td><td>19</td></tr>
 <tr><td>8</td><td>"What if we change BI tools?"</td><td>Nothing breaks. The AI and any BI tool read the same models and definitions. Ideally they share one semantic layer.</td><td>21</td></tr>
 <tr><td>9</td><td>"What happens if you go away?"</td><td>Everything is in your accounts, documented, and your team has run the runbooks in a drill. That's the handover test.</td><td>36</td></tr>
 <tr><td>10</td><td>"How does Phase 1 lead to churn prediction?"</td><td>Same contract history and company-level marts. Phase 2 adds a contract-events model, agreed company-level usage aggregates (with a minimum group size), a score and a renewal pack on top. No rebuild.</td><td>30</td></tr>
@@ -120,7 +120,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Question</th><th>Model answer</th></tr>
 <tr><td>ETL vs ELT?</td><td>ETL transforms before loading; ELT loads raw data into the warehouse first and transforms there (with dbt). ELT keeps raw history and makes changes cheaper.</td></tr>
-<tr><td>When Fivetran vs a Python extractor?</td><td>Fivetran for standard connectors you don't want to maintain; Python where no good connector exists or cost is better. Trade-off: licence cost vs maintenance effort.</td></tr>
+<tr><td>When Fivetran vs a Python extractor?</td><td>Fivetran for standard connectors you don't want to maintain; Python where no good connector exists or cost is better. The catch: licence cost vs maintenance effort.</td></tr>
 <tr><td>What are dbt's layers for?</td><td>Raw/staging cleans and renames each source; intermediate joins and applies logic; marts are business-ready tables like <code>fct_site_month_kpis</code>. Swapping a source only touches staging.</td></tr>
 <tr><td>Why do dbt tests matter for AI?</td><td>The AI trusts the marts. Tests (unique, not null, relationships, accepted values) catch broken data before it becomes a confident wrong answer.</td></tr>
 <tr><td>Should the AI depend on the BI tool?</td><td>No. Both read the same models and definitions, so either can change independently.</td></tr>
@@ -143,7 +143,7 @@
 <tr><td>What signals predict churn in coworking?</td><td>Falling physical usage, fewer bookings, a contract end date with no renewal conversation, complaints, and downsizing requests.</td></tr>
 <tr><td>What's a renewal context pack?</td><td>A one-page summary for a renewal conversation: tenure, company-level usage trend, spend, history and risk signals. Facts come from fixed queries; no contact details or person-level data.</td></tr>
 <tr><td>What would you forecast first?</td><td>The brief's list: resident revenue projection (signed contracts plus expected renewals, with pipeline on a separate line), net member movements, seasonality and meeting room demand. Signed revenue is arithmetic on contracts; only usage gets a time-series model.</td></tr>
-<tr><td>How does role-based access extend Phase 1?</td><td>Same sign-in and logging, plus row-level rules (e.g. a site manager sees their site) defined in one place.</td></tr>
+<tr><td>How does role-based access extend Phase 1?</td><td>Same sign-in and logging, plus row-level rules (for example a site manager sees their site) defined in one place.</td></tr>
 </table>
 
 <p><b>Season 5 · Delivery</b></p>
@@ -199,7 +199,7 @@
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>The call</b></td><td>A test of whether we understand their business and systems.</td></tr>
 <tr><td><b>Preparation</b></td><td>Know the principles, the 10 questions, the estimates and the dates without notes.</td></tr>
-<tr><td><b>4-step answer</b></td><td>Answer → why/how → their example → caveat.</td></tr>
+<tr><td><b>4-step answer</b></td><td>Answer → why/how → their example → warning note.</td></tr>
 <tr><td><b>Unknowns</b></td><td>"I don't know yet. Here's how we'll find out, and when."</td></tr>
 <tr><td><b>Our questions</b></td><td>Users and board pack, definition owners, ACT, accuracy bar, BI review and budget.</td></tr>
 <tr><td><b>The series</b></td><td>Business → sources → pipeline → AI → Phase 2 → delivery.</td></tr>
