@@ -40,7 +40,7 @@ The scoping brief is the only source of client facts. Lab numbers come from `lab
 
 The series is built in phases. Each phase is one season, written as its own unit so the phases can be worked on in parallel.
 
-### Phase 0: The Business & the Brief ✅ done, in review
+### Phase 0: The Business & the Brief ✅ done, reviewed
 `namaste-worklife/season-0-business/`
 
 | # | Chapter |
@@ -52,7 +52,7 @@ The series is built in phases. Each phase is one season, written as its own unit
 
 **Outcome:** the business model, the KPI dictionary, the brief turned into requirements, and the stakeholder map.
 
-### Phase 1: The Source Systems, Hands-On Labs ✅ done, in review
+### Phase 1: The Source Systems, Hands-On Labs ✅ done, reviewed
 `namaste-worklife/season-1-source-systems/`
 
 | # | Chapter |
@@ -67,7 +67,7 @@ The series is built in phases. Each phase is one season, written as its own unit
 
 **Outcome:** the lab data, an understanding of each system, the ID crosswalk, and 12 questions for the client.
 
-### Phase 2: The Pipeline 🔄 in progress
+### Phase 2: The Pipeline ✅ written, reviewed
 `namaste-worklife/season-2-pipeline/`
 
 | # | Chapter |
@@ -82,7 +82,7 @@ The series is built in phases. Each phase is one season, written as its own unit
 
 **Outcome:** lab exports loaded into BigQuery and modelled into the shared marts (below).
 
-### Phase 3: The AI Layer (client Phase 1) ✅ written, in review
+### Phase 3: The AI Layer (client Phase 1) ✅ written, reviewed
 `namaste-worklife/season-3-ai-layer/`, split into two parts:
 
 | Part | # | Chapter |
@@ -100,7 +100,7 @@ The series is built in phases. Each phase is one season, written as its own unit
 
 **Outcome:** a Phase 1 design that meets all 8 of the brief's principles.
 
-### Phase 4: Where It Goes Next (client Phase 2) ✅ written, in review
+### Phase 4: Where It Goes Next (client Phase 2) ✅ written, reviewed
 `namaste-worklife/season-4-phase-2/`
 
 | # | Chapter |
@@ -112,7 +112,7 @@ The series is built in phases. Each phase is one season, written as its own unit
 
 **Outcome:** how Phase 1 extends without a rebuild. This is context only, so it isn't priced.
 
-### Phase 5: Delivering the Project 🏆 ✅ written, in review
+### Phase 5: Delivering the Project 🏆 ✅ written, reviewed
 `namaste-worklife/season-5-delivery/`
 
 | # | Chapter |
@@ -135,6 +135,18 @@ The series is built in phases. Each phase is one season, written as its own unit
 | 40 | A Month in the Life of Work.Life: Every System, Day by Day |
 
 **Outcome:** complete domain knowledge in one place: every term, every integration (with confidence labels), and the whole business in motion.
+
+### Phase 8: Deep Dives 🔄 writing
+`namaste-worklife/season-7-deep-dives/`
+
+| # | Chapter |
+|---|---------|
+| 41 | Flex Workspace Economics: How a Site Makes (or Loses) Money |
+| 42 | How Membership Billing Really Works: Contracts to Cash |
+| 43 | Month-End Close and the Board Pack: How the Numbers Become Official |
+| 44 | The Sales and Renewals Engine: From Enquiry to Re-Sign |
+
+**Outcome:** how the business works inside: site economics, billing mechanics, the finance close, and the customer lifecycle.
 
 ### Phase 6: Review & publish 🔄 in progress
 - Link the new chapters in `namaste-worklife/index.html` and update the progress counts.

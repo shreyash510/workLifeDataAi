@@ -96,6 +96,8 @@
 <tr><td>K007</td><td>C005 Kite &amp; Key</td><td>SOHO hot desk</td><td>2026-08-01 → (rolling)</td><td>320</td><td></td></tr>
 </table>
 
+<p>This is <b>the contract-movements model</b> that Season 3 kept referring to as a proposal (Chapter 21 needed its <code>movement_type</code> column for <code>revenue_churn</code>; Chapter 28 used <code>movement_type = 'churn'</code>). Here we finally build it. One row per contract change, with <code>movement_type</code> in (new, upgrade, downgrade, transfer, renewal, churn), the MRR change, and the contract dates, including the <code>contract_end_date</code> that Chapter 24 proposed adding. Season 2 doesn't have it yet, so it is new in Phase 2 (or brought forward into Phase 1 if the client wants churn as a board-pack KPI).</p>
+
 <p>The core of the model is a window function: for each contract end, look at the <b>next contract for the same company</b>.</p>
 
 <pre>
@@ -111,7 +113,7 @@ with c as (
   window w as (partition by company_id order by start_date)
 )
 select
-  company_id, contract_id, end_date as event_date,
+  company_id, contract_id, start_date, end_date as contract_end_date, end_date as event_date,
   case
     when end_date is null                                         then null   -- still running
     when next_start is null
@@ -120,7 +122,7 @@ select
     when next_price  > monthly_price_gbp                          then 'upgrade'
     when next_price  < monthly_price_gbp                          then 'downgrade'
     else 'renewal'
-  end as event_type,
+  end as movement_type,
   coalesce(next_price, 0) - monthly_price_gbp as mrr_change_gbp,
   date_trunc(date_add(end_date, interval 1 day), month) as effective_month   -- end 31 Mar → shows in April
 from c
@@ -172,7 +174,7 @@ from c
 <pre>
    metric: net_member_movements
      = count(joined) − count(left)
-     where event_type in ('new', 'churn')         ← transfers, upgrades,
+     where movement_type in ('new', 'churn')         ← transfers, upgrades,
      grain: month · dimensions: site, plan type      renewals excluded by rule
 </pre>
 
@@ -206,7 +208,7 @@ from c
 
 <h3>7. The MRR Bridge, and Why a Naive Report Gets It Wrong</h3>
 
-<p>A <b>bridge</b> (or waterfall) explains how you got from the start number to the end number. Sum the 2026 rows of <code>fct_contract_events</code> by event type. At <b>company</b> level the Kite &amp; Key transfer is +£140; at <b>site</b> level it is Reading −£180 and Soho +£320 (the two lenses from Section 4):</p>
+<p>A <b>bridge</b> (or waterfall) explains how you got from the start number to the end number. Sum the 2026 rows of <code>fct_contract_events</code> by <code>movement_type</code>. At <b>company</b> level the Kite &amp; Key transfer is +£140; at <b>site</b> level it is Reading −£180 and Soho +£320 (the two lenses from Section 4):</p>
 
 <pre>
    MRR BRIDGE, Dec 2025 → Sep 2026 (lab data)
@@ -306,7 +308,7 @@ where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
 <table border="1" cellpadding="10">
 <tr><th>Test</th><th>Catches</th></tr>
 <tr><td>Bridge reconciles (above)</td><td>A classification rule that drops or double-counts money</td></tr>
-<tr><td><code>accepted_values</code> on <code>event_type</code></td><td>A new kind of change nobody classified</td></tr>
+<tr><td><code>accepted_values</code> on <code>movement_type</code></td><td>A new kind of change nobody classified</td></tr>
 <tr><td>Source freshness on Nexudus</td><td>A stalled sync. The report would show "no change" when really there's no data.</td></tr>
 <tr><td>MRR vs NetSuite within tolerance</td><td>Drift between contracted and recognised revenue (a small gap is expected, e.g. Soho's −£90 credit memo, but not a big one)</td></tr>
 <tr><td>No test/staff accounts</td><td>Inflated member counts (Chapter 11, question 9)</td></tr>

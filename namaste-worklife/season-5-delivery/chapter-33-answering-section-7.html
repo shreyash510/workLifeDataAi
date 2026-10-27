@@ -2,14 +2,12 @@
 
 <p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
 
-<p>Welcome to Season 5, the finale. 🏆 For 32 chapters we learned the business, ran every source system, built the pipeline, designed the AI layer and planned Phase 2. Now we do the thing the brief actually asked for: <b>write the response</b>. Section 7 of the brief lists 10 questions. Section 8 says <i>"a short written response to the questions in section 7 is ideal, followed by a call"</i>. This chapter writes that response, question by question, and explains why each answer is shaped the way it is.</p>
+<p>Welcome to Season 5. For 32 chapters we learned the business, ran every source system, built the pipeline, designed the AI layer and planned Phase 2. Section 7 of the brief asks 10 questions, and Section 8 asks for <i>"a short written response to the questions in section 7"</i>. Answering them is a good test of understanding, because every honest answer depends on a mechanism we've already learned: the controlled copy, one definition per KPI, the crosswalk, the close calendar, who owns which decision. This chapter answers each question and points back to the mechanism behind it.</p>
 
 <p>What we will cover:</p>
 <ul>
-    <li>What a winning response looks like (and what loses)</li>
-    <li>The 5 rules we write by</li>
-    <li>The skeleton: one page per question, in their order</li>
-    <li>The full draft response, Q1 to Q10</li>
+    <li>How the brief shapes the answers</li>
+    <li>The draft answers, Q1 to Q10, and the mechanism behind each</li>
     <li>The "what we need from you" table (the answer to "it depends")</li>
     <li>The like-for-like summary box</li>
     <li>Self-check: every principle, every question</li>
@@ -20,82 +18,43 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>Two suppliers answer the same brief (made up):</p>
+<p>Two suppliers answer the same brief (made up). Supplier A sends 38 pages and says "pricing available on request". Supplier B sends 6 pages: ten headings in the brief's order, each with a one-line answer, a cost table at the two levels asked for, and a list of what they need from Work.Life. The panel compares the two like for like, as the brief promised, and only Supplier B can be compared at all.</p>
 
-<ul>
-    <li><b>Supplier A</b> sends 38 pages. A company history, a "vision for AI", twelve architecture diagrams, a churn-prediction demo, and on page 31: <i>"Pricing available on request."</i> 🙃</li>
-    <li><b>Supplier B</b> sends 6 pages. Ten headings, one per question, in the brief's order. Each answer starts with a one-line yes/no, then the detail. Costs are in a table with two columns: leadership only, wider team. There's a list of what they need from Work.Life and a short list of what's hard.</li>
-</ul>
-
-<p>The selection panel puts the responses side by side, as the brief promised (<i>"like for like"</i>). For Supplier A they spend an hour hunting for answers. For Supplier B they just read across. Supplier B gets the call.</p>
+<p>But the real difference isn't the format. Supplier B could only write short answers because they understood <b>how the business works</b>: that "trusted by end of 2026" really means mid-December, because of the close calendar and Christmas; that the biggest dependency is a Finance owner for definitions; that HubSpot replacing Nexudus for members is a staging change, not an AI change.</p>
 
 <pre>
 ┌─────────────────────────────────────────────────────────────┐
 │   RULE OF THIS CHAPTER                                      │
 │                                                             │
-│   Answer THEIR questions, in THEIR order, in THEIR words.   │
-│   Lead every answer with the short answer.                  │
-│   Put a number wherever they asked for one.                 │
-│   Say what's hard before they find out.                     │
+│   Every answer = short answer + the MECHANISM behind it     │
+│   + what it depends on at Work.Life.                        │
+│   If you can't name the mechanism, you don't know the       │
+│   answer yet.                                               │
 └─────────────────────────────────────────────────────────────┘
 </pre>
 
 <hr/>
 
-<h3>2. What Wins and What Loses</h3>
+<h3>2. How the Brief Shapes the Answers</h3>
 
 <p>Everything below comes straight from the brief's own words (we read them closely in <a href="../season-0-business/chapter-03-reading-the-scoping-brief.html">Chapter 03</a>):</p>
 
 <table border="1" cellpadding="10">
-<tr><th>The brief says</th><th>So a winning response…</th><th>And a losing one…</th></tr>
-<tr><td>"A request for your thinking, not a commitment to purchase"</td><td>Shows clear thinking and honest trade-offs</td><td>Reads like a sales brochure</td></tr>
-<tr><td>"Not looking for a polished formal proposal"</td><td>Is short: 5–8 pages</td><td>Is 40 pages with a cover design</td></tr>
-<tr><td>"Compare responses on a like for like basis"</td><td>Uses their 10 headings, in order, with numbers in tables</td><td>Invents its own structure</td></tr>
-<tr><td>"Tell us what you would need from us to firm it up"</td><td>Lists open decisions and owners, openly</td><td>Hides assumptions, or guesses</td></tr>
-<tr><td>"Do not price [Phase 2] now"</td><td>Explains how Phase 2 fits, with no price</td><td>Prices churn prediction "as an optional extra"</td></tr>
-<tr><td>"Honest feedback… is more useful to us than an optimistic pitch"</td><td>Says what's realistic by end 2026 and what isn't</td><td>Promises everything by Christmas</td></tr>
+<tr><th>The brief says</th><th>So each answer…</th></tr>
+<tr><td>"A request for your thinking, not a commitment to purchase"</td><td>Explains the approach and trade-offs, not features</td></tr>
+<tr><td>"Compare responses on a like for like basis"</td><td>Uses their 10 headings, in order, with numbers where they asked for numbers</td></tr>
+<tr><td>"Tell us what you would need from us to firm it up"</td><td>Names the open decisions and who at Work.Life owns each one</td></tr>
+<tr><td>"Do not price [Phase 2] now"</td><td>Explains how Phase 2 fits, with no price</td></tr>
+<tr><td>"Honest feedback… is more useful to us than an optimistic pitch"</td><td>Says what's realistic by end 2026 and what isn't</td></tr>
 </table>
 
-<hr/>
-
-<h3>3. The 5 Rules We Write By</h3>
-
-<ol>
-    <li><b>Short answer first.</b> Every answer opens with one sentence a leader could repeat in a meeting: "Yes, on your existing BigQuery, in about 3 months."</li>
-    <li><b>Their words, not ours.</b> They say "controlled copy", "launch gate", "safe data". We use exactly those phrases, so they can see each principle being met.</li>
-    <li><b>Two levels wherever they asked for two.</b> Q2 (3 vs 6 months), Q4 (leadership vs wider team) and Q9 (us vs in house). Always both.</li>
-    <li><b>Every assumption written down.</b> We don't know the leadership team size, the identity provider or the accuracy bar. So we state our assumption and say what would change if it's wrong.</li>
-    <li><b>No jargon without a translation.</b> The readers are Operations &amp; IT Systems and the leadership team, not data engineers. "Semantic layer" is fine once, if the same sentence says "one agreed definition of each KPI".</li>
-</ol>
+<p>Two levels wherever they asked for two: Q2 (3 vs 6 months), Q4 (leadership vs wider team), Q9 (supplier vs in house). And every assumption written down: we don't know the leadership team size (question #13), the identity provider or the accuracy bar, so each is stated as an assumption with what changes if it's wrong.</p>
 
 <hr/>
 
-<h3>4. The Skeleton</h3>
+<h3>3. The Draft Answers</h3>
 
-<pre>
-   WORK.LIFE · PHASE 1 · SUPPLIER RESPONSE                  ~6 pages
-
-   0. Summary (half a page)      ← the like-for-like box from section 7
-   1. Feasibility &amp; approach     ← architecture in plain terms + 1 diagram
-   2. Timeline                   ← 3-month and 6-month, + "what must be true"
-   3. What we need from you      ← the table in section 6
-   4. Cost                       ← build + run, two levels, + how we cap it
-   5. Security                   ← access, isolation, never-connect list, AI policy
-   6. Accuracy                   ← golden questions, the gate, how actuals checks work
-   7. Resilience                 ← source agnostic, with the HubSpot example
-   8. Documentation &amp; handover   ← what gets written, how we prove it
-   9. Support &amp; resourcing       ← what we do, what you hold in house
-   10. Scalability               ← Phase 2 on top, without a rebuild. No price.
-   Appendix: assumptions + open questions
-</pre>
-
-<p>Ten headings, the same ten as the brief. Anyone on the panel can find "Cost" in two seconds in every response. That's the whole point.</p>
-
-<hr/>
-
-<h3>5. The Draft Response</h3>
-
-<p>Here is the response itself. Each question shows <b>what they're really scoring</b> first, then <b>our answer</b> as it would appear in the document. Where a number depends on our own estimate (for example a day rate), it's marked as an assumption. Client facts come only from the brief, the 173tech deck and earlier chapters.</p>
+<p>Here is the response itself. Each question shows <b>what they're really scoring</b> first, then <b>our answer</b> as it would appear in the document. Where a number depends on our own estimate (for example a day rate), it's marked as an assumption. Client facts come only from the brief; lab facts come from the Mini Work.Life files.</p>
 
 <p><b>Q1 · Feasibility and approach</b></p>
 <p><i>Scoring:</i> can you do it on our BigQuery, and can you explain it without jargon?</p>
@@ -103,12 +62,12 @@
 <p><b>Yes. We would build Phase 1 directly on your existing BigQuery warehouse and dbt models, without replacing anything you already run.</b></p>
 <p>In plain terms there are four layers:</p>
 <ol>
-    <li><b>A controlled copy.</b> A separate BigQuery dataset, <code>ai_safe</code>, holds copies of approved, modelled tables only (sites, companies, members without personal details, contracts by month, bookings, the finance ledger and the site KPI table). It refreshes from your dbt marts on a schedule. The AI can read this dataset and nothing else.</li>
+    <li><b>A controlled copy.</b> A separate BigQuery dataset, <code>ai_safe</code>, holds copies of approved, modelled tables only: sites, companies (no billing emails), contracts by month (no member key), bookings, the finance ledger (no memo or counterparty text) and the site KPI table. Member-level tables, the ID crosswalk, door events and CRM contacts stay out. It refreshes from your dbt marts on a schedule. The AI can read this dataset and nothing else.</li>
     <li><b>One definition per KPI.</b> Each board-pack KPI (revenue, contribution, occupancy, churn and so on) is written down once, in dbt, with the formula Finance and Operations agree. The AI asks for "Soho contribution, September", and the definition does the maths. It never invents its own formula.</li>
     <li><b>Business context.</b> Your board pack, KPI glossary, targets and "why this KPI matters" notes are loaded as reference material, so answers carry meaning: "Soho is 62% under its revenue budget, and occupancy is the main reason."</li>
     <li><b>The assistant.</b> A chat interface, behind Work.Life sign-in, where a leader types a question. The assistant chooses the right KPIs, runs the queries on <code>ai_safe</code>, and replies with the number, a short explanation, the definition used and the data's freshness. If it can't answer reliably, it says so.</li>
 </ol>
-<p>A scheduled weekly digest and a small set of alerts provide the proactive insight. The LLM runs inside your Google Cloud project, so data doesn't leave your environment for a third-party app.</p>
+<p>A scheduled weekly digest and a small set of alerts provide the proactive insight. The model is called through your own Google Cloud project on enterprise terms (we'd confirm the provider's data-residency and no-training terms with you), so there's no separate third-party app holding your data.</p>
 </blockquote>
 
 <pre>
@@ -156,7 +115,7 @@
 </blockquote>
 
 <p><b>Q3 · What we need from you</b></p>
-<p><i>Scoring:</i> have you thought about this properly? Will you be a burden? (See the full table in section 6 below.)</p>
+<p><i>Scoring:</i> have you thought about this properly? Will you be a burden? (See the full table in section 4 below.)</p>
 <blockquote>
 <p><b>About half a day a week from your side on average, concentrated in two places: agreeing definitions in month 1–2, and checking golden answers in month 2–3.</b> The detail is in the table that follows. The biggest single dependency is a Finance owner for money definitions.</p>
 </blockquote>
@@ -164,17 +123,17 @@
 <p><b>Q4 · Cost</b></p>
 <p><i>Scoring:</i> real numbers, side by side, at two levels, with a credible cap. (Built up line by line in <a href="chapter-35-cost-build-and-run.html">Chapter 35</a>.)</p>
 <blockquote>
-<p><b>One-off build: about £63,000, of which £48,000 delivers the 3-month launch and £15,000 the 6-month hardening and handover. Ongoing running cost: about £22,000 a year for the leadership team, or about £46,000 a year with wider team access.</b></p>
+<p><b>One-off build: about £63,000 (estimate), of which £48,000 delivers the 3-month launch and £15,000 the 6-month hardening and handover. Ongoing running cost: about £22,000 a year for the leadership team, or about £42,500 a year with wider team access (estimates). Both stay well below the "six figure operation" you ruled out.</b></p>
 <table border="1" cellpadding="10">
-<tr><th>Annual running cost (estimate)</th><th>Leadership only (~10 users)</th><th>Wider team (~60 users)</th></tr>
-<tr><td>LLM usage (tokens)</td><td>£2,000</td><td>£6,600</td></tr>
+<tr><th>Annual running cost (estimate)</th><th>Leadership only (10 users, assumed)</th><th>Wider team (70 users, assumed)</th></tr>
+<tr><td>LLM usage (tokens, including accuracy test runs)</td><td>£2,500</td><td>£3,500</td></tr>
 <tr><td>BigQuery (queries + storage of the copy)</td><td>£500</td><td>£1,000</td></tr>
 <tr><td>Hosting, scheduling, logging</td><td>£1,000</td><td>£2,000</td></tr>
-<tr><td><b>Technology subtotal</b></td><td><b>£3,500</b></td><td><b>£9,600</b></td></tr>
-<tr><td>Support retainer (2 or 4 days a month)</td><td>£18,000</td><td>£36,000</td></tr>
-<tr><td><b>Total per year</b></td><td><b>~£21,500</b></td><td><b>~£45,600</b></td></tr>
+<tr><td><b>Technology subtotal</b></td><td><b>£4,000</b></td><td><b>£6,500</b></td></tr>
+<tr><td>Support agreement (2 or 4 days a month, made-up day rate)</td><td>£18,000</td><td>£36,000</td></tr>
+<tr><td><b>Total per year</b></td><td><b>~£22,000</b></td><td><b>~£42,500</b></td></tr>
 </table>
-<p>Assumptions: an illustrative day rate of £750; about 8 questions per leader per working day, and 3 per wider-team user. Your existing pipeline and BI licence costs are unchanged and not included. Wider team access also needs the role-based access work from Phase 2, which we haven't priced, as you asked.</p>
+<p>Assumptions (all ours, to be firmed up with you): a <b>made-up</b> day rate of £750; 10 leadership users × 8 questions per working day; wider team 70 users × 3 questions per working day; 21 working days a month; illustrative token prices giving about £0.03 per question (Chapter 27), with accuracy test runs as the largest token line; BigQuery inside its free monthly allowance (<b>check current pricing</b> before relying on any figure). Your existing pipeline and BI licence costs are unchanged and not included. Wider team access also needs the role-based access work from Phase 2, which we haven't priced, as you asked.</p>
 <p><b>How we cap it:</b> a hard monthly budget on LLM spend that stops the service rather than overspending; a daily question limit per user; a limit on how many steps the assistant can take per question; a maximum data scanned per BigQuery query; caching for repeated questions (the same KPI asked twice in a day costs once); and a monthly cost report. Notice that the technology costs are small. The real cost is people time, which is why we keep the support model small and predictable.</p>
 </blockquote>
 
@@ -185,7 +144,7 @@
 <ul>
     <li><b>Access control:</b> single sign-on with your existing Work.Life identity provider, limited to a named leadership group. No shared or local logins. Access reviewed monthly by Operations &amp; IT Systems.</li>
     <li><b>Data isolation:</b> the assistant uses its own service account with read-only access to <code>ai_safe</code>. It has no access to raw tables, staging models, source systems or any other dataset. It can only run read queries.</li>
-    <li><b>Safe data only:</b> a written allow-list of tables and columns, following the same rule as your current reporting extracts and signed off by you. Names, emails, phone numbers and card numbers stay out. Door-access data, if used at all, is aggregated (for example "visits per company per week"), never individual tap events.</li>
+    <li><b>Safe data only:</b> a written allow-list of tables and columns, following the same rule as your current reporting extracts and signed off by you. Names, emails, phone numbers and card numbers stay out. Door-access data is not in the Phase 1 copy at all. If it's ever added (for example for churn in Phase 2), it is only as company-level weekly aggregates with a minimum group size, never individual tap events.</li>
     <li><b>Never connect:</b> the HR system or any people data; raw personal data; live source systems; payment or bank details; email inboxes and shared drives. Staff costs appear only as finance totals.</li>
     <li><b>The model:</b> served through your Google Cloud project on enterprise terms where your data isn't used for training. Every question, query and answer is logged, so you can audit what was asked and what data was used.</li>
 </ul>
@@ -209,12 +168,12 @@
 <p><b>Q7 · Resilience</b></p>
 <p><i>Scoring:</i> will it break when HubSpot takes over member data?</p>
 <blockquote>
-<p><b>The assistant never sees a source system. It sees business tables (sites, members, contracts) and KPI definitions. If a source changes, only the dbt models that read that source change; the assistant, its definitions and its tests stay the same.</b></p>
-<p>Your own example: as HubSpot becomes the source of truth for members, the dbt staging models switch from Nexudus to HubSpot for member fields, and a crosswalk table (<code>member_xref</code>) keeps one stable ID per member across both. The <code>dim_member</code> table the assistant reads keeps the same columns and meaning. The golden questions prove nothing changed: if they pass before and after the switch, the swap is safe. No prompt, KPI definition or test mentions "Nexudus" or "HubSpot" by name.</p>
+<p><b>The assistant never sees a source system. It sees business tables (sites, companies, contracts by month, bookings, the ledger) and KPI definitions. If a source changes, only the dbt models that read that source change; the assistant, its definitions and its tests stay the same.</b></p>
+<p>Your own example: as HubSpot becomes the source of truth for members, the dbt staging models switch from Nexudus to HubSpot for member fields, and a crosswalk table in the marts (<code>member_xref</code>) keeps one stable ID per member and company across both. The tables the assistant reads (<code>dim_company</code>, <code>fct_contract_month</code>) keep the same columns and meaning. The golden questions prove nothing changed: if they pass before and after the switch, the swap is safe. No prompt, KPI definition or test mentions "Nexudus" or "HubSpot" by name.</p>
 </blockquote>
 
 <p><b>Q8 · Documentation and handover</b></p>
-<p><i>Scoring:</i> will we be stuck with you, or with one person? (Full detail in <a href="chapter-36-documentation-and-handover.html">Chapter 36</a>.)</p>
+<p><i>Scoring:</i> will we be stuck with you, or with one person? (Full detail in <a href="chapter-36-documentation-handover.html">Chapter 36</a>.)</p>
 <blockquote>
 <p><b>Everything is documented as we build, kept in your own repository, and the handover is proven, not promised: before month 6 ends, your team runs the service for two weeks from the documents alone, with us only observing.</b></p>
 <p>The pack covers: the architecture and data flows; the safe-data allow-list; every KPI definition and its owner; the golden question set and how to run it; runbooks for common tasks (add a user, add a KPI, a failed refresh, a failed accuracy test, a cost alert); the cost model; and a decision log explaining why things are the way they are.</p>
@@ -223,9 +182,9 @@
 <p><b>Q9 · Support and resourcing</b></p>
 <p><i>Scoring:</i> what does it cost us in people, and what must we hire? (Answer: nobody.)</p>
 <blockquote>
-<p><b>You don't need to hire anyone. We provide a small monthly support retainer; you keep two light roles you already have.</b></p>
+<p><b>You don't need to hire anyone. We provide a small monthly support agreement; you keep two light roles you already have.</b></p>
 <table border="1" cellpadding="10">
-<tr><th>Us (support retainer)</th><th>You (in house)</th></tr>
+<tr><th>Us (support agreement)</th><th>You (in house)</th></tr>
 <tr><td>
 <ul>
 <li>Monitoring, refresh and cost checks</li>
@@ -236,7 +195,7 @@
 </ul>
 </td><td>
 <ul>
-<li><b>KPI owner</b> (for example your analytics lead): keeps definitions and golden answers current, ~half a day a week</li>
+<li><b>KPI owner</b> (whoever owns reporting today; we'd need to know who that is): keeps definitions and golden answers current, ~half a day a week</li>
 <li><b>Service owner</b> (Operations &amp; IT Systems): access reviews, budget, approvals, ~half a day a month</li>
 </ul>
 </td></tr>
@@ -251,7 +210,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Phase 2 use case</th><th>What Phase 1 already provides</th><th>What gets added later</th></tr>
 <tr><td>Real-time member &amp; retention reporting</td><td>Agreed member and churn definitions; scheduled digests</td><td>More frequent refresh; retention views in the BI tool</td></tr>
-<tr><td>Churn &amp; renewal prediction + context packs</td><td>Contract history, attendance (aggregated), CRM notes in the copy</td><td>A prediction model; a "renewal pack" template the assistant fills in</td></tr>
+<tr><td>Churn &amp; renewal prediction + context packs</td><td>Contract history by month; agreed churn and transfer definitions; golden tests</td><td>A contract-events model; company-level attendance and renewal-deal tables (no contacts, minimum group size); a score; a "renewal pack" template</td></tr>
 <tr><td>Forecasting (resident revenue, net member movements, seasonality, meeting rooms)</td><td>Clean monthly history by site in <code>fct_site_month_kpis</code></td><td>Forecast models; the assistant explains their output</td></tr>
 <tr><td>Role-based access &amp; agents</td><td>Sign-in, logging, a single controlled copy</td><td>Roles that filter by site or team; approved automations</td></tr>
 </table>
@@ -259,9 +218,9 @@
 
 <hr/>
 
-<h3>6. The "What We Need From You" Table</h3>
+<h3>4. What Work.Life Must Provide, and When</h3>
 
-<p>The brief invites this directly: <i>"Where something depends on decisions we have not yet made, tell us what you would need from us to firm it up."</i> We merge the 12 lab questions from <a href="../season-1-source-systems/chapter-11-one-member-five-systems.html">Chapter 11</a> and the 10 brief questions from <a href="../season-0-business/chapter-03-reading-the-scoping-brief.html">Chapter 03</a> into one table, sorted by <b>when</b> we need the answer:</p>
+<p>The brief invites this directly: <i>"Where something depends on decisions we have not yet made, tell us what you would need from us to firm it up."</i> We merge client questions #1–12 from <a href="../season-1-source-systems/chapter-11-one-member-five-systems.html">Chapter 11</a> and #13–22 from <a href="../season-0-business/chapter-03-reading-the-scoping-brief.html">Chapter 03</a> into one table, sorted by <b>when</b> we need the answer. Read it as a map of how decisions flow inside Work.Life: almost every row is owned by Operations &amp; IT Systems or Finance, which is why they sit on the critical path (Chapter 34).</p>
 
 <table border="1" cellpadding="10">
 <tr><th>When</th><th>What we need</th><th>From whom</th><th>Why</th></tr>
@@ -271,17 +230,17 @@
 <tr><td>Week 2</td><td>A recent board pack and its KPI definitions (occupancy, churn, revenue, contribution)</td><td>Finance + leadership</td><td>It <i>is</i> the business context</td></tr>
 <tr><td>Week 2</td><td>The current "safe extract" rule; test, staff and internal accounts to exclude</td><td>Ops &amp; IT</td><td>The allow-list follows your existing rule</td></tr>
 <tr><td>Week 3</td><td>Identity provider (Google Workspace, Microsoft 365, other); digest channel (email, Slack, Teams)</td><td>Ops &amp; IT</td><td>Sign-in and proactive insight design</td></tr>
-<tr><td>Week 3</td><td>Site mapping in NetSuite (location, department, class or subsidiary); Xero cut-over date</td><td>Finance</td><td>Every site P&amp;L and trend question</td></tr>
+<tr><td>Week 3</td><td>Site mapping in NetSuite (location, department, class or subsidiary); how far back NetSuite history goes and where any older finance history lives</td><td>Finance</td><td>Every site P&amp;L and trend question</td></tr>
 <tr><td>Week 4</td><td>HubSpot sync status: which fields, which direction, who owns what</td><td>Sales &amp; membership</td><td>Source of truth during the migration</td></tr>
 <tr><td>Week 4</td><td>Agreement on the accuracy bar for the launch gate</td><td>Leadership</td><td>The gate needs a number agreed in advance</td></tr>
-<tr><td>Weeks 6–10</td><td>Golden answers checked from closed months; close calendar</td><td>Finance + analytics lead</td><td>The launch gate itself</td></tr>
+<tr><td>Weeks 6–10</td><td>Golden answers checked from closed months; close calendar</td><td>Finance + reporting owner</td><td>The launch gate itself</td></tr>
 <tr><td>Week 10</td><td>2–3 leaders for a two-week pilot</td><td>Leadership</td><td>Real questions before go-live</td></tr>
 <tr><td>Any time</td><td>Status of the BI tool review; any existing AI usage policy</td><td>Ops &amp; IT</td><td>Share one set of definitions with the new BI tool</td></tr>
 </table>
 
 <hr/>
 
-<h3>7. The Like-for-Like Summary Box</h3>
+<h3>5. The Summary Box</h3>
 
 <p>The first half page of the response. If the panel reads nothing else, they read this:</p>
 
@@ -295,7 +254,8 @@
 │  MONTH 6     Wider coverage, alerts, full handover, Phase 2      │
 │              design ready.                                       │
 │  BUILD       ~£63k one-off (£48k to launch + £15k to month 6)    │
-│  RUN / YEAR  ~£22k leadership only · ~£46k wider team            │
+│  RUN / YEAR  ~£22k leadership only · ~£42.5k wider team          │
+│              (estimates; made-up day rate; check current prices) │
 │              Hard monthly caps on AI and query spend.            │
 │  SECURITY    Work.Life sign-in only · reads a controlled copy    │
 │              only · HR and personal data never connected         │
@@ -312,7 +272,7 @@
 
 <hr/>
 
-<h3>8. Self-Check: Every Principle, Every Question</h3>
+<h3>6. Self-Check: Every Principle, Every Question</h3>
 
 <p>Before sending, we check the draft against the brief's 8 principles. Each one must be answered somewhere, in the brief's own words:</p>
 
@@ -323,7 +283,7 @@
 <tr><td>Safe data only</td><td>Q5</td><td>"Same rule as your current reporting extracts, signed off by you"</td><td>✓</td></tr>
 <tr><td>People data excluded</td><td>Q5</td><td>"Never connect: the HR system or any people data"</td><td>✓</td></tr>
 <tr><td>Accuracy is a launch gate</td><td>Q6</td><td>"Zero wrong on tier 1… a failure stops the release"</td><td>✓</td></tr>
-<tr><td>Cost conscious</td><td>Q4, Q9</td><td>"~£22k a year… hard monthly budget… no hires"</td><td>✓</td></tr>
+<tr><td>Cost conscious</td><td>Q4, Q9</td><td>"~£22k a year (estimate)… hard monthly budget… no hires"</td><td>✓</td></tr>
 <tr><td>Secure by design</td><td>Q5</td><td>"Work.Life accounts only… inside your Google Cloud project"</td><td>✓</td></tr>
 <tr><td>Documented and handover ready</td><td>Q8</td><td>"Your team runs the service for two weeks from the documents alone"</td><td>✓</td></tr>
 </table>
@@ -345,16 +305,14 @@
 <p><i>"Exactly their 10 headings, in their order, each starting with a one-line answer. A half-page summary at the top. Numbers in tables at the levels they asked for. An appendix of assumptions and open questions. They'll compare suppliers side by side, so I make that comparison easy."</i></p>
 
 <p><b>Q: You don't know the client's user count or accuracy bar, but they want a cost and an approach. What do you do?</b></p>
-<p><i>"State a clear assumption, price on it, and say what changes if it's wrong. For example: 'we've assumed 10 leadership users; each extra 10 users adds about £2,000 a year in usage'. Then list the decision as something we need from them, with a date. That's what the brief asked for, and it's more useful than refusing to give a number."</i></p>
+<p><i>"State a clear assumption, price on it, and say what changes if it's wrong. For example: 'we've assumed 10 leadership users; each extra 10 users adds about £600 a year in usage'. Then list the decision as something we need from them, with a date. That's what the brief asked for, and it's more useful than refusing to give a number."</i></p>
 
-<p><b>Q: Why put "hard parts" in the summary of a sales document?</b></p>
-<p><i>"Because this client explicitly said honest feedback is worth more than an optimistic pitch. Being upfront about the risks, like agreeing definitions on time, makes every other claim more credible. And they'd find those risks in month two anyway."</i></p>
+<p><b>Q: What must Work.Life provide for Phase 1, and why does each item matter?</b></p>
+<p><i>"Read access to BigQuery and dbt, because we can't check what the marts already hold without it. A recent board pack and owners for KPI definitions, because the board pack is the business context and Finance decides what 'revenue' means. The NetSuite site mapping and close calendar, because every site P&amp;L and every 'is this month final?' answer depends on them. The identity provider for sign-in. And the people to check golden answers from closed months, because that's the launch gate."</i></p>
 
 <p><b>Q: The client's main fear is a confidently wrong number. What's the single most important design decision that addresses it?</b></p>
 <p><i>"The LLM never calculates. Every figure comes from a query against an agreed KPI definition, and the answer shows that definition and the data's freshness. Then a refusal mode for anything it can't answer reliably, and a launch gate tested against their own closed months."</i></p>
 
-<p><b>Q: Why not include an optional price for Phase 2 to show ambition?</b></p>
-<p><i>"The brief says not to. Adding it would break the like-for-like comparison and suggest we didn't read the brief. The ambition goes into the Scalability answer instead: showing that each Phase 2 item reuses the Phase 1 foundations."</i></p>
 
 <hr/>
 
@@ -362,12 +320,12 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
-<tr><td><b>Format</b></td><td>~6 pages, their 10 headings, their order, short answer first.</td></tr>
+<tr><td><b>Format</b></td><td>Their 10 headings, their order, short answer first, mechanism second.</td></tr>
 <tr><td><b>Two levels</b></td><td>3 vs 6 months, leadership vs wider team, us vs in house. Always both.</td></tr>
 <tr><td><b>Approach</b></td><td>Controlled copy → one definition per KPI → business context → assistant behind sign-in.</td></tr>
-<tr><td><b>Numbers</b></td><td>Build ~£63k; run ~£22k (leadership) or ~£46k (wider team) a year.</td></tr>
+<tr><td><b>Numbers</b></td><td>Estimates: build ~£63k; run ~£22k (leadership, 10 users × 8 q/day) or ~£42.5k (wider team, 70 users × 3 q/day) a year, 21 working days a month.</td></tr>
 <tr><td><b>Accuracy</b></td><td>50 golden questions; zero wrong on board-pack KPIs before go-live.</td></tr>
-<tr><td><b>What we need</b></td><td>A dated list of decisions and owners. That's the honest answer to "it depends".</td></tr>
+<tr><td><b>What we need</b></td><td>A dated list of decisions and owners, mostly Ops &amp; IT and Finance. That's the honest answer to "it depends".</td></tr>
 <tr><td><b>Self-check</b></td><td>All 8 principles answered in their words; no Phase 2 price; no HR data.</td></tr>
 </table>
 

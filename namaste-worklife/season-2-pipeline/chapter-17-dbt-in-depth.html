@@ -2,9 +2,9 @@
 
 <p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
 
-<p>In Chapter 16 our dbt project produced the right numbers: Soho's September MRR of £3,040, revenue of £3,475, contribution of −£4,175. Today the question is harder: <b>how do we know they'll still be right next month?</b> Sources change, sheets get renamed, loaders stop silently, and someone "fixes" a model on a Friday afternoon.</p>
+<p>In Chapter 16 our dbt project produced the right numbers: Soho's September MRR of £3,040, revenue of £3,475, contribution of −£4,175. Today's question is harder: <b>how do we know they'll still be right next month?</b> Sources change, sheets get renamed, loaders stop silently.</p>
 
-<p>The brief has a principle for this: <i>"Accuracy is a launch gate. If it confidently returns a wrong figure, trust is lost."</i> Season 3 builds the AI's launch gate. But it stands on what we build today: <b>tests</b> that fail loudly, <b>freshness</b> checks, <b>documentation</b> people can read, <b>lineage</b> that shows where every number comes from, and the <code>ai_safe</code> layer that only gets refreshed when all of that passes.</p>
+<p>The brief's principle: <i>"Accuracy is a launch gate. If it confidently returns a wrong figure, trust is lost."</i> Season 3 builds the AI's launch gate on what we build today: <b>tests</b> that fail loudly, <b>freshness</b> checks, <b>documentation</b>, <b>lineage</b>, and the <code>ai_safe</code> layer the AI reads.</p>
 
 <p>What we will cover:</p>
 <ul>
@@ -14,11 +14,9 @@
     <li>Lab 17.3: Unit tests for the business rules</li>
     <li>Lab 17.4: Source freshness</li>
     <li>Lab 17.5: Break it on purpose</li>
-    <li>Documentation: descriptions that the AI can read too</li>
-    <li>Lineage and selecting parts of the graph</li>
+    <li>Documentation the AI can read too, and lineage</li>
     <li>Lab 17.6: Build the <code>ai_safe</code> layer</li>
-    <li>Model contracts: a promise to the AI</li>
-    <li>Exposures, scheduling and CI</li>
+    <li>Model contracts, exposures, scheduling and CI</li>
     <li>Interview Questions</li>
 </ul>
 
@@ -26,65 +24,47 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>Here's a failure that happens on data teams all the time (made up, but realistic). Finance renames a NetSuite location from "Soho" to "London Soho". Nothing errors. The pipeline runs. But our <code>site_mapping</code> seed still says "Soho", so every Soho GL line now has <code>site_code = NULL</code>. Soho's revenue in <code>fct_site_month_kpis</code> drops to nothing. The dashboard shows a gap; the AI cheerfully says <i>"Soho had no revenue in October"</i>.</p>
+<p>A failure that happens on data teams all the time (made up, but realistic): Finance renames a NetSuite location from "Soho" to "London Soho". Nothing errors. But our <code>site_mapping</code> seed still says "Soho", so every Soho GL line now gets <code>site_code = NULL</code>, Soho's revenue in <code>fct_site_month_kpis</code> goes blank, and the AI cheerfully says <i>"Soho had no revenue in October"</i>. Nobody notices for two weeks.</p>
 
-<p>Nobody notices for two weeks. The fix took 30 seconds. The damage to trust took months.</p>
+<p>One test, <code>not_null</code> on <code>fct_gl.site_code</code>, would have failed the build that morning, pointing at the exact problem, <b>before</b> anyone saw a wrong number.</p>
 
-<p>With one test, <code>not_null</code> on <code>fct_gl.site_code</code>, the build would have failed the same morning, with a message pointing at the exact problem, <b>before</b> anyone saw a wrong number.</p>
-
-<pre>
-┌─────────────────────────────────────────────────────────────┐
-│   THE PROMISE WE'RE BUILDING                                │
-│                                                             │
-│   A wrong number should FAIL THE BUILD,                     │
-│   not reach a leader.                                       │
-│                                                             │
-│   If tests fail → ai_safe is NOT refreshed →                │
-│   the AI keeps serving yesterday's checked numbers.         │
-└─────────────────────────────────────────────────────────────┘
-</pre>
+<p>The promise we are building: <b>a wrong number should fail the build, not reach a leader.</b></p>
 
 <hr/>
 
 <h3>2. What a dbt Test Really Is</h3>
 
-<p>A dbt test is just a <b>SELECT that should return zero rows</b>. Any rows returned = failures. That's it.</p>
+<p>A dbt test is just a <b>SELECT that should return zero rows</b>.</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Type</th><th>Where you write it</th><th>Good for</th></tr>
-<tr><td><b>Generic test</b></td><td>One line in a <code>.yml</code> file</td><td><code>unique</code>, <code>not_null</code>, <code>accepted_values</code>, <code>relationships</code></td></tr>
-<tr><td><b>Singular test</b></td><td>A <code>.sql</code> file in <code>tests/</code></td><td>Anything custom: golden numbers, reconciliations, composite keys</td></tr>
-<tr><td><b>Unit test</b> (dbt 1.8+)</td><td>A <code>.yml</code> block with fake input rows and expected output</td><td>Proving a business rule works, before real data arrives</td></tr>
-<tr><td><b>Source freshness</b></td><td>In <code>_sources.yml</code></td><td>"Was raw data loaded recently?"</td></tr>
+<tr><td><b>Generic</b></td><td>One line in a <code>.yml</code> file</td><td><code>unique</code>, <code>not_null</code>, <code>accepted_values</code>, <code>relationships</code></td></tr>
+<tr><td><b>Singular</b></td><td>A <code>.sql</code> file in <code>tests/</code></td><td>Golden numbers, reconciliations, composite keys</td></tr>
+<tr><td><b>Unit</b> (dbt 1.8+)</td><td>A <code>.yml</code> block: fake input rows + expected output</td><td>Proving a business rule before real data arrives</td></tr>
+<tr><td><b>Source freshness</b></td><td><code>_sources.yml</code></td><td>"Was raw data loaded recently?"</td></tr>
 </table>
 
-<p>Every test can be an <b>error</b> (stop the build) or a <b>warning</b> (report, carry on). Choosing which is a business decision: a wrong revenue figure is an error; a small known difference between two systems might be a warning.</p>
+<p>Each test is an <b>error</b> (stop) or a <b>warning</b> (report, carry on): a business decision. A wrong revenue figure is an error; an explained difference between two systems may be a warning.</p>
 
 <hr/>
 
 <h3>3. Lab 17.1 — Generic Tests on Keys and Relationships</h3>
 
-<p>Create <b><code>models/marts/_marts.yml</code></b>. This is also where descriptions go (section 8):</p>
+<p>Create <b><code>models/marts/_marts.yml</code></b>. YAML keys vary a little by dbt version (newer ones use <code>data_tests:</code> and nest test arguments under <code>arguments:</code>); check the docs.</p>
 
 <pre>
 version: 2
-
 models:
   - name: dim_site
-    description: "One row per site. Maps every system's name for the site."
     columns:
       - name: site_code
-        description: "Our site key, e.g. SOHO, RDG."
         tests: [unique, not_null]
       - name: netsuite_location
-        tests: [unique, not_null]          # every site must be mapped to finance
-
+        tests: [unique, not_null]        # every site must be mapped to finance
   - name: dim_company
-    description: "One row per real company: members and CRM-only prospects."
     columns:
       - name: company_key
         tests: [unique, not_null]
-
   - name: dim_member
     columns:
       - name: member_key
@@ -92,61 +72,37 @@ models:
       - name: company_key
         tests:
           - not_null
-          - relationships:
-              to: ref('dim_company')
-              field: company_key
-
-  - name: member_xref
-    columns:
-      - name: member_key
-        tests: [unique, not_null]
-
+          - relationships: {to: ref('dim_company'), field: company_key}
   - name: fct_contract_month
-    description: "One row per contract per month in which it is active at month end."
     columns:
       - name: site_code
         tests:
           - not_null
-          - relationships:
-              to: ref('dim_site')
-              field: site_code
+          - relationships: {to: ref('dim_site'), field: site_code}
       - name: company_key
         tests: [not_null]
       - name: mrr_gbp
         tests: [not_null]
-
   - name: fct_booking
     columns:
       - name: booking_id
         tests: [unique, not_null]
-
   - name: fct_gl
-    description: "One row per NetSuite GL line, tagged with our site_code and P&amp;L category."
     columns:
       - name: tran_id
         tests: [unique, not_null]
       - name: site_code
         description: "NULL means the NetSuite location is missing from seeds/site_mapping.csv."
-        tests: [not_null]                  # the test from the story
+        tests: [not_null]                # the test from the story
       - name: pl_category
         tests:
-          - accepted_values:
-              values: ['revenue', 'direct_cost', 'central_cost']   # 'other' = unknown account
-
-  - name: fct_site_month_kpis
-    description: "One row per site per month. Main table for leadership questions."
-    columns:
-      - name: site_code
-        tests: [not_null]
-      - name: month_start
-        tests: [not_null]
+          - accepted_values: {values: ['revenue', 'direct_cost', 'central_cost']}  # 'other' = unknown account
 </pre>
 
-<p>And on staging, protect the rules that later models depend on, in <b><code>models/staging/_staging.yml</code></b>:</p>
+<p>And on staging, protect the rules later models depend on, in <b><code>models/staging/_staging.yml</code></b>:</p>
 
 <pre>
 version: 2
-
 models:
   - name: stg_nexudus__contracts
     columns:
@@ -154,87 +110,69 @@ models:
         tests: [unique, not_null]
       - name: plan_code
         tests:
-          - accepted_values:
-              values: ['P-HOT', 'P-FLEX10', 'P-OFFICE']   # a new plan must be a conscious decision
+          - accepted_values: {values: ['P-HOT', 'P-FLEX10', 'P-OFFICE']}  # new plan = conscious decision
       - name: start_date
         tests: [not_null]
   - name: stg_excel__capacity_budget
     columns:
       - name: budget_revenue_gbp
-        tests: [not_null]          # catches the renamed column from Lab 13.1
+        tests: [not_null]                # catches the renamed column from Lab 13.1
       - name: site_code
         tests:
-          - relationships:
-              to: ref('site_mapping')
-              field: site_code
+          - relationships: {to: ref('site_mapping'), field: site_code}
 </pre>
 
-<p>Run only the tests:</p>
-
-<pre>
-dbt test
-# ... PASS unique_dim_site_site_code
-# ... PASS not_null_fct_gl_site_code
-# ... PASS accepted_values_fct_gl_pl_category__revenue__direct_cost__central_cost
-</pre>
-
-<p>💡 Why <code>accepted_values</code> on <code>plan_code</code>? Because <code>int_contract_months</code> has a <code>case</code> that gives desks to <code>P-OFFICE</code> and <code>P-HOT</code> and <b>0 to everything else</b>. If Work.Life launches a new "Team Desk" plan, it would silently count as 0 desks. The test turns that silent error into a loud question: <i>"how many desks does the new plan hold?"</i></p>
+<p>💡 Why <code>accepted_values</code> on <code>plan_code</code>? <code>int_contract_months</code> gives desks to <code>P-OFFICE</code> and <code>P-HOT</code> and <b>0 to everything else</b>. A new "Team Desk" plan would silently count as 0 desks. The test turns that silent error into a loud question: <i>"how many desks does the new plan hold?"</i></p>
 
 <hr/>
 
 <h3>4. Lab 17.2 — Singular Tests: Golden Numbers and Reconciliations</h3>
 
-<p>Composite keys first. "One row per site per month" is a promise; test it. <b><code>tests/assert_site_month_kpis_grain.sql</code></b>:</p>
+<p>"One row per site per month" is a promise; test it. <b><code>tests/assert_site_month_kpis_grain.sql</code></b>:</p>
 
 <pre>
--- fct_site_month_kpis must have exactly one row per site per month
 select site_code, month_start, count(*) as n
 from {{ ref('fct_site_month_kpis') }}
 group by site_code, month_start
 having count(*) &gt; 1
 </pre>
 
-<p>Now the most powerful idea in this chapter: <b>golden tests</b>. These are numbers a human has verified by hand. We did that in Chapters 06, 09 and 11. <b><code>tests/assert_golden_sep_2026.sql</code></b>:</p>
+<p>Now the most powerful idea in this chapter: <b>golden tests</b>, numbers a human verified by hand (Chapters 06, 09 and 11). <b><code>tests/assert_golden_sep_2026.sql</code></b>:</p>
 
 <pre>
 -- Golden numbers for September 2026, verified by hand in Ch 06, 09 and 11.
 -- Returns a row for every site where the mart disagrees with the verified value.
 with expected as (
-    select 'SOHO' as site_code, 3040 as mrr_gbp, 6 as desks_contracted,
-           3475 as revenue_gbp, 7650 as direct_costs_gbp, -4175 as contribution_gbp,
-           -5725 as revenue_vs_budget_gbp
+    select 'SOHO' as site_code, 3040 as mrr_gbp, 6 as desks_contracted, 3475 as revenue_gbp,
+           7650 as direct_costs_gbp, -4175 as contribution_gbp, -5725 as revenue_vs_budget_gbp
     union all
     select 'RDG', 2700, 6, 2900, 2450, 450, -300
 ),
 actual as (
-    select *
-    from {{ ref('fct_site_month_kpis') }}
-    where month_start = date '2026-09-01'
+    select * from {{ ref('fct_site_month_kpis') }} where month_start = date '2026-09-01'
 )
-select e.site_code,
-       e.mrr_gbp,          a.mrr_gbp          as actual_mrr_gbp,
-       e.revenue_gbp,      a.revenue_gbp      as actual_revenue_gbp,
-       e.contribution_gbp, a.contribution_gbp as actual_contribution_gbp
+select e.site_code, e.mrr_gbp, a.mrr_gbp as actual_mrr_gbp,
+       e.revenue_gbp, a.revenue_gbp as actual_revenue_gbp
 from expected as e
 left join actual as a using (site_code)
 where a.site_code is null
-   or a.mrr_gbp               != e.mrr_gbp
-   or a.desks_contracted      != e.desks_contracted
-   or a.revenue_gbp           != e.revenue_gbp
-   or a.direct_costs_gbp      != e.direct_costs_gbp
-   or a.contribution_gbp      != e.contribution_gbp
-   or a.revenue_vs_budget_gbp != e.revenue_vs_budget_gbp
+   or a.mrr_gbp               is distinct from e.mrr_gbp     -- NOT !=, see below
+   or a.desks_contracted      is distinct from e.desks_contracted
+   or a.revenue_gbp           is distinct from e.revenue_gbp
+   or a.direct_costs_gbp      is distinct from e.direct_costs_gbp
+   or a.contribution_gbp      is distinct from e.contribution_gbp
+   or a.revenue_vs_budget_gbp is distinct from e.revenue_vs_budget_gbp
 </pre>
 
-<p>This is the seed of the brief's launch gate. In Season 3 the same idea grows into a set of <b>golden questions</b> that the AI must answer correctly against actuals before leadership relies on it (<a href="../season-3-ai-layer/chapter-25-accuracy-launch-gate.html">Chapter 25</a>). If the data underneath can't pass its golden tests, the AI never stands a chance.</p>
+<p>⚠️ Why <code>is distinct from</code>? Because <code>NULL != 3475</code> is NULL, not TRUE, so a <code>!=</code> test would <b>pass</b> exactly when revenue has gone missing, which is the story's failure. <code>is distinct from</code> treats NULL as a real difference.</p>
 
-<p><b>Reconciliation tests</b> compare two systems that should agree. Nexudus says Soho members booked £525 of meeting rooms in September. NetSuite shows £525 invoiced minus a £90 goodwill credit = £435. That difference is <b>real and explained</b> (Chapter 11, Q4), so this test should <b>warn</b>, not fail. <b><code>tests/warn_meeting_rooms_nexudus_vs_netsuite.sql</code></b>:</p>
+<p>This is the seed of the launch gate; Season 3 grows it into <b>golden questions</b> the AI must answer correctly against actuals (<a href="../season-3-ai-layer/chapter-25-accuracy-launch-gate.html">Chapter 25</a>).</p>
+
+<p><b>Reconciliation tests</b> compare two systems that should agree. Soho members booked £525 of meeting rooms in Nexudus in September (90 + 30 + 90 + 45 + 90 + 60 + 90 + 30). NetSuite account 4100 shows £525 invoiced minus a £90 goodwill credit = £435. That difference is <b>real and explained</b> (Chapter 11, Q4), so this test should <b>warn</b>, not fail. <b><code>tests/warn_meeting_rooms_nexudus_vs_netsuite.sql</code></b>:</p>
 
 <pre>
 {{ config(severity = 'warn') }}
-
--- Meeting room revenue: Nexudus bookings vs NetSuite account 4100, per site and month.
--- Known causes of differences: credit memos, timing of invoices. Investigate, don't panic.
+-- Known causes of differences: credit memos, invoice timing. Investigate, don't panic.
 with bookings as (
     select site_code, month_start, sum(price_gbp) as booked_gbp
     from {{ ref('fct_booking') }}
@@ -243,36 +181,26 @@ with bookings as (
 ),
 ledger as (
     select site_code, month_start, sum(amount_gbp) as ledger_gbp
-    from {{ ref('fct_gl') }}
-    where account_number = 4100
+    from {{ ref('fct_gl') }} where account_number = 4100
     group by site_code, month_start
 )
-select site_code, month_start, b.booked_gbp, l.ledger_gbp, b.booked_gbp - l.ledger_gbp as difference_gbp
+select site_code, month_start, b.booked_gbp, l.ledger_gbp,
+       coalesce(b.booked_gbp, 0) - coalesce(l.ledger_gbp, 0) as difference_gbp
 from bookings as b
 full outer join ledger as l using (site_code, month_start)
 where coalesce(b.booked_gbp, 0) != coalesce(l.ledger_gbp, 0)
 </pre>
 
-<p>Expected: <code>dbt test</code> reports <b>1 warning</b>: SOHO, 2026-09, booked 525, ledger 435, difference 90. Reading reconciles exactly (£200 both sides). ✅ That one warning row is exactly the kind of thing leadership will ask "why don't these match?" about. Now you have the answer ready.</p>
-
-<p>One more sanity test, <b><code>tests/assert_occupancy_in_range.sql</code></b>:</p>
-
-<pre>
--- Desk occupancy outside 0–100% means capacity or desk counting is broken
-select site_code, month_start, desk_occupancy
-from {{ ref('fct_site_month_kpis') }}
-where desk_occupancy &lt; 0 or desk_occupancy &gt; 1
-</pre>
+<p>Expected: <b>1 warning</b>: SOHO, 2026-09, booked 525, ledger 435, difference 90. Reading reconciles exactly (£200 both sides). Leadership will ask "why don't these match?"; now the answer is ready.</p>
 
 <hr/>
 
 <h3>5. Lab 17.3 — Unit Tests for the Business Rules</h3>
 
-<p>Golden tests check today's real data. <b>Unit tests</b> check a <b>rule</b> with made-up rows, including cases our lab data doesn't have yet. Add to <b><code>models/intermediate/_intermediate.yml</code></b> (needs dbt 1.8 or newer):</p>
+<p><b>Unit tests</b> check a <b>rule</b> with made-up rows, including cases the lab data lacks. Add to <b><code>models/intermediate/_intermediate.yml</code></b> (dbt 1.8+):</p>
 
 <pre>
 version: 2
-
 unit_tests:
   - name: flex_holds_no_desk_and_rolling_contracts_continue
     model: int_contract_months
@@ -302,43 +230,28 @@ unit_tests:
 dbt test --select "int_contract_months,test_type:unit"
 </pre>
 
-<p>If someone later "simplifies" the join and forgets the <code>end_date is null</code> case, this test fails instantly, even though no real rolling contract has changed. Unit tests are how you protect <b>definitions</b> from Chapter 02's KPI dictionary.</p>
+<p>Drop the <code>end_date is null</code> case and this fails instantly, even though no real contract changed. Unit tests protect the <b>definitions</b> in Chapter 02's KPI dictionary.</p>
 
 <hr/>
 
 <h3>6. Lab 17.4 — Source Freshness</h3>
 
-<p>Tests check that data is <b>right</b>. Freshness checks that it's <b>recent</b>. Our loader from Chapter 14 adds <code>_loaded_at</code> to every raw row. Update <b><code>models/staging/_sources.yml</code></b>:</p>
+<p>Freshness checks that data is <b>recent</b>. Our Chapter 14 loader adds <code>_loaded_at</code> to every raw row. In <b><code>models/staging/_sources.yml</code></b> add, per source (newer dbt versions put these under <code>config:</code>; check the docs):</p>
 
 <pre>
-version: 2
-
-sources:
   - name: nexudus
     schema: raw_nexudus
     loaded_at_field: _loaded_at
     freshness:
       warn_after:  {count: 24, period: hour}
       error_after: {count: 48, period: hour}
-    tables:
-      - name: contracts
-        columns:
-          - name: contract_id
-            tests: [not_null]
-      - name: members
-      - name: sites
-      - name: plans
-      - name: resources
-      - name: companies
-      - name: bookings
+    tables: ...                        # as in Chapter 16
   - name: netsuite
     schema: raw_netsuite
     loaded_at_field: _loaded_at
     freshness:
       warn_after:  {count: 24, period: hour}
       error_after: {count: 72, period: hour}     # finance changes slowly
-    tables:
-      - name: gl_lines
   # ... excel, act, act365 the same way. For Fivetran tables use _fivetran_synced.
 </pre>
 
@@ -348,38 +261,33 @@ dbt source freshness
 # Run it 3 days after Lab 14.1 and you'll see ERROR. Re-run load_lab.py → PASS.
 </pre>
 
-<p>Freshness is the answer to the "extractor failed silently" story in Chapter 14. If the Nexudus job stops, this check fails within a day, even if the job itself never reported an error.</p>
+<p>This answers Chapter 14's "extractor failed silently" story: if the Nexudus job stops, freshness fails within a day.</p>
 
 <hr/>
 
 <h3>7. Lab 17.5 — Break It on Purpose</h3>
 
-<p>The best way to trust tests is to watch them catch things. Do each, run <code>dbt build</code>, read the failure, then undo it.</p>
+<p>Make each change, run <code>dbt build</code>, read the failure, undo it.</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Break</th><th>How</th><th>Which test catches it</th></tr>
-<tr><td>Finance renames a location (the story)</td><td>In <code>seeds/site_mapping.csv</code> change <code>Soho</code> to <code>London Soho</code>, then <code>dbt build</code></td><td><code>not_null_fct_gl_site_code</code> and the golden test (Soho revenue no longer £3,475)</td></tr>
-<tr><td>Someone forgets rolling contracts</td><td>In <code>int_contract_months</code>, delete <code>c.end_date is null or</code></td><td>Unit test, and golden test (Soho MRR drops to £2,400)</td></tr>
-<tr><td>A new plan appears</td><td>In <code>int_contract_months</code>, pretend: change <code>'P-HOT'</code> to <code>'P-HOTDESK'</code></td><td>Golden test (Soho desks 6 → 4)</td></tr>
-<tr><td>Grain bug</td><td>In <code>fct_contract_month</code>, add <code>join {{ ref('dim_member') }} using (company_key)</code></td><td>Golden test (MRR ×4 at Soho, ×6 at Reading)</td></tr>
+<tr><th>Break</th><th>How</th><th>What catches it</th></tr>
+<tr><td>Finance renames a location (the story)</td><td>In <code>seeds/site_mapping.csv</code> change <code>Soho</code> to <code>London Soho</code></td><td><code>not_null_fct_gl_site_code</code> fails, so <code>dbt build</code> skips everything downstream of <code>fct_gl</code>. (Run <code>dbt run</code> then <code>dbt test</code> and the golden test fails too: Soho revenue is NULL.)</td></tr>
+<tr><td>Someone forgets rolling contracts</td><td>In <code>int_contract_months</code>, delete <code>c.end_date is null or</code></td><td>Unit test, and golden test (Soho MRR £3,040 → £2,400)</td></tr>
+<tr><td>A plan code changes</td><td>In <code>int_contract_months</code>, change <code>'P-HOT'</code> to <code>'P-HOTDESK'</code></td><td>Golden test (Soho desks 6 → 4)</td></tr>
+<tr><td>Grain bug</td><td>In <code>fct_contract_month</code>, add <code>join {{ ref('dim_member') }} using (company_key)</code></td><td>Golden test (Soho MRR £3,040 → £10,240, Pixel Chai's office counted 4 times; Reading £2,700 → £16,200)</td></tr>
 </table>
 
-<p>Notice how many different mistakes the single golden test catches. That's why a <b>small set of hand-verified numbers</b> is the most valuable test you can write.</p>
+<p>One golden test catches most of these: a <b>few hand-verified numbers</b> are the most valuable tests you can write.</p>
 
 <hr/>
 
-<h3>8. Documentation: Descriptions the AI Can Read Too</h3>
-
-<p>Every <code>description</code> you write in YAML ends up in dbt's documentation site:</p>
+<h3>8. Documentation the AI Can Read Too, and Lineage</h3>
 
 <pre>
-dbt docs generate      # builds the docs site from your project + warehouse metadata
-dbt docs serve         # opens it in your browser
+dbt docs generate &amp;&amp; dbt docs serve    # build the docs site, open it in a browser
 </pre>
 
-<p>You get a page per model: description, columns, tests, the SQL, and the lineage graph. This directly answers the brief's <i>"documented and handover ready"</i> principle for the modelling layer.</p>
-
-<p>And there's a bigger reason to write good descriptions now: in Season 3, these same descriptions become <b>context for the AI</b>. When it sees <code>contribution_gbp</code>, it should also see <i>"revenue minus direct site costs (accounts 5000–5999), before central overheads. From NetSuite. NULL when finance actuals are not loaded."</i> A model with no description is a model the AI will guess about. Add to <code>_marts.yml</code>:</p>
+<p>A page per model (description, columns, tests, SQL, lineage) answers the brief's <i>"documented and handover ready"</i> principle for the modelling layer. And in Season 3 the same descriptions become <b>context for the AI</b>: when it sees <code>contribution_gbp</code>, it should also see what it means. A column with no description is a column the AI will guess about. Add to <code>_marts.yml</code>:</p>
 
 <pre>
   - name: fct_site_month_kpis
@@ -387,52 +295,42 @@ dbt docs serve         # opens it in your browser
       One row per site per month. Membership KPIs from Nexudus contracts (active at month end),
       finance from the NetSuite GL by transaction date, budget from the Excel capacity sheet.
     columns:
-      - name: mrr_gbp
-        description: "Sum of monthly contract prices active on the last day of the month."
       - name: desk_occupancy
         description: "desks_contracted / sellable_desks. Offices hold their capacity, Unlimited Coworking 1, Flex 0."
-      - name: revenue_gbp
-        description: "NetSuite income (accounts 4xxx) incl. credit memos. NULL if no GL loaded for the month."
       - name: contribution_gbp
-        description: "revenue_gbp minus direct site costs (accounts 5000-5999), before central overheads."
+        description: "revenue_gbp (accounts 4xxx incl. credit memos) minus direct site costs (5000-5999), before central overheads."
       - name: has_finance_actuals
         description: "FALSE means finance numbers are unknown for this month, not zero."
 </pre>
 
-<hr/>
-
-<h3>9. Lineage and Selecting Parts of the Graph</h3>
-
-<p>Because every model uses <code>ref()</code> and <code>source()</code>, dbt knows the full graph:</p>
+<p><b>Lineage.</b> Because every model uses <code>ref()</code> and <code>source()</code>, dbt knows the full graph:</p>
 
 <pre>
- raw_nexudus.contracts ─► stg_nexudus__contracts ─┐
- raw_nexudus.resources ─► stg_nexudus__resources ─┼─► int_contract_months ─► fct_contract_month ─┐
-                          int_month_spine ────────┘                              ▲             │
- raw_nexudus.companies ─► stg_nexudus__companies ─┐                              │             │
- raw_act.contacts ──────► stg_act__contacts ──────┼─► int_company_matching ─► dim_company       ├─► fct_site_month_kpis ─► ai_safe
- raw_netsuite.gl_lines ─► stg_netsuite__gl_lines ─┘                                │             │
-                          seed: site_mapping ─────────────────────► fct_gl ◄───────┘ ────────────┤
- raw_excel.budget ──────► stg_excel__capacity_budget ─────────────────────────────────────────────┘
+ raw_nexudus.contracts -> stg_nexudus__contracts -+
+ raw_nexudus.resources -> stg_nexudus__resources -+-> int_contract_months -> fct_contract_month -+
+                          int_month_spine --------+                                             |
+ raw_nexudus.companies -> stg_nexudus__companies -+                                             |
+ raw_act.contacts ------> stg_act__contacts ------+-> int_company_matching -> dim_company       +-> fct_site_month_kpis -> ai_safe
+ raw_netsuite.gl_lines -> stg_netsuite__gl_lines -+-> fct_gl (+ seed site_mapping) -------------+
+ raw_excel.budget ------> stg_excel__capacity_budget -------------------------------------------+
 </pre>
 
-<p>That graph is how you answer <i>"where does this number come from?"</i>, and <i>"if Nexudus changes, what breaks?"</i>. dbt's selection syntax uses it:</p>
+<p>It answers <i>"where does this number come from?"</i> and <i>"if Nexudus changes, what breaks?"</i>:</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Command</th><th>Meaning</th></tr>
-<tr><td><code>dbt build --select fct_site_month_kpis</code></td><td>Just that model and its tests</td></tr>
 <tr><td><code>dbt build --select +fct_site_month_kpis</code></td><td>It and everything <b>upstream</b> of it</td></tr>
-<tr><td><code>dbt build --select stg_nexudus__contracts+</code></td><td>It and everything <b>downstream</b>: "what does a Nexudus change affect?"</td></tr>
-<tr><td><code>dbt ls --select source:nexudus+</code></td><td>List every model that depends on Nexudus. Your source-agnostic checklist (Ch 28).</td></tr>
+<tr><td><code>dbt build --select stg_nexudus__contracts+</code></td><td>It and everything <b>downstream</b>: what a Nexudus change affects</td></tr>
+<tr><td><code>dbt ls --select source:nexudus+</code></td><td>Every model that depends on Nexudus: your source-agnostic checklist (Ch 28)</td></tr>
 </table>
 
-<p><code>dbt build</code> runs seeds, models and tests <b>in graph order</b>. If a test on a model fails, dbt <b>skips everything downstream</b> of it. That behaviour is what makes the next lab safe.</p>
+<p><code>dbt build</code> runs seeds, models and tests <b>in graph order</b>, and when a test fails it <b>skips everything downstream</b> of that model. The next lab relies on that.</p>
 
 <hr/>
 
-<h3>10. Lab 17.6 — Build the <code>ai_safe</code> Layer</h3>
+<h3>9. Lab 17.6 — Build the <code>ai_safe</code> Layer</h3>
 
-<p>Chapter 15 described three ways to build the brief's "controlled copy". In dbt, it's a folder of models. Add to <code>dbt_project.yml</code>:</p>
+<p>Chapter 15 described three ways to build the brief's "controlled copy". In dbt it's a folder of models. Add to <code>dbt_project.yml</code>:</p>
 
 <pre>
 models:
@@ -440,44 +338,41 @@ models:
     # ... staging, intermediate, marts as before
     ai_safe:
       +schema: ai_safe
-      +materialized: view          # option A from Ch 15. Switch to 'table' for option B.
+      +materialized: view        # option A from Ch 15: quick to iterate. 'table' = option B.
 </pre>
 
-<p>dbt needs unique model names, so each file gets an <b>alias</b>: the file is <code>ai_safe__fct_site_month_kpis.sql</code>, but the BigQuery view is <code>ai_safe.fct_site_month_kpis</code>.</p>
+<p>Model names must be unique, so each file gets an <b>alias</b>: <code>ai_safe__fct_site_month_kpis.sql</code> builds <code>ai_safe.fct_site_month_kpis</code>.</p>
 
 <pre>
--- models/ai_safe/ai_safe__fct_site_month_kpis.sql
+-- models/ai_safe/ai_safe__fct_site_month_kpis.sql   (already aggregated, nothing personal)
 {{ config(alias = 'fct_site_month_kpis') }}
-select * from {{ ref('fct_site_month_kpis') }}     -- already aggregated, nothing personal
+select * from {{ ref('fct_site_month_kpis') }}
 
 -- models/ai_safe/ai_safe__dim_site.sql
 {{ config(alias = 'dim_site') }}
 select * from {{ ref('dim_site') }}
 
--- models/ai_safe/ai_safe__dim_company.sql
+-- models/ai_safe/ai_safe__dim_company.sql   (no billing_email, no match keys)
 {{ config(alias = 'dim_company') }}
 select company_key, company_name, industry, home_site_code, is_member_company
-    -- no billing_email, no match keys
 from {{ ref('dim_company') }}
 
--- models/ai_safe/ai_safe__fct_contract_month.sql
+-- models/ai_safe/ai_safe__fct_contract_month.sql   (no member_key: companies and sites, not people)
 {{ config(alias = 'fct_contract_month') }}
 select month_start, month_end, site_code, contract_id, company_key,
        plan_code, resource_code, is_office, desks, mrr_gbp
-    -- no member_key: questions are about companies and sites, not people
 from {{ ref('fct_contract_month') }}
 
--- models/ai_safe/ai_safe__fct_booking.sql
+-- models/ai_safe/ai_safe__fct_booking.sql   (no member_key)
 {{ config(alias = 'fct_booking') }}
 select booking_id, booking_date, month_start, site_code, resource_code, resource_type,
        company_key, start_time, end_time, hours, price_gbp, status
 from {{ ref('fct_booking') }}
 
--- models/ai_safe/ai_safe__fct_gl.sql
+-- models/ai_safe/ai_safe__fct_gl.sql   (no memo, no entity: free text can hide personal details)
 {{ config(alias = 'fct_gl') }}
 select tran_id, tran_date, month_start, site_code, tran_type, account_number, account_name,
        account_type, pl_category, company_key, amount_gbp
-    -- no memo, no entity: free text can hide personal details
 from {{ ref('fct_gl') }}
 </pre>
 
@@ -485,25 +380,21 @@ from {{ ref('fct_gl') }}
 
 <table border="1" cellpadding="10">
 <tr><th>Not exposed</th><th>Why</th></tr>
-<tr><td><code>dim_member</code>, <code>member_xref</code></td><td>Names and emails of individuals. Leadership questions are about sites and companies.</td></tr>
-<tr><td>Door events, cardholders</td><td>Individual movement tracking (Ch 08). A company × week attendance mart could be added later, aggregated.</td></tr>
-<tr><td>Act! contacts</td><td>Personal contact details</td></tr>
+<tr><td><code>dim_member</code>, <code>member_xref</code></td><td>Names and emails of individuals. Leadership questions are about sites and companies; people-level questions are out of scope for the AI.</td></tr>
+<tr><td>Door events and cardholders (raw or per person)</td><td>Individual movement tracking (Ch 08). Company-level attendance aggregates could be added later, only with a minimum group size.</td></tr>
+<tr><td>CRM contacts (Act!, later HubSpot)</td><td>Personal contact details</td></tr>
 <tr><td>Any HR or payroll detail</td><td>Out of scope in the brief. Staff cost appears only as the GL total "Site Staff".</td></tr>
 </table>
 
-<p>Two dbt-bigquery configs make this production-grade (check the dbt-bigquery docs for the exact syntax for your version):</p>
-<ul>
-    <li><code>grant_access_to</code> on the <code>ai_safe</code> views makes them <b>authorized views</b>, so they can read <code>marts</code> while the AI's service account cannot.</li>
-    <li><code>grants</code> gives the AI's service account <i>BigQuery Data Viewer</i> on <code>ai_safe</code> only, applied automatically on every build.</li>
-</ul>
+<p>Two dbt-bigquery configs (check the docs for syntax): <code>grants</code> gives the AI's service account <i>BigQuery Data Viewer</i> on <code>ai_safe</code> only, on every build; <code>grant_access_to</code> makes views <b>authorized views</b> that read <code>marts</code> while the AI's account cannot.</p>
 
-<p>And here's the safety net from the story: <code>ai_safe</code> models sit <b>downstream</b> of the golden test's model. If <code>assert_golden_sep_2026</code> fails, <code>dbt build</code> skips the <code>ai_safe</code> refresh. With <code>+materialized: table</code> (option B), the AI keeps reading yesterday's tables, which passed every test. That's the brief's launch-gate principle, working every single night. 🛡️</p>
+<p>And the safety net from the story: <code>ai_safe__fct_site_month_kpis</code> is <b>downstream</b> of the golden test's model. If <code>assert_golden_sep_2026</code> fails, <code>dbt build</code> skips that refresh. But skipping only protects the AI if <code>ai_safe</code> holds <b>tables</b>: dbt tests a model <i>after</i> building it, so <code>marts.fct_site_month_kpis</code> already contains the bad numbers, and a <b>view</b> over it would show them straight away. With <code>+materialized: table</code> (option B) the AI keeps reading the last copy that passed. That's why <a href="../season-3-ai-layer/chapter-23-phase-1-architecture.html">Chapter 23</a> switches <code>ai_safe</code> to tables for production. 🛡️</p>
 
 <hr/>
 
-<h3>11. Model Contracts: A Promise to the AI</h3>
+<h3>10. Model Contracts, Exposures, Scheduling and CI</h3>
 
-<p>A dbt <b>model contract</b> fixes a model's column names and types. If a change would add, remove, rename or retype a column, the build fails. That's exactly what a consumer like an AI layer needs: a stable interface.</p>
+<p>A dbt <b>model contract</b> fixes a model's column names and types. If a change would add, remove, rename or retype a column, the build fails: exactly the stable interface an AI layer needs.</p>
 
 <pre>
 # models/ai_safe/_ai_safe.yml
@@ -511,28 +402,18 @@ version: 2
 models:
   - name: ai_safe__dim_company
     config:
-      contract:
-        enforced: true
+      contract: {enforced: true}
     columns:
-      - name: company_key
-        data_type: string
-      - name: company_name
-        data_type: string
-      - name: industry
-        data_type: string
-      - name: home_site_code
-        data_type: string
-      - name: is_member_company
-        data_type: boolean
+      - {name: company_key,       data_type: string}
+      - {name: company_name,      data_type: string}
+      - {name: industry,          data_type: string}
+      - {name: home_site_code,    data_type: string}
+      - {name: is_member_company, data_type: boolean}
 </pre>
 
-<p>Contracts are the technical half of the brief's <b>source-agnostic</b> answer. When HubSpot replaces Nexudus as the member source, staging and intermediate models change; the contracted <code>ai_safe</code> models must <b>not</b>. If they would, the build tells you before the AI breaks. We use this in <a href="../season-3-ai-layer/chapter-28-source-agnostic.html">Chapter 28</a>.</p>
+<p>Contracts are the technical half of the brief's <b>source-agnostic</b> answer: when HubSpot replaces Nexudus as the member source, staging and intermediate change; the contracted <code>ai_safe</code> models must <b>not</b>. If they would, the build says so before the AI breaks (<a href="../season-3-ai-layer/chapter-28-source-agnostic.html">Chapter 28</a>).</p>
 
-<hr/>
-
-<h3>12. Exposures, Scheduling and CI</h3>
-
-<p><b>Exposures</b> tell dbt who uses what, so lineage reaches all the way to the consumer:</p>
+<p><b>Exposures</b> extend lineage to the consumer (<code>dbt ls --select +exposure:phase1_leadership_ai</code> lists all the AI depends on):</p>
 
 <pre>
 # models/ai_safe/_exposures.yml
@@ -540,10 +421,8 @@ version: 2
 exposures:
   - name: phase1_leadership_ai
     type: application
-    maturity: low
     description: "Phase 1 natural-language Q&amp;A for the leadership team (Season 3)."
-    owner:
-      name: Operations &amp; IT Systems
+    owner: {name: Operations &amp; IT Systems}
     depends_on:
       - ref('ai_safe__fct_site_month_kpis')
       - ref('ai_safe__dim_site')
@@ -557,27 +436,23 @@ exposures:
    03:00  dbt source freshness        fail → alert, stop
    03:05  dbt build                   seeds → models → tests, in graph order
               test fails → downstream (incl. ai_safe) skipped → alert
-   03:30  ai_safe refreshed only if everything above passed
    later  BI dashboards and the AI read fresh, tested data
 </pre>
 
-<p><b>CI (continuous integration)</b>: every change to the dbt project goes through a pull request, and a CI job runs <code>dbt build</code> against a separate CI dataset before it can be merged. Changes can't reach production without passing every test. dbt Cloud has this built in; with Core, a GitHub Actions workflow does the same.</p>
+<p><b>CI</b>: every change goes through a pull request whose CI job runs <code>dbt build</code> against a separate CI dataset, so nothing reaches production untested (built into dbt Cloud; a GitHub Actions workflow with Core).</p>
 
 <hr/>
 
 <h3>Interview Questions</h3>
 
 <p><b>Q: How do you make sure a dashboard number stays correct over time?</b></p>
-<p><i>"Tests at every layer: unique and not-null keys, relationships, accepted values on codes that drive logic, source freshness, and a small set of golden numbers verified by hand, like last month's revenue per site. They run on every build and in CI. If a test fails, downstream models aren't refreshed, so people keep seeing the last good numbers."</i></p>
-
-<p><b>Q: What's a golden test?</b></p>
-<p><i>"A test that compares a model's output to values a person has verified against the real source, for example September revenue per site matching the finance system. It catches many kinds of bugs at once, from broken mappings to grain errors, because they all change the final number."</i></p>
+<p><i>"Tests at every layer: keys, relationships, accepted values on codes that drive logic, source freshness, and a few hand-verified golden numbers like last month's revenue per site, run on every build and in CI. A failing test stops downstream refreshes."</i></p>
 
 <p><b>Q: Two systems disagree on meeting room revenue. Should the test fail?</b></p>
-<p><i>"It depends whether the difference is expected. Credit notes exist only in finance, so some difference is normal. I'd make it a warning that reports the difference per site and month, document the known causes, and only fail if it exceeds an agreed tolerance."</i></p>
+<p><i>"It depends whether the difference is expected. Credit notes exist only in finance, so some difference is normal. I'd make it a warning that reports the difference per site and month, document the known causes, and fail only above an agreed tolerance."</i></p>
 
 <p><b>Q: How do you expose warehouse data to an AI layer without exposing personal data?</b></p>
-<p><i>"A separate dataset of views or tables built from the marts, selecting only safe columns: no names, emails, free-text memos or individual movement data. The AI's service account can read only that dataset. I'd enforce model contracts on it so its shape stays stable, and refresh it only after all tests pass."</i></p>
+<p><i>"A separate dataset built from the marts with only safe tables and columns: no names, emails, free-text memos or individual movement data. Only the AI's service account reads it; contracts keep its shape stable, and as tables it refreshes only after all tests pass."</i></p>
 
 <hr/>
 
@@ -585,21 +460,16 @@ exposures:
 
 <table border="1" cellpadding="10">
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
-<tr><td><b>Test = query</b></td><td>Returns zero rows when everything is right.</td></tr>
-<tr><td><b>Generic tests</b></td><td>unique, not_null, relationships, accepted_values. Cheap and powerful.</td></tr>
-<tr><td><b>Golden tests</b></td><td>Hand-verified numbers (Soho Sep revenue £3,475). The seed of the launch gate.</td></tr>
+<tr><td><b>Test = query</b></td><td>Returns zero rows when everything is right. Generic, singular, unit, freshness.</td></tr>
+<tr><td><b>Golden tests</b></td><td>Hand-verified numbers (Soho Sep revenue £3,475). Compare with <code>is distinct from</code> so NULLs fail.</td></tr>
 <tr><td><b>Reconciliation</b></td><td>Nexudus vs NetSuite meeting rooms: warn on the known £90 credit.</td></tr>
-<tr><td><b>Unit tests</b></td><td>Protect definitions (Flex = 0 desks, rolling contracts continue).</td></tr>
-<tr><td><b>Freshness</b></td><td><code>_loaded_at</code> / <code>_fivetran_synced</code>; catches silent loader failures.</td></tr>
-<tr><td><b>Docs &amp; lineage</b></td><td>Descriptions become AI context; the graph answers "where from?" and "what breaks?".</td></tr>
-<tr><td><b>ai_safe</b></td><td>Aliased views/tables over marts, no personal data, refreshed only when tests pass.</td></tr>
-<tr><td><b>Contracts</b></td><td>Fixed columns and types: a stable promise to the AI.</td></tr>
+<tr><td><b>ai_safe</b></td><td>Aliased models over marts, no people-level data, with contracts. As tables, they keep the last good numbers when a test fails.</td></tr>
 </table>
 
 <hr/>
 
 <h3>What's Next?</h3>
 
-<p>Our data is modelled, tested and documented. The last step of the pipeline is how <b>people</b> see it. The brief says Tableau is in use, and that a separate review of BI and reporting tooling is running in parallel. In Chapter 18 we compare <b>Tableau, Metabase and Looker</b>, connect a free BI tool to our marts, and work out how the BI tool and the AI layer can share one set of definitions.</p>
+<p>The last step is how <b>people</b> see the data. Tableau is in use and a separate BI review is running. In Chapter 18 we compare <b>Tableau, Metabase and Looker</b>, connect a free BI tool to our marts, and work out how the BI tool and the AI layer can share one set of definitions.</p>
 
 <p>Keep learning, keep building! See you in the next one!</p>

@@ -227,15 +227,15 @@ ORDER BY site_code, month;
 <tr><td>netsuite_gl_sep2026</td><td>23</td><td>All created in Sep</td><td>23</td></tr>
 <tr><td>bookings_sep2026</td><td>10</td><td>All created in Sep</td><td>10</td></tr>
 <tr><td>act365_door_events_sep2026</td><td>276</td><td>All created in Sep</td><td>276</td></tr>
-<tr><td>act_opportunities</td><td>7</td><td>Ortho Robotics deal opened 2 Sep</td><td>1</td></tr>
+<tr><td>act_opportunities</td><td>7</td><td>Ortho Robotics deal opened 2 Sep; GreenRoot renewal opened 15 Sep</td><td>2</td></tr>
 <tr><td>act_contacts</td><td>7</td><td>Ben Carter created 2 Sep</td><td>1</td></tr>
 <tr><td>contracts</td><td>7</td><td>None started or ended in Sep</td><td>0</td></tr>
 <tr><td>members, companies, sites, plans, resources</td><td>14 + 5 + 2 + 3 + 10</td><td>No changes in Sep</td><td>0</td></tr>
 <tr><td>capacity_budget_2026</td><td>6</td><td>Unchanged</td><td>0</td></tr>
-<tr><td colspan="3"><b>Total</b></td><td><b>311</b></td></tr>
+<tr><td colspan="3"><b>Total</b></td><td><b>312</b></td></tr>
 </table>
 
-<p>Look at that table. <b>89% of the MAR is door events.</b> One busy table dominates everything. That's the general lesson: event and log tables (door taps, page views, emails sent) drive cost far more than "business" tables like contracts.</p>
+<p>Look at that table. <b>About 88% of the MAR (276 of 312) is door events.</b> One busy table dominates everything. That's the general lesson: event and log tables (door taps, page views, emails sent) drive cost far more than "business" tables like contracts.</p>
 
 <p>Now scale it up. Here's a <b>made-up</b> sizing for the real Work.Life, just to practise the method. Replace every number with real ones on access day:</p>
 
@@ -302,7 +302,7 @@ ORDER BY site_code, month;
 <tr><td><b>_fivetran_deleted</b></td><td>Always filter soft deletes in staging.</td></tr>
 <tr><td><b>Schema changes</b></td><td>New columns are easy. Renames and type changes break things silently. Test.</td></tr>
 <tr><td><b>MAR</b></td><td>Rows touched per month. Event tables dominate. Check current pricing rules.</td></tr>
-<tr><td><b>Mini Work.Life</b></td><td>311 MAR in September, 276 of them door events.</td></tr>
+<tr><td><b>Mini Work.Life</b></td><td>312 MAR in September, 276 of them door events.</td></tr>
 <tr><td><b>Fivetran + Python</b></td><td>Connectors where they exist, scripts where they don't. Work.Life uses both.</td></tr>
 </table>
 
