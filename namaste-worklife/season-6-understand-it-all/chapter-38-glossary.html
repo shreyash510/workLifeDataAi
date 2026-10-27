@@ -21,6 +21,7 @@
     <li>AI layer terms</li>
     <li>Project and delivery terms</li>
     <li>The "same word, different meaning" trap list</li>
+    <li>Is it really in Work.Life's stack? (real vs practice vs proposal)</li>
     <li>Interview Questions</li>
 </ul>
 
@@ -370,6 +371,25 @@
 <tr><td><b>Month</b></td><td>Calendar month (transaction date)</td><td>Accounting period (posting)</td><td>UTC vs London time boundary</td></tr>
 <tr><td><b>Active</b></td><td>Contract active on date</td><td>HubSpot "Customer"</td><td>Has badged in recently</td></tr>
 </table>
+
+<hr/>
+
+<h3>15. Is It Really in Work.Life's Stack? (Read This Before Anything Else)</h3>
+
+<p>The series mentions many tools. <b>Only some of them are part of Work.Life's real project.</b> Others appear as practice tools for the labs, as alternatives for comparison, or as <i>our</i> design proposals. Don't walk into a client call thinking Work.Life uses Looker or Xero. 😅</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Category</th><th>Terms</th><th>What it means for you</th></tr>
+<tr><td>✅ <b>In Work.Life's stack</b> (confirmed by the brief)</td><td>Nexudus, NetSuite, "ACT", Excel, HubSpot (being integrated), Fivetran, Python, Google BigQuery, dbt, Tableau</td><td>These are real. Learn them deeply (Seasons 1–2).</td></tr>
+<tr><td>❓ <b>Ambiguous</b></td><td>ACT365 (door access) vs Act! (CRM)</td><td>The brief only says "ACT". We teach both; only one (or neither) is real. Ask.</td></tr>
+<tr><td>🧪 <b>Practice tools only</b> (used in our labs, not by Work.Life as far as we know)</td><td>Xero demo company, Excel Power Query, Google Sheets, Looker Studio, Metabase in Docker, the BigQuery sandbox, free trials</td><td>Learning aids. Don't present them as Work.Life's tools.</td></tr>
+<tr><td>⚖️ <b>Alternatives, for comparison only</b></td><td>Looker, Metabase, Power BI, QuickBooks, Zapier, Airflow, Airbyte, Snowflake, Redshift, Databricks, Cube, MetricFlow, dbt Cloud, Salesforce</td><td>Named to explain choices. Not in the project. (The brief says a BI review is running, so the BI tool may change; that's their decision.)</td></tr>
+<tr><td>💡 <b>Our proposals for the AI layer</b> (not built, not agreed)</td><td>Dataset names (raw_*, staging, marts, <code>ai_safe</code>, <code>ai_logs</code>, <code>ai_eval</code>), all mart names (dim_*, fct_*, member_xref), tools (query_metrics, run_sql, get_business_context), Cloud Run, Cloud Scheduler, Identity-Aware Proxy, Microsoft Entra, Secret Manager, GitHub Actions, Vertex AI, Claude models, BigQuery ML (ARIMA_PLUS, LOGISTIC_REG), Slack/Teams digests</td><td>Our design. Work.Life's real dataset, model and table names are unknown until you get access. Expect them to differ.</td></tr>
+<tr><td>🏷️ <b>Lab-only names and numbers</b></td><td>Soho / Reading lab sites, Pixel Chai, GreenRoot, Brightline, Ortho Robotics, account codes 4000–6000, all £ figures in lab examples</td><td>Made up for learning. Real sites and accounts will differ.</td></tr>
+<tr><td>📚 <b>General industry or vendor knowledge</b></td><td>Leases, management agreements, brokers and commission, FRS 102 / IFRS 16, Nexudus and HubSpot features and prices</td><td>True in general, but whether Work.Life uses or does it is unknown. Ask.</td></tr>
+</table>
+
+<p><b>Rule of thumb:</b> if a term isn't in the first row, say "in our design" or "for example" when you use it with the client.</p>
 
 <hr/>
 
