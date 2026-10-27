@@ -1,0 +1,329 @@
+<h2>Chapter 43 — Month-End Close and the Board Pack: How the Numbers Become Official</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>The brief says the AI must <i>"understand our board pack, our KPIs, why those KPIs matter and their current status."</i> Chapter 09 showed what a closed period is. Chapter 22 showed how to turn the board pack into business context. This chapter fills in the step between them: what finance <b>does</b> between the last day of the month and the day the numbers become official, and how leadership then <b>reads</b> those numbers.</p>
+
+<p>Warning: we haven't seen Work.Life's close timetable (question #11) or board pack (question #14). The <i>process</i> below is <b>general practice</b>; every <i>number</i> comes from the lab CSVs.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>A small story: the number that moved</li>
+    <li>The close, day by day (general practice)</li>
+    <li>The adjustments: accruals, prepayments, deferrals, depreciation, allocations</li>
+    <li>Reconciliations, including Nexudus ↔ NetSuite</li>
+    <li>Management accounts vs statutory accounts</li>
+    <li>Budget vs forecast vs actual</li>
+    <li>Variance analysis and commentary</li>
+    <li>What a coworking board pack typically contains</li>
+    <li>RAG status</li>
+    <li>Sample board pack, Sep 2026 (lab)</li>
+    <li>Restatements: when a closed month changes</li>
+    <li>How all of this becomes data, and the PROVISIONAL rule</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>Picture 2 October (illustrative). A site manager asks the AI "what did Soho make in September?" and gets <b>£3,565</b>, because the Nexudus invoices are all there. A week later the finance lead presents Soho's September revenue to leadership as <b>£3,475</b>. Same month, same site, two numbers.</p>
+
+<p>Nobody made a mistake. Between those two dates, finance did the close: they posted the £90 goodwill credit memo CN-2609-01, the site-staff journals, the central cost allocations, and they reconciled what Nexudus invoiced against what NetSuite recognised. The first number was a <b>work in progress</b>. The second is <b>official</b>. The AI's job is to know the difference and to say which one it is giving.</p>
+
+<pre>
+   1 Sep ─────────── 30 Sep ───── close (WD1 … WD~7) ───── 🔒 period locked ───── board meeting
+     transactions flow in           adjustments, recs,         numbers are          leadership reads
+     (Nexudus, bills, payroll)      review, commentary         official              and decides
+                                    ▲
+         anything reported before the lock = PROVISIONAL
+   (WD = working day after month end; timings illustrative, Work.Life's are unknown: #11)
+</pre>
+
+<hr/>
+
+<h3>2. The Close, Day by Day (General Practice)</h3>
+
+<p>Most finance teams of Work.Life's size (~70 staff, 14 sites) close in roughly 5 to 10 working days. A typical checklist looks like this. <b>This is generic practice, not Work.Life's actual timetable.</b></p>
+
+<table border="1" cellpadding="10">
+<tr><th>When</th><th>Step</th><th>What it means</th><th>Lab example</th></tr>
+<tr><td>Last days of month</td><td><b>Pre-close</b></td><td>Remind site teams to submit invoices and approvals; run the final usage billing</td><td>Meeting-room invoices INV-2609-05 to 08, dated 30 Sep</td></tr>
+<tr><td>WD1</td><td><b>Cut-off</b></td><td>Decide which month each item belongs to. A bill received on 3 Oct for September energy is a September cost</td><td>Utilities BILL-2609-04 and 09 dated 30 Sep</td></tr>
+<tr><td>WD2</td><td><b>Payroll journal</b></td><td>Staff costs from the payroll system, split by site</td><td>JE-2609-01 £1,200 Soho, JE-2609-02 £400 Reading</td></tr>
+<tr><td>WD2–3</td><td><b>Accruals, prepayments, deferrals</b></td><td>See section 3</td><td>(none in the lab GL)</td></tr>
+<tr><td>WD3</td><td><b>Depreciation</b></td><td>Monthly charge for fit-outs, furniture, IT</td><td>(not in lab)</td></tr>
+<tr><td>WD3</td><td><b>Central cost allocation</b></td><td>Share HQ costs out to sites by an agreed key</td><td>JE-2609-03 £1,000 Soho, JE-2609-04 £500 Reading</td></tr>
+<tr><td>WD3</td><td><b>Intercompany</b> (only if several legal entities)</td><td>Match and eliminate recharges between group companies</td><td>Lab has one entity</td></tr>
+<tr><td>WD3–4</td><td><b>Reconciliations</b></td><td>Bank, AR, AP, VAT, deposits, Nexudus ↔ NetSuite revenue (section 4)</td><td>Soho −£90 explained</td></tr>
+<tr><td>WD4–5</td><td><b>Review</b></td><td>Compare to budget and last month, chase anything odd, write commentary</td><td>Soho −62% vs budget</td></tr>
+<tr><td>WD5–7</td><td><b>Sign-off and lock</b></td><td>Finance lead approves; the period is closed in NetSuite (AR and AP can be locked earlier, separately)</td><td>(lab has no period table)</td></tr>
+</table>
+
+<p>💡 Notice how many lab rows are dated <b>30 September</b>: all the journals, the meeting-room invoices, the credit memo, two utility bills. A query run on 25 September misses all of them.</p>
+
+<hr/>
+
+<h3>3. The Adjustments, One by One</h3>
+
+<p>These are the journals that make NetSuite differ from "what got invoiced" and "what got paid". Chapter 09 covered deferred revenue; here are the rest, with coworking examples.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Adjustment</th><th>Plain meaning</th><th>Coworking example</th><th>Effect on the month</th></tr>
+<tr><td><b>Accrual</b></td><td>Cost used this month, invoice not yet received</td><td>September energy bill arrives on 15 Oct. Finance estimates £350 (made up as an accrual; in the lab the bill is posted on 30 Sep)</td><td>Cost goes in September, not October</td></tr>
+<tr><td><b>Prepayment</b></td><td>Cost paid in advance, spread over the months it covers</td><td>UK commercial rent is often billed quarterly in advance. A £13,500 quarter (made up) is spread as £4,500 per month</td><td>Rent is smooth month to month</td></tr>
+<tr><td><b>Deferred revenue</b></td><td>Customer paid in advance; revenue released as earned</td><td>A member prepays a year (Chapter 09's GreenRoot example, made up)</td><td>Invoiced ≠ recognised</td></tr>
+<tr><td><b>Depreciation</b></td><td>Cost of long-life assets spread over their life</td><td>A £120,000 office fit-out over 10 years = £1,000/month (made up)</td><td>Hits EBITDA? No. Hits profit? Yes</td></tr>
+<tr><td><b>Central allocation</b></td><td>HQ costs shared to sites</td><td>£1,000 Soho, £500 Reading (lab). The key (by desks, revenue, sq ft?) is unknown</td><td>Turns contribution into "after central"</td></tr>
+</table>
+
+<p>Why it matters for us: the allocation key decides whether a site "makes money after central costs". Reading's contribution is <b>+£450</b> but after its £500 share it's <b>−£50</b>. Change the key and Reading flips. The AI must quote the key, not just the result. New question for the client: <i>"How are central costs allocated to sites, and how often does the key change?"</i></p>
+
+<hr/>
+
+<h3>4. Reconciliations</h3>
+
+<p>A reconciliation proves that two records of the same thing agree, or explains exactly why they don't. The standard ones: <b>bank</b> (ledger vs statement: missing receipts, double payments), <b>AR</b> (open invoices vs the debtors account: members not paying), <b>AP</b> (bills vs supplier statements: missing bills), <b>VAT</b> (VAT wrongly posted to revenue). The one that matters most for us is <b>Nexudus ↔ NetSuite revenue</b>, per site:</p>
+
+<pre>
+   SOHO, SEP 2026 (lab)            NEXUDUS invoiced   NETSUITE recognised   diff
+   Office 101 (Pixel Chai)                2,400              2,400            0
+   Coworking (2 hot-desk members)           640                640            0
+   Meeting rooms                            525                435          −90   ← CN-2609-01
+                                          ─────              ─────          ───
+   Total                                  3,565              3,475          −90   ✅ fully explained
+
+   READING, SEP 2026 (lab)                2,900              2,900            0   ✅
+</pre>
+
+<p>It proves the warehouse joins the two systems correctly. In dbt it becomes a model plus a test: "unexplained difference per site per month = 0".</p>
+
+<hr/>
+
+<h3>5. Management Accounts vs Statutory Accounts</h3>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Management accounts</th><th>Statutory accounts</th></tr>
+<tr><td>Who for</td><td>Leadership, board</td><td>Companies House, HMRC, shareholders</td></tr>
+<tr><td>How often</td><td>Monthly</td><td>Yearly (audited if the company is above the audit thresholds)</td></tr>
+<tr><td>Format</td><td>Whatever helps decisions: P&amp;L by site, contribution, KPIs</td><td>Fixed by accounting standards (most UK private companies use FRS 102)</td></tr>
+<tr><td>Site detail</td><td>Yes</td><td>No: one company (or group) total</td></tr>
+<tr><td>AI scope</td><td><b>Yes</b></td><td>No</td></tr>
+</table>
+
+<p>⚠️ <b>Leases are where the two can look very different.</b> In management accounts, rent is usually a monthly cost line (our lab's account 5000). Lease accounting standards (IFRS 16, and the amended FRS 102 for periods starting on or after 1 January 2026) put most leases on the balance sheet, so "rent" turns into depreciation plus interest and EBITDA goes up. For a business whose biggest cost is rent, that matters. Ask finance which basis the board pack uses. Our assumption: management accounts with rent as a cost, which is what the lab shows.</p>
+
+<hr/>
+
+<h3>6. Budget vs Forecast vs Actual</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>What it is</th><th>When it's made</th><th>Changes?</th><th>In the lab</th></tr>
+<tr><td><b>Budget</b></td><td>The plan for the year, by site and month</td><td>Once, before the year starts</td><td>No (that's the point: it's the yardstick)</td><td><code>excel_capacity_budget_2026.csv</code></td></tr>
+<tr><td><b>Forecast</b> (reforecast, "latest estimate")</td><td>Actuals for the months done + best guess for the rest</td><td>Monthly or quarterly</td><td>Yes, each time</td><td>None (Phase 2, Chapter 31)</td></tr>
+<tr><td><b>Actual</b></td><td>What happened, from the closed ledger</td><td>At the close</td><td>Only via a restatement</td><td>NetSuite GL + Nexudus</td></tr>
+</table>
+
+<p>The lab budget for September: Soho <b>£9,200</b> revenue, £7,650 direct costs, 85% desk occupancy, 34 sellable desks. Reading <b>£3,200</b> revenue, £2,450 direct costs, 20% occupancy, 31 desks. Note the budget lives in <b>Excel</b>, not in NetSuite. That's common (Chapter 06) and it means a third system sits inside every "vs budget" answer.</p>
+
+<p>💡 "Are we on plan?" needs to know <b>which</b> plan: a site can be far below budget but on forecast. New question for the client: <i>"Does the board pack compare to budget, the latest forecast, or both?"</i></p>
+
+<hr/>
+
+<h3>7. Variance Analysis and Commentary</h3>
+
+<p>A variance is actual minus budget. For revenue and profit, negative is bad; for costs, positive is bad. Always say which way is "favourable" (F) or "adverse" (A), so nobody misreads a sign.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Sep 2026 (lab)</th><th>Actual</th><th>Budget</th><th>Variance</th><th>%</th></tr>
+<tr><td>Soho revenue</td><td>£3,475</td><td>£9,200</td><td>−£5,725 (A)</td><td>−62%</td></tr>
+<tr><td>Soho direct costs</td><td>£7,650</td><td>£7,650</td><td>£0</td><td>0%</td></tr>
+<tr><td>Soho contribution</td><td>−£4,175</td><td>+£1,550</td><td>−£5,725 (A)</td><td></td></tr>
+<tr><td>Reading revenue</td><td>£2,900</td><td>£3,200</td><td>−£300 (A)</td><td>−9%</td></tr>
+<tr><td>Reading direct costs</td><td>£2,450</td><td>£2,450</td><td>£0</td><td>0%</td></tr>
+<tr><td>Reading contribution</td><td>+£450</td><td>+£750</td><td>−£300 (A)</td><td>−40%</td></tr>
+</table>
+
+<p>The numbers say <i>what</i>. Commentary says <b>why</b>, and that's the part that today "takes someone a day to write" (Chapter 40). Good commentary names drivers you can check in the data:</p>
+
+<pre>
+SOHO — revenue £5,725 (62%) below budget; costs on budget
+  Volume:  desk occupancy 17.6% (6 of 34) vs 85% budget
+           • Office 102 (8 desks, list £5,000/month) empty
+           • Office 103 (list £1,400/month) empty since Brightline left on 30 Jun (K003)
+           • 18 of 20 hot desks unsold
+  Price:   Pixel Chai pays £2,400 vs £2,600 list for Office 101 (7.7% discount, 12-month term)
+  One-off: £90 goodwill credit to Pixel Chai, AV failure on 24 Sep (CN-2609-01)
+  So what: costs are fixed (£7,650 whether 1 or 34 desks are sold), so every
+           desk sold goes almost straight to contribution. No open Soho deals.
+
+READING — revenue £300 (9%) below budget; contribution still positive (+£450)
+  Volume:  occupancy 19% vs 20% budget; no coworking members in September
+           (Kite &amp; Key's Flex 10 moved to Soho on 1 Aug: K006 → K007, a transfer, not churn)
+  Watch:   upside: Ortho Robotics, Office 202, £4,200/month quoted, tour done, wants Nov
+           risk:   GreenRoot (Office 201, £2,700) renews 31 Dec; weekly attendance fell
+                   73% → 23% → ~0 over September
+</pre>
+
+<p>Two rules for AI-written commentary: (1) every driver points to a row in the data (contract, GL line, booking); (2) never invent a split the data doesn't have. The lab budget is one number per site, so we can't say "the budget expected Office 102 at £5,000". We can only say the empty offices' list value (£6,400/month) is bigger than the gap.</p>
+
+<hr/>
+
+<h3>8. What a Coworking Board Pack Typically Contains</h3>
+
+<p>We haven't seen Work.Life's board pack (question #14). This is what flex-workspace board packs <b>typically</b> contain:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Page</th><th>Shows</th><th>Main source</th></tr>
+<tr><td><b>KPI summary</b></td><td>8–12 headline numbers with RAG and trend</td><td>All, via marts</td></tr>
+<tr><td><b>Site league table</b></td><td>All 14 sites ranked by occupancy, contribution, vs budget</td><td><code>fct_site_month_kpis</code></td></tr>
+<tr><td><b>P&amp;L by site</b></td><td>Revenue, direct costs, contribution, after central; actual vs budget</td><td>NetSuite + Excel budget</td></tr>
+<tr><td><b>Occupancy</b></td><td>Desk / office occupancy, contracted vs physical</td><td>Nexudus, capacity sheet, door access</td></tr>
+<tr><td><b>Pipeline</b></td><td>Open deals, tours, expected starts</td><td>CRM</td></tr>
+<tr><td><b>Churn and renewals</b></td><td>Leavers, notices given, renewals due next 3–6 months</td><td>Nexudus contracts + CRM</td></tr>
+<tr><td><b>Cash</b></td><td>Bank balance, cash flow, debtor days, deposits held</td><td>NetSuite balance sheet</td></tr>
+<tr><td><b>Commentary</b></td><td>Why, and what we're doing about it</td><td>Finance + ops leads</td></tr>
+</table>
+
+<p><b>Cash</b> needs balance-sheet accounts; our <code>fct_gl</code> only has P&amp;L categories (<code>revenue</code>, <code>direct_cost</code>, <code>central_cost</code>). A cash page would be a scope question.</p>
+
+<hr/>
+
+<h3>9. RAG Status</h3>
+
+<p><b>RAG</b> = Red / Amber / Green. It lets a reader scan 14 sites in seconds. Thresholds are a business decision (context cards, Chapter 22), never invented by the AI. Example thresholds (made up):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>KPI</th><th>🟢 Green</th><th>🟠 Amber</th><th>🔴 Red</th></tr>
+<tr><td>Revenue vs budget</td><td>≥ −5%</td><td>−5% to −15%</td><td>&lt; −15%</td></tr>
+<tr><td>Desk occupancy vs budget</td><td>within 5 points</td><td>5 to 15 points below</td><td>&gt; 15 points below</td></tr>
+<tr><td>Contribution</td><td>≥ budget</td><td>below budget but positive</td><td>negative</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. Sample Board Pack, Sep 2026 (Lab)</h3>
+
+<p>One page, two sites, canonical lab numbers only. RAG uses the made-up thresholds above.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>KPI</th><th>Soho</th><th>Reading</th><th>Source</th></tr>
+<tr><td>Period status</td><td colspan="2">Lab: treated as closed (no period table in lab). Built on 1 Oct, every row would be PROVISIONAL</td><td>NetSuite periods</td></tr>
+<tr><td>Recognised revenue</td><td>£3,475</td><td>£2,900</td><td>NetSuite GL</td></tr>
+<tr><td>Revenue vs budget</td><td>🔴 −£5,725 (−62%)</td><td>🟠 −£300 (−9%)</td><td>GL + Excel budget</td></tr>
+<tr><td>MRR (contracted)</td><td>£3,040</td><td>£2,700</td><td>Nexudus contracts</td></tr>
+<tr><td>Direct costs</td><td>£7,650 (on budget)</td><td>£2,450 (on budget)</td><td>NetSuite GL</td></tr>
+<tr><td>Contribution</td><td>🔴 −£4,175</td><td>🟠 +£450</td><td>NetSuite GL</td></tr>
+<tr><td>After central costs</td><td>−£5,175</td><td>−£50</td><td>GL allocation journals</td></tr>
+<tr><td>Desk occupancy</td><td>🔴 17.6% (6/34) vs 85%</td><td>🟢 19% (6/31) vs 20%</td><td>Nexudus + capacity sheet</td></tr>
+<tr><td>Office occupancy</td><td>1 of 3</td><td>1 of 2</td><td>Nexudus</td></tr>
+<tr><td>Members (by contract site)</td><td>6</td><td>6</td><td>Nexudus</td></tr>
+<tr><td>Churn</td><td colspan="2">None in September. 2026 to date: 1 company (Brightline, Soho, 2 people, £1,400 MRR)</td><td>Nexudus contracts</td></tr>
+<tr><td>Open pipeline</td><td>£0</td><td>£7,000/month (Ortho £4,200 new + GreenRoot renewal £2,800)</td><td>CRM</td></tr>
+<tr><td>Renewal risk</td><td>None due</td><td>GreenRoot, 31 Dec, attendance falling</td><td>Contracts + door access</td></tr>
+<tr><td>Cash</td><td colspan="2">Not in lab (needs balance-sheet data)</td><td>NetSuite</td></tr>
+<tr><td>One-line commentary</td><td>Empty offices, fixed costs: fill Office 102/103</td><td>Near plan; win Ortho, save GreenRoot</td><td>Section 7</td></tr>
+</table>
+
+<hr/>
+
+<h3>11. Restatements: When a Closed Month Changes</h3>
+
+<p>Sometimes a closed month turns out to be wrong. Say (made up) that in mid-October finance finds a £300 September cleaning invoice for Soho that was never posted. There are two ways to fix it:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Approach</th><th>What happens</th><th>Effect on September</th></tr>
+<tr><td><b>Post in the current month</b> (most common for small items)</td><td>The £300 goes into October</td><td>September stays −£4,175; October looks £300 worse</td></tr>
+<tr><td><b>Reopen and restate</b> (for material errors)</td><td>Finance reopens September, posts it, locks again</td><td>September becomes −£4,475 (made up); the board already saw −£4,175</td></tr>
+</table>
+
+<p>The second is dangerous for data: a number leadership already saw quietly changes. Two protections:</p>
+<ul>
+    <li><b>Snapshot what was reported.</b> Keep an "as reported" copy of each month's KPIs at board-pack time (a dbt snapshot), so "what did we tell the board?" and "what's true now?" are both answerable.</li>
+    <li><b>Alert on closed-period changes.</b> A test that fails if any closed month's revenue or costs move. The AI should then say: "September was restated on [date]: contribution changed from −£4,175 to −£4,475 (made up)."</li>
+</ul>
+
+<hr/>
+
+<h3>12. How All This Becomes Data</h3>
+
+<pre>
+   NETSUITE accountingperiod ──┐   (one row per period: start/end dates and
+   (vendor fact: has closed and│    closed / locked flags; check exact column
+    AR/AP/all-locked flags)    │    names in the Records Catalog)
+                               ▼
+   EXCEL budget ──► raw_excel ──► staging ──► fct_site_month_kpis  ◄── fct_gl, fct_contract_month
+                                              │  revenue_gbp, revenue_vs_budget_gbp,
+                                              │  contribution_gbp, desk_occupancy …
+                                              │  + is_period_closed  (proposed column)
+                                              ▼
+                                         ai_safe ──► AI answers with PROVISIONAL / FINAL
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Piece</th><th>Where</th><th>Why</th></tr>
+<tr><td>Accounting periods</td><td><code>raw_netsuite</code> (via Fivetran) → staging</td><td>Source of the closed flag; report by period, not transaction date (Chapter 09)</td></tr>
+<tr><td><code>is_period_closed</code></td><td>Proposed column on <code>fct_site_month_kpis</code> (already in <code>ai_safe</code>)</td><td>The AI needs it on every row it reads; no new table in <code>ai_safe</code></td></tr>
+<tr><td>Budget</td><td><code>raw_excel</code> → <code>revenue_vs_budget_gbp</code> etc.</td><td>One agreed budget version, tested (Chapter 06)</td></tr>
+<tr><td>As-reported snapshot</td><td>dbt snapshot in <code>marts</code> (proposed)</td><td>Restatement detection and "what did the board see?"</td></tr>
+</table>
+
+<p><b>The PROVISIONAL rule</b> (Chapter 20 has the pipeline step):</p>
+<ul>
+    <li>No month named → use the <b>last closed</b> month.</li>
+    <li>Open month asked for → answer, label it <b>PROVISIONAL</b>, and say what usually still changes: late bills, accruals, credit memos, payroll and allocation journals.</li>
+    <li>Closed month restated → say so, with the old and new figure.</li>
+    </ul>
+
+<pre>
+   "How is Soho doing this month?"   (asked 3 Oct, September still open, illustrative)
+
+   PROVISIONAL (September not yet closed): Soho revenue so far £3,475, £5,725 below
+   the £9,200 budget. Direct costs £7,650, contribution −£4,175. These may still
+   change: accruals, credit memos and allocation journals are added at the close.
+   Last closed month: August.
+</pre>
+
+<p>New questions for the client (unnumbered): <i>"Are there several legal entities in NetSuite, with intercompany recharges?"</i>, <i>"Is the board pack on a management basis with rent as a cost?"</i>, <i>"Has a closed month ever been restated, and how is it communicated?"</i></p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Walk me through a month-end close.</b></p>
+<p><i>"Cut-off first, so each item lands in the right month. Then post payroll, accruals, prepayments, deferred revenue releases, depreciation and central cost allocations, and handle intercompany if there are several entities. Then reconcile bank, debtors, creditors, VAT and, for a coworking business, membership-system invoicing against recognised revenue. Finance reviews variances, writes commentary, signs off and locks the period. Until then, numbers are provisional."</i></p>
+
+<p><b>Q: What's the difference between budget, forecast and actual?</b></p>
+<p><i>"The budget is the fixed plan made before the year. The forecast is updated regularly: actuals to date plus a best guess for the rest. Actuals come from the closed ledger. An assistant must know which one the board compares against."</i></p>
+
+<p><b>Q: A closed month's number changed in the warehouse. What do you do?</b></p>
+<p><i>"First check whether finance restated it or it's a pipeline bug. I'd keep an as-reported snapshot per board-pack month and a test that flags changes to closed periods. For a real restatement, show the new number and say it was restated, with the old figure."</i></p>
+
+<p><b>Q: How would the AI explain why a site missed budget?</b></p>
+<p><i>"Split the variance into drivers it can prove from data: occupancy (which offices and desks are empty), price (discounts against list), one-offs (credit memos) and costs against budget. Every driver must point to a contract, GL line or booking. It shouldn't invent a breakdown of the budget that the budget file doesn't contain."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Close</b></td><td>Cut-off, adjustments, reconciliations, review, lock. Typically 5–10 working days; Work.Life's timetable is unknown (#11).</td></tr>
+<tr><td><b>Adjustments</b></td><td>Accruals, prepayments, deferrals, depreciation, allocations: why ledger ≠ invoices ≠ cash.</td></tr>
+<tr><td><b>Nexudus ↔ NetSuite rec</b></td><td>Soho £3,565 vs £3,475, −£90 fully explained. Build it as a model and a test.</td></tr>
+<tr><td><b>Management vs statutory</b></td><td>The AI lives in management accounts. Check how leases are shown.</td></tr>
+<tr><td><b>Budget / forecast / actual</b></td><td>Fixed plan / moving estimate / closed truth. Budget lives in Excel.</td></tr>
+<tr><td><b>Variance</b></td><td>Soho −£5,725 (−62%), Reading −£300 (−9%). Commentary names provable drivers.</td></tr>
+<tr><td><b>Board pack</b></td><td>KPIs, league table, site P&amp;L, occupancy, pipeline, churn, cash. Typical only; ask for theirs (#14).</td></tr>
+<tr><td><b>RAG</b></td><td>Thresholds are a business decision; always show the £ too.</td></tr>
+<tr><td><b>Restatement</b></td><td>Snapshot what was reported; alert when a closed month moves.</td></tr>
+<tr><td><b>PROVISIONAL</b></td><td>Open month = labelled answer. No month named = last closed month.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>The board pack showed Reading's future depends on two deals: winning Ortho Robotics and keeping GreenRoot. In Chapter 44 we go deep on <b>the sales and renewals engine</b>: how an enquiry becomes a tour, a deal, a contract and, a year later, a renewal or a leaver, and which system records each step.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

@@ -1,0 +1,330 @@
+<h2>Chapter 44 — The Sales and Renewals Engine: From Enquiry to Re-Sign</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>A flex workspace sells desks and offices for a while. Every member was won once, and every fixed-term member has to be won <b>again</b> when their term ends. Understand that engine and you understand most of what the revenue numbers say.</p>
+
+<p>Chapter 08 showed the CRM records, Chapter 10 HubSpot's data model, Chapter 30 a renewal risk score. This chapter goes underneath: <b>how the business wins, keeps and loses customers</b>, and the trail each step leaves in the data. Lab files only, snapshot 30 Sep 2026.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>A small story: two Reading deals worth £7,000 a month that mean very different things</li>
+    <li>Where customers come from: lead sources</li>
+    <li>Brokers: why they matter in UK flex</li>
+    <li>The funnel and its maths: enquiry → tour → proposal → won/lost</li>
+    <li>Quoting and discounting: list vs quoted vs won</li>
+    <li>Contract terms, minimum terms and notice periods</li>
+    <li>The renewal cycle: when the conversation starts</li>
+    <li>Upgrades, downgrades and transfers are not churn</li>
+    <li>Lost and churn reasons as structured data</li>
+    <li>Leading indicators</li>
+    <li>The ownership question: who owns renewals?</li>
+    <li>What the move to HubSpot changes</li>
+    <li>The data trail: every step, every KPI</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>On 2 Sep 2026 Ben Carter, COO of Ortho Robotics, is introduced by a broker (OfficeFinder, a made-up name in the lab). They tour Reading Office 202 and want 10 desks from November. Quote: <b>£4,200/month</b>. Stage: Tour Done.</p>
+
+<p>On 15 Sep the GreenRoot Foods renewal is opened. Their Office 201 contract (K005, £2,700/month) ends 31 Dec. A proposal goes out at <b>£2,800/month</b>. Stage: Proposal Sent.</p>
+
+<p>The CRM report says: <b>open pipeline £7,000/month</b>. True, and also misleading. Reading's MRR today is £2,700. If both deals close, Reading goes to £7,000, which is <b>+£4,300</b>, not +£7,000, because £2,700 of the GreenRoot "pipeline" is money Work.Life already has. And the door data says GreenRoot's team has nearly stopped coming in (Chapter 08). One deal is growth. The other is <b>defence</b>. A sales report that adds them together hides the most important fact in Reading.</p>
+
+<hr/>
+
+<h3>2. Where Customers Come From: Lead Sources</h3>
+
+<p>The <code>Referred By</code> field in <code>act_contacts.csv</code> records how each contact first arrived. Seven contacts, four sources:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Source</th><th>Contacts</th><th>Who</th><th>Outcome</th><th>Active MRR today</th></tr>
+<tr><td><b>Website</b></td><td>3</td><td>Pixel Chai, Kite &amp; Key, Lumen Yoga</td><td>2 customers, 1 lost (event enquiry)</td><td>£2,400 + £320 = £2,720</td></tr>
+<tr><td><b>Broker</b></td><td>2</td><td>Brightline Legal, Ortho Robotics</td><td>1 won then churned, 1 open</td><td>£0</td></tr>
+<tr><td><b>Referral</b></td><td>1</td><td>GreenRoot Foods (referred by Ravi Patel, Nomad)</td><td>Customer</td><td>£2,700</td></tr>
+<tr><td><b>Walk-in</b></td><td>1</td><td>Nomad Analytics</td><td>Customer</td><td>£320</td></tr>
+<tr><td colspan="4"><b>Total</b></td><td><b>£5,740</b> (= Soho £3,040 + Reading £2,700)</td></tr>
+</table>
+
+<p><b>Website</b> enquiries are mixed quality (Lumen wanted an event space). <b>Walk-ins</b> are small and fast: Nomad's contact was created 30 Dec 2024, hot desk from 15 Jan 2025, no opportunity ever logged. <b>Referrals</b> come from happy members, a quiet retention signal. <b>Brokers</b> bring bigger office deals, at a cost.</p>
+
+<p>Three data lessons hide in that one column:</p>
+<ul>
+    <li><b>Type and name are mixed.</b> <code>Broker - OfficeFinder</code> and <code>Referral - Ravi Patel</code> pack two facts into one text field. Staging must split them into <code>lead_source_type</code> (a fixed list) and <code>lead_source_detail</code>.</li>
+    <li><b>A referrer's name is personal data.</b> "Referral - Ravi Patel" names a member. The company-level fact "referred by another member company" is fine for reporting; the person's name stays out of <code>ai_safe</code>.</li>
+    <li><b>Source is a first-touch fact.</b> It is set once, at creation, and should never be overwritten when the same company comes back for a renewal or an upgrade.</li>
+</ul>
+
+<hr/>
+
+<h3>3. Brokers: Why They Matter in UK Flex</h3>
+
+<p><i>This section is general UK flex-market practice, not Work.Life fact. Work.Life's broker terms, broker share and commission accounting are unknown. Ask.</i></p>
+
+<p>Companies looking for 5 to 50 desks often call a <b>flex office broker</b>, who shortlists buildings across operators, books tours and helps negotiate. The tenant usually pays nothing; the <b>operator pays commission</b> on signing, commonly a percentage of first-year (or full-term) value. Brokers usually register the introduction first, which decides who earns commission if the client later comes back directly.</p>
+
+<p>Why this matters for the numbers, with a <b>(made up)</b> 10% commission on a 12-month term:</p>
+
+<pre>
+   Ortho Robotics, Office 202 (if won)
+   Monthly price           £4,200
+   12-month value          £4,200 × 12 = £50,400
+   Commission (made up)    10% × £50,400 = £5,040, paid once, near signing
+   ≈ 1.2 months of the contract's revenue goes to the broker
+</pre>
+
+<p>So "revenue by lead source" is not "profit by lead source". Where the commission is recorded (a NetSuite cost? the Excel tracker Chapter 06 guessed at?) is unconfirmed. And brokers show clients <b>competitors</b>, so broker deals tend to be the most price-sensitive.</p>
+
+<hr/>
+
+<h3>4. The Funnel and Its Maths</h3>
+
+<pre>
+   ENQUIRY ──► TOUR BOOKED ──► TOUR DONE ──► PROPOSAL SENT ──► CLOSED WON ──► contract in Nexudus
+   (contact      (activity)      (stage)        (stage +           (stage +        (start date,
+    created,                                     quoted £)          won £)          price, term)
+    lead source)                                                   └─► CLOSED LOST (lost reason)
+
+   Lab today (7 opportunities): Tour Done 1 · Proposal Sent 1 · Closed Won 3 · Closed Lost 2
+</pre>
+
+<p>Chapter 08 gave the headline: <b>win rate 3 won / 5 closed = 60%</b>. But "win rate" is a definition, and the lab gives four different answers depending on what you include:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Win rate definition</th><th>Closed deals included</th><th>Result</th></tr>
+<tr><td>All closed opportunities</td><td>Pixel Chai, Brightline office, GreenRoot (won); Brightline renewal, Lumen (lost)</td><td><b>3/5 = 60%</b></td></tr>
+<tr><td>New business only (no renewals)</td><td>Same minus Brightline renewal</td><td>3/4 = 75%</td></tr>
+<tr><td>New office/membership business (no events)</td><td>Minus Lumen's event enquiry too</td><td>3/3 = 100%</td></tr>
+<tr><td>Renewals only</td><td>Brightline renewal</td><td>0/1 = 0%</td></tr>
+</table>
+
+<p>Mixing renewals and new business blends two different jobs. Keep separate pipelines (as in Chapter 10) and separate KPIs.</p>
+
+<p><b>Sales cycle</b> (open → close) for won deals: Brightline 21, GreenRoot 38, Pixel Chai 41 days, average about <b>33 days</b>; then 18–22 days to contract start. Enquiry to revenue is roughly <b>7 to 9 weeks</b>. Ortho's estimated close is 31 Oct for a 1 Nov start: one day of slack.</p>
+
+<p><b>Weighted pipeline</b> multiplies each deal by a stage probability. With <b>(made up)</b> 25% for Tour Done and 50% for Proposal Sent: £4,200 × 25% + £2,800 × 50% = <b>£2,450</b>. Real probabilities need history.</p>
+
+<p>⚠️ <b>The lab only holds today's stage.</b> It says Ortho is "Tour Done", not when. Conversion between stages and time-in-stage need <b>stage history</b> (every change, timestamped). HubSpot records deal stage changes (vendor fact); whether the current CRM and the warehouse keep it is a question.</p>
+
+<p>⚠️ <b>Not every customer has a deal.</b> Five companies signed contracts but only three deals are "Closed Won", and one (Pixel Chai's office) is an <b>upgrade</b>. Nomad and Kite &amp; Key have no deal at all. New-company counts must come from contracts, not the CRM.</p>
+
+<hr/>
+
+<h3>5. Quoting and Discounting: List vs Quoted vs Won</h3>
+
+<p>Every office deal carries up to four prices, each from a different place:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Price</th><th>Where it lives (lab)</th><th>Pixel Chai, Office 101</th></tr>
+<tr><td><b>List price</b></td><td><code>resources.csv</code> list_price_gbp; also <code>contracts.list_price_gbp</code></td><td>£2,600</td></tr>
+<tr><td><b>Quoted price</b></td><td>CRM <code>Quoted Monthly GBP</code></td><td>£2,600</td></tr>
+<tr><td><b>Won price</b></td><td>CRM <code>Won Monthly GBP</code></td><td>£2,400</td></tr>
+<tr><td><b>Contracted price</b></td><td><code>contracts.monthly_price_gbp</code> (K002)</td><td>£2,400</td></tr>
+</table>
+
+<p>Discount = (£2,600 − £2,400) ÷ £2,600 = <b>7.7%</b>, "for 12m term". Work.Life gave up £200/month (£2,400 over the term) for twelve months of committed revenue instead of a 3-month minimum. Price for term is the classic flex trade.</p>
+
+<ul>
+    <li><b>Test that won = contracted.</b> All three lab wins match (£2,400, £1,400, £2,700). A mismatch means a late renegotiation or a stale CRM.</li>
+    <li><b>Measure discount against list, not quote.</b> List-to-contracted shows the real price leakage.</li>
+    <li><b>Price per desk</b> makes offices comparable: Office 101 = £2,400 ÷ 4 = £600/desk; Ortho's Office 202 quote = £4,200 ÷ 10 = £420/desk; GreenRoot's Office 201 = £2,700 ÷ 6 = £450/desk.</li>
+    <li><b>Ask how real discounts are stored.</b> A lower contract price, a discount line on the invoice, a rent-free month? Each lands in Nexudus and NetSuite differently.</li>
+</ul>
+
+<hr/>
+
+<h3>6. Contract Terms, Minimum Terms and Notice Periods</h3>
+
+<p><i>General practice: UK flex contracts are usually <b>licence agreements</b> (permission to occupy) rather than leases, which is what makes short terms and quick exits possible. Work.Life's actual contract wording is unknown.</i></p>
+
+<p>Three dates control every contract:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Term</th><th>Meaning</th><th>Lab</th></tr>
+<tr><td><b>Minimum term</b></td><td>The shortest commitment the plan allows</td><td><code>plans.csv</code>: hot desk and Flex 10 = 1 month, private office = 3 months</td></tr>
+<tr><td><b>Contract term</b></td><td>What was actually signed (often longer, for a discount)</td><td>K002 Pixel Chai 12 months; K005 GreenRoot 12 months (1 Jan → 31 Dec 2026)</td></tr>
+<tr><td><b>Notice period</b></td><td>How far ahead the member must say they're leaving</td><td>Not a column in the lab. Brightline gave notice 30 Apr and left 30 Jun: 61 days</td></tr>
+<tr><td><b>Rolling</b></td><td>No end date; continues month by month until notice</td><td>K004 Nomad, K007 Kite &amp; Key (end_date empty)</td></tr>
+</table>
+
+<ul>
+    <li><b>Committed revenue</b> = MRR × months before the member could leave. GreenRoot on 30 Sep: £2,700 × 3 = £8,100. Nomad (rolling): about one month, however long they've stayed.</li>
+    <li><b>Notice is the earliest certain churn signal.</b> Brightline's gave 61 days to re-market Office 103.</li>
+    <li><b>No notice period in the lab</b>, so no "last date to give notice". Ask: a Nexudus field, a standard per plan, or only in the signed PDF?</li>
+</ul>
+
+<hr/>
+
+<h3>7. The Renewal Cycle: When the Conversation Starts</h3>
+
+<p>A fixed-term contract ends on a known date, so the renewal can be planned backwards from it. The lab shows two renewals, one lost and one live:</p>
+
+<pre>
+   BRIGHTLINE (K003, Office 103, £1,400)                         → LOST
+   01 Mar 2026   renewal opened, quoted £1,450 (+3.6%)    121 days before end
+   30 Apr 2026   notice given = renewal Closed Lost         61 days before end
+   30 Jun 2026   contract ends, company churns
+
+   GREENROOT (K005, Office 201, £2,700)                           → OPEN
+   01–14 Sep     team attendance 71–73% (weeks 1–2)
+   15 Sep 2026   renewal opened, proposal £2,800 (+3.7%)  107 days before end
+   late Sep      attendance 23% (week 4), ~0 (week 5)
+   30 Sep 2026   lab snapshot                               92 days before end
+   30 Nov 2026   estimated close                            31 days before end
+   31 Dec 2026   contract ends
+</pre>
+
+<p>What the timeline teaches:</p>
+<ul>
+    <li><b>Start before the notice window opens.</b> If GreenRoot's contract had a 2-month notice clause <b>(made up, borrowing the gap in Brightline's dates)</b>, they could give notice any time up to 31 Oct. A renewal conversation that hasn't happened by then is a conversation on the member's terms. That's why Chapter 30 scores risk at 120 days before end.</li>
+    <li><b>The proposal went out as attendance was falling.</b> A price rise of £100/month to a team that has stopped coming in is a risky opening. The person who sent it couldn't see the door data. That is exactly the gap a context pack (Chapter 30) fills.</li>
+    <li><b>Renewal pipeline is defended revenue, not new revenue.</b> GreenRoot's £2,800 is really "keep £2,700 + gain £100". Report renewal deals as <i>MRR at risk</i> and <i>uplift</i>, separately from new business.</li>
+    <li><b>Rolling contracts have no renewal moment.</b> Nomad and Kite &amp; Key renew silently every month, so their risk shows up only as falling usage or a sudden notice.</li>
+</ul>
+
+<hr/>
+
+<h3>8. Upgrades, Downgrades and Transfers Are Not Churn</h3>
+
+<p>Chapter 29 built the rules. Here is how the three lab cases look from the sales side:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Contract</th><th>What happened</th><th>Contracts say</th><th>CRM says</th><th>Movement</th></tr>
+<tr><td><b>K001</b> Pixel Chai</td><td>Hot desk £320 ended 31 Mar; Office 101 £2,400 started 1 Apr</td><td>end_reason = upgrade</td><td>A "Closed Won" deal, as if new</td><td><b>Upgrade</b>, +£2,080 MRR</td></tr>
+<tr><td><b>K006</b> Kite &amp; Key</td><td>Reading Flex 10 £180 ended 31 Jul; Soho hot desk £320 from 1 Aug</td><td>end_reason = transfer</td><td>Nothing</td><td><b>Transfer</b>: Reading −£180, Soho +£320</td></tr>
+<tr><td><b>K003</b> Brightline</td><td>Office 103 £1,400 ended 30 Jun; nothing after</td><td>end_reason = left, notice 30 Apr</td><td>Renewal Closed Lost, with a reason</td><td><b>Churn</b>, −£1,400 (2 people)</td></tr>
+</table>
+
+<p>A <b>downgrade</b> is the renewal "save" (smaller office, flex plan): churn avoided, MRR still down, so count it as a downgrade. And K006 is a transfer for the business but a lost member for Reading: site and company reports tell different, both true, stories.</p>
+
+<p>The rule for the warehouse: <b>movements come from contracts, reasons come from the CRM</b>. The CRM can't tell an upgrade from a new customer (it calls both "won"), and contracts can't tell you <i>why</i> someone left.</p>
+
+<hr/>
+
+<h3>9. Lost and Churn Reasons as Structured Data</h3>
+
+<p>The lab has two lost reasons, both free text:</p>
+<ul>
+    <li>Brightline renewal: <i>"Moving to hybrid; downsizing to home working"</i> (two reasons in one string)</li>
+    <li>Lumen Yoga: <i>"Price too high"</i> (lost at proposal stage, never a member)</li>
+</ul>
+
+<p>A lost prospect and a churned member are different events, but both answer "why didn't they buy (again)?". To count them, capture reasons as fields, not prose:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Field</th><th>Example values</th><th>Brightline</th><th>Lumen</th></tr>
+<tr><td><code>deal_type</code></td><td>new, renewal, upgrade</td><td>renewal</td><td>new</td></tr>
+<tr><td><code>lost_reason</code> (picklist)</td><td>price, location, space/size, hybrid/remote, company closed, competitor, other</td><td>hybrid/remote</td><td>price</td></tr>
+<tr><td><code>stage_at_loss</code></td><td>enquiry, tour, proposal, renewal</td><td>renewal</td><td>proposal</td></tr>
+<tr><td><code>lost_reason_note</code></td><td>free text, kept out of <code>ai_safe</code> unless reviewed</td><td>the original sentence</td><td>the original sentence</td></tr>
+</table>
+
+<p>Brightline's second reason (downsizing) can go in an optional secondary field. Keep all this separate from <code>contracts.end_reason</code> (upgrade / transfer / left): that records <b>what happened</b>, the CRM records <b>why</b>. A picklist only works if the team agrees it and uses it, so it's a process change as much as a schema change.</p>
+
+<hr/>
+
+<h3>10. Leading Indicators</h3>
+
+<p>Most sales and renewal KPIs are lagging: by the time churn shows in MRR, the decision was made months ago. These move first:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Indicator</th><th>Predicts</th><th>Lead time (lab)</th><th>Source</th></tr>
+<tr><td><b>Tours booked/done</b></td><td>Future occupancy and MRR</td><td>~7–9 weeks enquiry → revenue. Ortho alone would take Reading office desks from 6/16 to 16/16</td><td>CRM activities/stages</td></tr>
+<tr><td><b>Renewals due in 120 days</b></td><td>MRR at risk</td><td>GreenRoot: £2,700, due 31 Dec</td><td>Nexudus contract end dates</td></tr>
+<tr><td><b>Notices given</b></td><td>Churn (certain) and future vacancy</td><td>61 days for Brightline</td><td>Nexudus</td></tr>
+<tr><td><b>Company attendance trend</b></td><td>Churn risk, early</td><td>GreenRoot 73% → 23% → ~0 over September, 3 months before the end date</td><td>Door system, aggregated</td></tr>
+</table>
+
+<p>Notice is lagging for churn prediction (it's the answer arriving, Chapter 30's label leakage) but <b>leading</b> for occupancy and revenue forecasts. Same field, different role, depending on the question.</p>
+
+<p>🔒 Attendance is used only as a <b>company × site × week aggregate</b>, with a minimum group size (Chapters 24 and 30). GreenRoot has 6 members, so their team rate can be shown. Who in the team stopped coming in is never shown, to sales or to the AI.</p>
+
+<hr/>
+
+<h3>11. The Ownership Question: Who Owns Renewals?</h3>
+
+<p>We don't know who owns renewals at Work.Life, so we ask. In flex it is often split: <b>sales</b> owns new office deals, <b>community or site teams</b> know members day to day. Renewals sit in between, and that changes the data:</p>
+<ul>
+    <li><b>Is every renewal a CRM deal?</b> The lab logs them as deals. If site teams just extend the Nexudus contract, there's no stage and no lost reason.</li>
+    <li><b>Who gets the context pack and alerts?</b> Deal owner, site manager, or both?</li>
+    <li><b>Who fills in the lost reason?</b> If nobody owns the loss, the field stays empty.</li>
+</ul>
+
+<hr/>
+
+<h3>12. What the Move to HubSpot Changes</h3>
+
+<p>The brief says HubSpot <i>"is being integrated and is expected to become the source of truth for member data over time"</i>. For the sales and renewals engine that means:</p>
+
+<ul>
+    <li><b>History breaks at cutover.</b> Old deals must be migrated or frozen in the warehouse, or win rates and cycle times jump.</li>
+    <li><b>Two CRMs at once.</b> During the move a deal can exist in both: pipeline double counted.</li>
+    <li><b>New picklists.</b> A chance to fix lead source and lost reason, but old free text must be mapped to the new codes.</li>
+    <li><b>New IDs and merges</b> (Ch 10). Joins to contracts go through <code>member_xref</code>.</li>
+    <li><b>Deals sync HubSpot → Nexudus</b> (vendor fact, Ch 10). If both sides can edit price, won and contracted price drift.</li>
+</ul>
+
+<p>Underneath: we don't know where sales data lives <b>today</b>. The lab's CRM files are shaped like an Act! export for Chapter 08's "if ACT is the CRM" case, but "ACT" could equally be ACT365 door access. Either way, deals land in one conformed model with a <code>source_system</code> column and KPIs read only that (Chapter 28).</p>
+
+<hr/>
+
+<h3>13. The Data Trail: Every Step, Every KPI</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>Data it leaves</th><th>System</th><th>KPI it feeds</th></tr>
+<tr><td>Enquiry</td><td>Contact, create date, lead source</td><td>CRM</td><td>Leads by source, by site</td></tr>
+<tr><td>Tour</td><td>Activity / stage change, date</td><td>CRM</td><td>Tours per week, enquiry → tour rate</td></tr>
+<tr><td>Proposal</td><td>Quoted price, product, site, est. close</td><td>CRM</td><td>Open pipeline (£7,000), weighted pipeline</td></tr>
+<tr><td>Won / lost</td><td>Won price or lost reason, close date</td><td>CRM</td><td>Win rate (3/5), sales cycle (~33 days), lost reasons</td></tr>
+<tr><td>Contract</td><td>Plan, resource, price vs list, term, start</td><td>Nexudus</td><td>MRR, discount (7.7%), occupancy, new companies</td></tr>
+<tr><td>Usage</td><td>Bookings; door events (aggregated)</td><td>Nexudus, door system</td><td>Attendance trend, room usage</td></tr>
+<tr><td>Renewal opened</td><td>Renewal deal, proposed price</td><td>CRM</td><td>MRR up for renewal, uplift</td></tr>
+<tr><td>Notice / end</td><td>notice_given_on, end_date, end_reason</td><td>Nexudus</td><td>Churn (1 company, £1,400 in 2026), net movements</td></tr>
+<tr><td>Next contract</td><td>New contract for the same company</td><td>Nexudus</td><td>Upgrade / downgrade / transfer, net revenue retention</td></tr>
+</table>
+
+<p>New client questions (unnumbered): Who owns renewals, and is each one a CRM deal? Where is the notice period stored? How are discounts and incentives recorded? What share of office deals is broker-led, and where is commission booked? Is stage history kept, and how far back? Is there an agreed list of lost reasons?</p>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: The CRM shows £7,000/month of open pipeline. What would you check before reporting it?</b></p>
+<p><i>"Whether it mixes new business with renewals. In the lab £2,800 of it is GreenRoot's renewal, so only £100 of that is new money and £2,700 is revenue at risk. I'd report new-business pipeline, renewal MRR at risk and renewal uplift separately, and say whether the amounts are monthly or contract totals."</i></p>
+
+<p><b>Q: How do you measure discounting in a flex workspace?</b></p>
+<p><i>"Compare the contracted price with the list price, not just the quote with the won price, and record the reason, because discount is usually traded for a longer term. Pixel Chai's office is £2,400 against a £2,600 list, 7.7% off, for a 12-month term. I'd also test that the CRM won price matches the contract price."</i></p>
+
+<p><b>Q: Why can't you count churn from the CRM?</b></p>
+<p><i>"The CRM calls an upgrade a 'won' deal and may not record renewals or transfers at all. Movements come from contracts: nothing after the gap window is churn, pricier at the same site is an upgrade, a new site is a transfer. The CRM adds the why, as a structured lost reason."</i></p>
+
+<p><b>Q: When should a renewal conversation start, and what data supports it?</b></p>
+<p><i>"Before the notice deadline, planned backwards from the end date and notice period, say 120 days out. Supporting data: contract end and price, proposed price, renewal stage, company-level attendance against its own baseline, recent credits. Never person-level attendance."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Lead sources</b></td><td>Website 3, broker 2, referral 1, walk-in 1. Split type from name.</td></tr>
+<tr><td><b>Brokers</b></td><td>Bring office deals for commission (general practice). Work.Life's terms unknown.</td></tr>
+<tr><td><b>Win rate</b></td><td>3/5 = 60% overall, but it's a definition. Separate renewals.</td></tr>
+<tr><td><b>Four prices</b></td><td>List, quoted, won, contracted. Pixel Chai: 7.7% off for a 12-month term.</td></tr>
+<tr><td><b>Renewals</b></td><td>Plan backwards from the end date. Renewal pipeline = defended revenue.</td></tr>
+<tr><td><b>Movements vs reasons</b></td><td>Movements from contracts (K001, K006, K003); reasons from the CRM, as picklists.</td></tr>
+<tr><td><b>Leading indicators</b></td><td>Tours, renewals due, notices, company-level attendance only.</td></tr>
+<tr><td><b>Ownership</b></td><td>Who owns renewals is unknown. Ask; it decides what data exists.</td></tr>
+<tr><td><b>HubSpot move</b></td><td>Cutover breaks history and IDs unless deals go through one conformed model.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>That closes the deep-dive season. You've seen how a customer is won, priced, contracted, renewed or lost, and what each step writes into the CRM, Nexudus and NetSuite. For reference, go back to <a href="../season-6-understand-it-all/chapter-38-glossary.html">Chapter 38 (the glossary)</a> for every term, <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (the integration map)</a> for how the systems connect, and <a href="../season-6-understand-it-all/chapter-40-a-month-in-the-life.html">Chapter 40 (a month in the life)</a> to see the whole business move through one month.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

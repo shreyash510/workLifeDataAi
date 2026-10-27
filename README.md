@@ -136,7 +136,7 @@ The series is built in phases. Each phase is one season, written as its own unit
 
 **Outcome:** complete domain knowledge in one place: every term, every integration (with confidence labels), and the whole business in motion.
 
-### Phase 8: Deep Dives 🔄 writing
+### Phase 8: Deep Dives ✅ written
 `namaste-worklife/season-7-deep-dives/`
 
 | # | Chapter |

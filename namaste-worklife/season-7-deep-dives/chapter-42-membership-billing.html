@@ -1,0 +1,354 @@
+<h2>Chapter 42 — How Membership Billing Really Works: Contracts to Cash</h2>
+
+<p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
+
+<p>In Chapter 07 we clicked "run billing" in Nexudus, and in Chapter 09 we watched invoices become revenue in NetSuite. Both treated billing as one step. It isn't. Between a signed contract and money in the bank sit about ten mechanisms: advance vs arrears, proration, deposits, booking credits, discounts, credit notes, VAT, collection, dunning and deferral. Each leaves its own footprint in the data, and each is a reason "revenue" means different numbers to different people. 💷</p>
+
+<p>Many "the numbers don't match" questions on the real project will be billing questions. We take the machine apart using Pixel Chai's September in the lab, building on (not repeating) <a href="../season-1-source-systems/chapter-07-nexudus.html">Chapter 07</a> and <a href="../season-1-source-systems/chapter-09-netsuite.html">Chapter 09</a>.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>The billing cycle: in advance vs in arrears</li>
+    <li>Proration when a contract starts or ends mid-month</li>
+    <li>Deposits: money that isn't yours</li>
+    <li>Booking credits: how a charge becomes £0</li>
+    <li>Discounts: list price vs contract price</li>
+    <li>Credit notes</li>
+    <li>VAT: on the invoice, never in revenue</li>
+    <li>Invoice → payment → failed payment → dunning → write-off</li>
+    <li>Prepaid terms and deferred revenue</li>
+    <li>A month of billing for Pixel Chai (timeline)</li>
+    <li>Where every step lands: Nexudus, NetSuite and the KPIs</li>
+    <li>The reconciliation, rebuilt from billing mechanics</li>
+    <li>Interview Questions</li>
+</ul>
+
+<hr/>
+
+<h3>1. A Small Story First</h3>
+
+<p>It's 1 October. Pixel Chai's founder, Priya, opens their September statement and sees three documents: an invoice dated 1 Sep for £2,880, another dated 30 Sep for £486, and a credit of £108. "So what did September cost us?" they ask.</p>
+
+<p>Meanwhile, in the same building:</p>
+<ul>
+    <li>The site manager says Pixel Chai is worth <b>£2,400 a month</b> (MRR).</li>
+    <li>Nexudus says Pixel Chai was invoiced <b>£2,805</b> for September (net of VAT).</li>
+    <li>NetSuite says Pixel Chai produced <b>£2,715</b> of revenue.</li>
+    <li>The bank says Pixel Chai has paid... well, it depends on the day you ask.</li>
+</ul>
+
+<p>Every one of those numbers is correct; they answer different questions. By the end of this chapter you'll explain each pound of the difference.</p>
+
+<pre>
+   CONTRACT ──► CHARGE ──► INVOICE ──► PAYMENT ──► BANK
+   (what was     (what is    (what was    (what was   (cash)
+    agreed)       due)        billed)      collected)
+        │                        │
+        ▼                        ▼
+       MRR               REVENUE (recognised by finance, per month earned)
+</pre>
+
+<hr/>
+
+<h3>2. The Billing Cycle: In Advance vs In Arrears</h3>
+
+<p>Coworking billing has two rhythms running at the same time:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>What</th><th>When billed</th><th>Why</th><th>Lab example</th></tr>
+<tr><td>Plans and offices (recurring)</td><td><b>In advance</b>: at the start of the period they cover</td><td>The member is renting the space for the month. You collect before you deliver, like rent.</td><td>INV-2609-01, dated <b>1 Sep</b>: "Office 101 September", £2,400</td></tr>
+<tr><td>Meeting room bookings, extras (usage)</td><td><b>In arrears</b>: after the usage, usually on the next billing run</td><td>You don't know the amount until the month has happened.</td><td>INV-2609-05, dated <b>30 Sep</b>: "Meeting rooms September", £405</td></tr>
+</table>
+
+<p>So one company can receive two (or more) invoices about the "same" month on different dates. In the lab, all four plan/office invoices are dated 1 Sep and all four meeting room invoices are dated 30 Sep.</p>
+
+<p>Things that vary between operators, and that you must not assume for Work.Life (<b>check Nexudus docs / ask the client</b>):</p>
+<ul>
+    <li>Whether usage is billed on a separate invoice (as in the lab) or added as extra lines to the <i>next</i> month's advance invoice. If it's the second, October's invoice will carry September's meeting rooms, and "invoices dated October" is not "October's activity".</li>
+    <li>Whether the billing day is the 1st for everyone or anchored to each contract's start date.</li>
+</ul>
+
+<p>💡 <b>Data rule:</b> don't group invoices by invoice date and call it "the month". Group invoice <b>lines</b> by the <b>service period</b> they cover (or the booking date); for revenue, use NetSuite's accounting period.</p>
+
+<hr/>
+
+<h3>3. Proration: Starting or Ending Mid-Month</h3>
+
+<p>Contracts don't always start on the 1st. The lab has a real example: Nomad Analytics' K004 (Unlimited Coworking, £320) started on <b>15 January 2025</b>. What should the January invoice be? The lab doesn't hold January 2025 invoices, so here are the common methods, with numbers worked out by us (made up):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Method</th><th>January 2025 charge for K004 (made up)</th><th>Then</th></tr>
+<tr><td>Calendar-day proration</td><td>15–31 Jan = 17 of 31 days → 320 × 17/31 = <b>£175.48</b></td><td>£320 on 1 Feb, 1 Mar ...</td></tr>
+<tr><td>Anchor billing to start date</td><td><b>£320</b> on 15 Jan, covering 15 Jan – 14 Feb</td><td>£320 on the 15th of every month</td></tr>
+<tr><td>No proration (full or free first part-month)</td><td>£320 or £0</td><td>£320 on 1 Feb ...</td></tr>
+</table>
+
+<p>Ending mid-month is the mirror image, and with billing in advance it creates a <b>credit</b>. Made-up example: suppose Brightline (K003, Office 103, £1,400) had left on <b>15 June</b> instead of 30 June. The full £1,400 was already invoiced on 1 June. A calendar-day proration would refund 15 of 30 days:</p>
+
+<pre>
+   1 Jun   invoice   Office 103 June          + £1,400.00
+   15 Jun  contract ends early (made up)
+   30 Jun  credit    Office 103 16–30 June     −  £700.00   (1,400 × 15/30)
+                                               ──────────
+           June billed, net                      £700.00
+</pre>
+
+<p>How exactly Nexudus prorates (which basis, automatic or staff choice, part-month on its own invoice or the next) is configurable vendor behaviour: <b>check Nexudus docs / ask the client</b>.</p>
+
+<p>⚠️ <b>KPI trap:</b> our <code>fct_contract_month</code> rule (Chapter 16) counts a contract if it's active on the <b>last day</b> of the month, at its full monthly price. So K004's January 2025 MRR is £320 even if the invoice was £175.48, and in the made-up Brightline case June MRR is £0 though £700 was billed. MRR is a <i>run-rate</i>, not a bill.</p>
+
+<hr/>
+
+<h3>4. Deposits: Money That Isn't Yours</h3>
+
+<p>Many operators ask for a security deposit on offices, often a month or two of fees. The lab has no deposits, so here is a made-up one: Pixel Chai paid a <b>£2,400 deposit</b> (made up) when K002 started on 1 April 2026.</p>
+
+<pre>
+   Deposit received (made up)              DEBIT     CREDIT
+   1000 Bank                               2,400
+   2300 Deposits Held (liability)                    2,400     ← we OWE this back
+
+   Contract ends, deposit returned in full
+   2300 Deposits Held                      2,400
+   1000 Bank                                         2,400
+
+   OR: part kept against an unpaid invoice of £500 (made up)
+   2300 Deposits Held                      2,400
+   1100 Accounts Receivable                            500     ← clears the debt
+   1000 Bank                                         1,900     ← refunded
+</pre>
+
+<p>(Account 2300 is a made-up number; the lab chart of accounts only has P&amp;L accounts.)</p>
+
+<p>A deposit <b>never touches revenue</b>. It sits on the balance sheet until returned or applied. A pipeline that sums "all money received" from a payments table will let deposits inflate revenue and cash KPIs. Whether a refundable deposit carries VAT, and how Nexudus records deposits (invoice line, deposit record or manual entry): <b>check Nexudus docs / ask the client</b>.</p>
+
+<hr/>
+
+<h3>5. Booking Credits: How a Charge Becomes £0</h3>
+
+<p>Plans can include free meeting room hours (<code>TariffBookingCredits</code> on the plan, <code>CoworkerBookingCredits</code> on the member, Chapter 07). In the lab, Pixel Chai pays for every hour: their five Brick Lane bookings (9 hours at £45) make the £405 invoice. Now apply Chapter 07's exercise: Private Office includes <b>4 free hours a month</b> (made up).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Booking</th><th>Date</th><th>Hours</th><th>Lab price</th><th>With 4 free hours (made up)</th></tr>
+<tr><td>B1001</td><td>3 Sep</td><td>2</td><td>£90</td><td>£0 (2 credits used)</td></tr>
+<tr><td>B1003</td><td>10 Sep</td><td>2</td><td>£90</td><td>£0 (2 credits used, 0 left)</td></tr>
+<tr><td>B1004</td><td>14 Sep</td><td>1</td><td>£45</td><td>£45</td></tr>
+<tr><td>B1005</td><td>17 Sep</td><td>2</td><td>£90</td><td>£90</td></tr>
+<tr><td>B1007</td><td>24 Sep</td><td>2</td><td>£90</td><td>£90</td></tr>
+<tr><td colspan="2"><b>Total</b></td><td><b>9</b></td><td><b>£405</b></td><td><b>£225</b></td></tr>
+</table>
+
+<p>Same 9 hours of usage, £180 less revenue. That's why <b>meeting room revenue</b> and <b>utilisation</b> are two KPIs (Chapter 07). Compute utilisation from invoice lines, or drop £0 lines in staging as "noise", and the free hours vanish.</p>
+
+<p>Open details for the vendor: whether credits are consumed in date order, whether unused credits roll over or expire at month end, whether they are per member or shared by the team, and whether a £0 booking still produces an invoice line. All are <b>check Nexudus docs / ask the client</b>.</p>
+
+<hr/>
+
+<h3>6. Discounts: List Price vs Contract Price</h3>
+
+<p>Office 101 lists at <b>£2,600</b> (<code>resources.csv</code>). Pixel Chai pays <b>£2,400</b> (K002). The discount is £200 a month, <b>7.7%</b> (200 / 2,600).</p>
+
+<p>A discount can be stored in at least three ways, and each looks different in the data:</p>
+<table border="1" cellpadding="10">
+<tr><th>How staff enter it</th><th>What the invoice shows</th><th>How you find the discount</th></tr>
+<tr><td>Price overwritten on the contract (the lab's way)</td><td>One line: £2,400</td><td>Compare to list price from the resource or plan</td></tr>
+<tr><td>List price + discount line</td><td>£2,600 and −£200</td><td>Sum the discount lines</td></tr>
+<tr><td>Discount code / percentage on the contract</td><td>Depends on settings</td><td>Read the discount field</td></tr>
+</table>
+
+<p>Which one Work.Life uses may differ by site or by who entered the deal. The KPIs it feeds: <b>MRR</b> uses the price actually charged (£2,400, not £2,600), <b>average price per desk</b> is £600 (2,400 / 4 desks) against a list £650, and <b>discount %</b> by site is a classic leadership question ("are we giving space away in Soho?").</p>
+
+<hr/>
+
+<h3>7. Credit Notes</h3>
+
+<p>A credit note (NetSuite calls it a <b>credit memo</b>) reduces what a customer owes for something already invoiced. The lab's one: <b>CN-2609-01, −£90</b>, "Goodwill credit - AV failure 24 Sep". It matches B1007, the 2-hour Brick Lane booking on 24 Sep, account 4100 Meeting Room Revenue.</p>
+
+<p>Three things to know:</p>
+<ul>
+    <li><b>Never delete, always credit.</b> Once an invoice is issued, the correct fix is a credit note, not editing the invoice. So in data, "the real amount" is always invoice lines <b>plus</b> credit lines.</li>
+    <li><b>Where it was raised matters.</b> In the lab the credit exists only in NetSuite, which is why Nexudus still says £3,565 (Chapter 39, I6). It could equally be raised in Nexudus (as you did in Lab 7.7) and flow to NetSuite. Which way Work.Life does it is a new question for the client.</li>
+    <li><b>Reason codes are gold.</b> A pile of goodwill credits at one site is a service problem. If credits carry only a free-text memo, ask whether there is a reason list. (Note: <code>fct_gl</code> in <code>ai_safe</code> excludes memos, so reasons would need a separate, approved field.)</li>
+</ul>
+
+<hr/>
+
+<h3>8. VAT: On the Invoice, Never in Revenue</h3>
+
+<p>UK standard-rate VAT is <b>20%</b>. It's added to the invoice and owed to HMRC, so it's a <b>liability</b>, not income. The lab GL holds net amounts (VAT excluded). Pixel Chai's office invoice in full:</p>
+
+<pre>
+   INV-2609-01 (VAT added for illustration)    DEBIT     CREDIT
+   1100 Accounts Receivable                    2,880                ← what Pixel Chai owes
+   4000 Office Revenue                                   2,400      ← revenue (net)
+   2100 VAT Payable (made-up account no.)                  480      ← owed to HMRC
+</pre>
+
+<p>Soho's September invoicing is £3,565 net, which is <b>£4,278 gross</b>. If someone builds a revenue tile from the invoice <i>total</i> column instead of the net column, Soho's revenue is overstated by exactly 20%. If a number is 1.2× finance's, look for VAT. Which items are VAT-exempt or zero-rated (if any) is for finance; don't guess.</p>
+
+<hr/>
+
+<h3>9. Invoice → Payment → Failed Payment → Dunning → Write-off</h3>
+
+<p>An invoice is a claim, not cash. In general terms (the methods are typical for the industry; which ones Work.Life uses is unknown):</p>
+
+<pre>
+   INVOICE ISSUED ──► due date ──► PAID ✅  (Dr Bank / Cr AR)
+        │
+        └─► payment FAILS (card declined, Direct Debit bounced)
+               │
+               ▼
+           DUNNING: reminder 1 → reminder 2 → final notice
+                    (maybe: late fee, access suspended)
+               │
+               ├─► paid late ✅
+               └─► still unpaid after N days
+                      ▼
+                   WRITE-OFF (bad debt):  Dr Bad Debt Expense / Cr AR
+                   (or deposit applied first, see section 4)
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>What it means</th><th>What to ask</th></tr>
+<tr><td>Payment method</td><td>Card on file, Direct Debit, bank transfer for larger companies</td><td>Which payment providers does Work.Life connect to Nexudus? (Nexudus supports several; <b>check Nexudus docs / ask the client</b>)</td></tr>
+<tr><td>Payment terms</td><td>When it's due, e.g. on receipt or 14 days (made up)</td><td>Terms per customer type?</td></tr>
+<tr><td>Dunning</td><td>The reminder sequence for overdue invoices</td><td>Automated in Nexudus, done by finance, or both? Does an unpaid member lose door access?</td></tr>
+<tr><td>Write-off</td><td>Giving up on a debt; becomes an expense</td><td>Who approves? Which account? (UK VAT bad-debt relief rules also apply; finance handles that.)</td></tr>
+</table>
+
+<p>Two data points: a write-off is an <b>expense</b>, not negative revenue, so September revenue doesn't change when an old invoice is written off later. And a company with unpaid invoices may still have an active contract, so it still counts in MRR. Rising overdue balances, like falling attendance, are an early churn signal.</p>
+
+<hr/>
+
+<h3>10. Prepaid Terms and Deferred Revenue</h3>
+
+<p>Chapter 09 showed the mechanism with a made-up GreenRoot prepaying a year (£32,400 invoiced, £2,700 recognised a month). Two billing-specific additions:</p>
+<ul>
+    <li><b>Small deferrals happen every month too.</b> If a billing run for October were dated, say, 25 September (made up), the October fees would sit in deferred revenue at 30 Sep and be released on 1 Oct. Only invoices dated <i>within</i> the month they cover avoid that.</li>
+    <li><b>Who does the deferral?</b> Usually finance, in NetSuite, by journal or by NetSuite's revenue recognition features. Nexudus just records the invoice. Ask which.</li>
+</ul>
+
+<hr/>
+
+<h3>11. A Month of Billing for Pixel Chai</h3>
+
+<p>Lab facts are from the CSVs; payment dates are made up because the lab has no payments.</p>
+
+<pre>
+   SEPTEMBER 2026 · Pixel Chai Studio (C001) · Contract K002, Office 101, £2,400/month
+
+   1 Sep   BILLING RUN (in advance)
+           INV-2609-01  Office 101 September     net £2,400  (+ VAT £480 = £2,880)
+           MRR stays £2,400 (contract, not invoice). Discount vs list: 7.7%.
+   3 Sep   Payment collected £2,880 (made up date/method)  → AR for this invoice = £0
+   3 Sep   B1001  Brick Lane 2h   £90  ┐
+   10 Sep  B1003  Brick Lane 2h   £90  │  bookings accrue as CHARGES,
+   14 Sep  B1004  Brick Lane 1h   £45  │  not yet invoiced
+   17 Sep  B1005  Brick Lane 2h   £90  │  (B1004 by M002, the rest by M001)
+   24 Sep  B1007  Brick Lane 2h   £90  ┘  ⚠ AV failure during the booking
+   30 Sep  BILLING RUN (in arrears)
+           INV-2609-05  Meeting rooms September  net £405   (+ VAT £81 = £486)
+   30 Sep  CN-2609-01   Goodwill AV failure      net −£90   (+ VAT −£18 = −£108)
+           (raised in NetSuite only in the lab)
+   ~Oct    £378 due (486 − 108), terms made up. If unpaid → dunning (section 9).
+
+   SEPTEMBER SUMMARY (net of VAT)
+     MRR                     £2,400
+     Invoiced in Nexudus     £2,805   (2,400 + 405)
+     Recognised in NetSuite  £2,715   (2,805 − 90)
+     Gross billed incl. VAT  £3,258   (2,880 + 486 − 108)
+</pre>
+
+<p>Now Priya's question from the story has an answer: September cost Pixel Chai £2,715 plus VAT (£3,258 gross), of which the office was £2,400.</p>
+
+<hr/>
+
+<h3>12. Where Every Step Lands</h3>
+
+<p>Nexudus entity names are the API/BigQuery names from Chapter 07 (verify exact names and columns in the real dataset). NetSuite account numbers 4000/4010/4100 are from the lab; 1000/1100/2000 from Chapter 09; 2100/2200/2300 and bad debt are made-up numbers for illustration.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Event</th><th>Nexudus record</th><th>NetSuite entry</th><th>KPI affected</th></tr>
+<tr><td>Contract signed (K002)</td><td><code>CoworkerContract</code> (price, start, resource)</td><td>None (no money yet)</td><td>MRR, desk occupancy, discount %</td></tr>
+<tr><td>Deposit taken (made up)</td><td>Deposit record or invoice line (check docs)</td><td>Dr Bank / Cr 2300 Deposits Held</td><td>None (balance sheet only)</td></tr>
+<tr><td>Office billed in advance</td><td><code>CoworkerInvoice</code> + <code>CoworkerInvoiceLines</code>, line mapped via <code>FinancialAccounts</code> to 4000</td><td>Invoice: Dr 1100 AR / Cr 4000 / Cr 2100 VAT</td><td>Revenue (office), AR</td></tr>
+<tr><td>Meeting room booked</td><td><code>Booking</code> + a charge waiting for the next run</td><td>None yet</td><td>Utilisation (hours)</td></tr>
+<tr><td>Booking covered by credits</td><td><code>CoworkerBookingCredits</code> used; £0 charge</td><td>None (£0)</td><td>Utilisation yes, revenue no</td></tr>
+<tr><td>Usage billed in arrears</td><td>Invoice lines mapped to 4100</td><td>Dr AR / Cr 4100 / Cr VAT</td><td>Meeting room revenue</td></tr>
+<tr><td>Proration on mid-month start</td><td>Part-month invoice line (method: check docs)</td><td>Smaller invoice that month</td><td>Revenue; <b>not</b> MRR</td></tr>
+<tr><td>Credit note (CN-2609-01)</td><td>Credit note, if raised in Nexudus (in the lab it isn't)</td><td>Credit Memo: Dr 4100 / Dr VAT / Cr AR</td><td>Revenue −£90, credits-by-reason</td></tr>
+<tr><td>Payment received</td><td>Invoice marked paid / payment record (check docs)</td><td>Customer Payment: Dr 1000 Bank / Cr 1100 AR</td><td>Cash collected, debtor days</td></tr>
+<tr><td>Payment fails, dunning</td><td>Invoice stays unpaid; reminders</td><td>AR stays open</td><td>Overdue AR, churn risk signal</td></tr>
+<tr><td>Write-off</td><td>Invoice voided/credited (check how)</td><td>Dr Bad Debt Expense / Cr AR</td><td>Costs up; revenue unchanged</td></tr>
+<tr><td>Prepaid term</td><td>One large invoice</td><td>Cr 2200 Deferred Revenue, released monthly by journal</td><td>Revenue spread; invoiced lumpy</td></tr>
+</table>
+
+<p>In the warehouse: Nexudus invoices land in <code>raw_nexudus</code>, NetSuite postings in <code>raw_netsuite</code>, and <code>fct_gl</code> (with <code>pl_category</code> = revenue / direct_cost / central_cost) is the only source for <code>revenue_gbp</code> in <code>fct_site_month_kpis</code>. <code>mrr_gbp</code> comes from <code>fct_contract_month</code>. Invoices are an operational view and a reconciliation input, not the revenue number.</p>
+
+<hr/>
+
+<h3>13. The Reconciliation, Rebuilt From Mechanics</h3>
+
+<p>Chapter 09 built Soho's reconciliation. Here it is again, but labelled by <i>billing mechanism</i>, so you can see that every line is explained by something in this chapter:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Soho, September 2026</th><th>Amount</th><th>Mechanism</th></tr>
+<tr><td>MRR (contracts active 30 Sep: K002 £2,400, K004 £320, K007 £320)</td><td>£3,040</td><td>Contract run-rate (section 3)</td></tr>
+<tr><td>+ Meeting rooms billed in arrears (405 + 60 + 60)</td><td>+£525</td><td>Usage billing (section 2)</td></tr>
+<tr><td><b>= Invoiced in Nexudus (net)</b></td><td><b>£3,565</b></td><td></td></tr>
+<tr><td>− Goodwill credit CN-2609-01</td><td>−£90</td><td>Credit note raised in NetSuite (section 7)</td></tr>
+<tr><td><b>= Recognised in NetSuite</b></td><td><b>£3,475</b></td><td>Fully explained ✅</td></tr>
+<tr><td>(VAT on invoicing, not revenue)</td><td>(£713)</td><td>Liability (section 8)</td></tr>
+</table>
+
+<p>Other months add lines for proration, deferrals and credits. Give the reconciliation model one row per mechanism, so an unexplained difference shows up as its own line.</p>
+
+<p>New questions for the client (unnumbered, to add to the list):</p>
+<ul>
+    <li>Are usage charges billed on a separate invoice or on the next month's advance invoice? What is the billing day?</li>
+    <li>How are mid-month starts and early exits prorated?</li>
+    <li>Where are credit notes raised (Nexudus or NetSuite), and is there a reason list?</li>
+    <li>Which payment providers and dunning steps are used, and who writes off bad debt?</li>
+    <li>How are deposits recorded, and who does deferrals for prepaid terms?</li>
+</ul>
+
+<hr/>
+
+<h3>Interview Questions</h3>
+
+<p><b>Q: Why can a company's invoiced amount for a month differ from its MRR?</b></p>
+<p><i>"MRR is the monthly price of contracts active at month end. Invoicing adds usage billed in arrears like meeting rooms, can be lower or higher because of proration on starts and exits, and can include one-offs or prepaid periods. In the lab, Soho's MRR is £3,040 and invoicing £3,565; the £525 is meeting rooms."</i></p>
+
+<p><b>Q: A dashboard shows revenue exactly 20% above finance's number. What happened?</b></p>
+<p><i>"Almost certainly someone used the gross invoice total including VAT. VAT is a liability owed to HMRC, not revenue. I'd switch to net line amounts, or better, to recognised revenue from the general ledger."</i></p>
+
+<p><b>Q: How do booking credits affect your KPIs?</b></p>
+<p><i>"They turn charges into £0, so meeting room revenue drops while usage doesn't. Utilisation must come from bookings, not invoice lines, and £0 bookings must not be filtered out. Revenue comes from the ledger."</i></p>
+
+<p><b>Q: Is a deposit revenue? Is a written-off invoice negative revenue?</b></p>
+<p><i>"Neither. A deposit is a liability held until it's returned or applied to a debt. A write-off is a bad debt expense; the revenue was recognised when earned and stays. Both live outside the revenue line, so they shouldn't move revenue KPIs."</i></p>
+
+<hr/>
+
+<h3>Key Points to Remember</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Concept</th><th>Key Takeaway</th></tr>
+<tr><td><b>Two rhythms</b></td><td>Plans/offices billed in advance (1 Sep), usage in arrears (30 Sep). Group by service period, not invoice date.</td></tr>
+<tr><td><b>Proration</b></td><td>Changes the invoice, not MRR. Exact Nexudus method: check docs / ask.</td></tr>
+<tr><td><b>Deposits</b></td><td>A liability. Never revenue.</td></tr>
+<tr><td><b>Booking credits</b></td><td>£0 charge, real usage. Revenue ≠ utilisation.</td></tr>
+<tr><td><b>Discounts</b></td><td>£2,600 list vs £2,400 contract = 7.7%. MRR uses the price charged.</td></tr>
+<tr><td><b>Credit notes</b></td><td>Never edit an invoice; credit it. CN-2609-01 −£90 explains £3,565 vs £3,475.</td></tr>
+<tr><td><b>VAT</b></td><td>20% on top, owed to HMRC. 1.2× finance's number = VAT bug.</td></tr>
+<tr><td><b>Collection</b></td><td>Invoice ≠ cash. Failed payment → dunning → write-off (an expense).</td></tr>
+<tr><td><b>Ask, don't assume</b></td><td>Billing day, proration, credits, payment providers, dunning, deposits: all client/vendor questions.</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Billing produces the numbers; finance makes them final. In <a href="chapter-43-month-end-close-and-board-pack.html">Chapter 43</a> we follow the <b>month-end close</b> step by step, from the last billing run through accruals, deferrals and allocations to the locked period, and then into the <b>board pack</b>: which numbers leadership actually sees, and when the AI is allowed to quote them.</p>
+
+<p>Keep learning, keep building! See you in the next one!</p>

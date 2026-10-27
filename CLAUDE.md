@@ -63,7 +63,7 @@ The viewer works out which files exist from the GitHub tree API on `*.github.io`
 | 4 Client Phase 2 | 29–32 | member-retention-reporting, churn-renewal-prediction, forecasting, role-based-access-agents | written + reviewed |
 | 5 Delivery | 33–37 | answering-section-7, three-and-six-month-plan, cost-build-and-run, documentation-handover, client-call-interview-questions | written + reviewed |
 | 6 Understand it all | 38–40 | glossary, integration-map, a-month-in-the-life | written + checked |
-| 7 Deep dives | 41–44 | flex-workspace-economics, membership-billing, month-end-close-and-board-pack, sales-and-renewals | being written; verify the files exist, then review them |
+| 7 Deep dives | 41–44 | flex-workspace-economics, membership-billing, month-end-close-and-board-pack, sales-and-renewals | written + automated checks passed (not yet reviewed by a second agent) |
 
 Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter is already linked from `namaste-worklife/index.html`. Chapter 04's title is "Who's Who: Client, Data Partner, Leadership & Us".
 
@@ -159,7 +159,7 @@ Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter 
 ## 9. Open items / next steps
 
 1. Season 2 review is DONE. Ch 16/17 are ~30 KB / ~25 KB.
-2. Confirm Season 7 (41–44) exists. Review it against these rules.
+2. Season 7 (41–44) is written; optionally have an agent review it. Known flags: the lab Soho budget (85% occupancy but only £9,200 revenue) is taught as a finance question in Ch 41; Ch 43 states FRS 102 lease changes apply from 2026 (verify); Ch 42 invents liability account numbers 2100/2200/2300 (labelled made up).
 3. Re-run the whole-series checks (bash):
    - `grep -n -i -E "173tech|the deck|Jules|\bSam\b|Barbican" namaste-worklife/season-*/*.html` (expect nothing)
    - Tag balance for table / pre / ul / ol / p / tr / li per file
