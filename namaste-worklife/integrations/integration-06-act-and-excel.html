@@ -1,0 +1,371 @@
+<h2>Integration Guide 06 — ACT and Excel: The Two Tricky Sources</h2>
+
+<p>Hi! 🙏 This guide covers the two sources where the hard part is <b>not the code</b>. With ACT, the hard part is knowing <b>which system it even is</b>, and keeping personal data safe. With Excel, the hard part is that <b>people</b> change the file, and a renamed column can quietly break a board number.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> Work.Life's brief lists "ACT" and "Excel" as sources (✅ brief), but it does not say which ACT, or how either one reaches BigQuery today (❓ ask the client). "ACT" could be <b>ACT365</b> door access or the <b>Act!</b> CRM (Chapter 08). Never assume which one. This guide gives our standard setup for both paths. Vendor screens change, so check current docs. Numbers marked (made up) are examples only.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Before you start</li>
+    <li>Part A, step 1: find out which ACT</li>
+    <li>Path A: ACT365 door events, with the privacy design</li>
+    <li>Path B: Act! CRM, a one-off export of old history</li>
+    <li>Part B: which Excel files, and how to lock the template</li>
+    <li>Loading Excel with the Fivetran Google Sheets connector</li>
+    <li>When someone renames a column: the dbt test that catches it</li>
+    <li>Check it worked, common problems, and "Done when"</li>
+</ul>
+
+<hr/>
+
+<h3>1. Before You Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>You need</th><th>From</th></tr>
+<tr><td>☐</td><td>Datasets <code>raw_excel</code> and <code>raw_act365</code> or <code>raw_act</code> in <code>&lt;client&gt;-data-prod</code>, region <code>europe-west2</code></td><td>Guide 02</td></tr>
+<tr><td>☐</td><td><code>sa-extract-act</code> (Job User, Data Editor on the ACT raw dataset only, Secret Accessor on <code>act-api-key</code>)</td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>Fivetran account with the BigQuery destination working, and <code>sa-fivetran</code> able to write <code>raw_excel</code></td><td>Guide 03</td></tr>
+<tr><td>☐</td><td>The answer to "Which ACT?" (section 2)</td><td>❓ Ask the client</td></tr>
+<tr><td>☐</td><td>The list of Excel files that matter, with one owner each</td><td>❓ Ask the client (Finance / Ops)</td></tr>
+<tr><td>☐</td><td>A contact for the client's data protection lead (for door data)</td><td>❓ Ask the client</td></tr>
+</table>
+
+<hr/>
+
+<h2>Part A — ACT</h2>
+
+<h3>2. Step 1: Find Out Which ACT</h3>
+
+<p>Do not build anything until this is answered. Ask in plain words: <i>"In your source list you mention ACT. Is that your ACT365 door access system, the Act! CRM, or something else? Which data from it do you want in the warehouse?"</i></p>
+
+<table border="1" cellpadding="10">
+<tr><th>Look at</th><th>Points to ACT365 (doors)</th><th>Points to Act! (CRM)</th></tr>
+<tr><td>Who uses it</td><td>Ops, facilities, IT, front desk</td><td>Sales team</td></tr>
+<tr><td>What people say about it</td><td>Key cards, fobs, doors, "who came in"</td><td>Contacts, leads, tours, deals, renewals</td></tr>
+<tr><td>Nexudus integrations page</td><td>An ACT365 add-on turned on (📘 Nexudus lists one)</td><td>Nothing in Nexudus</td></tr>
+<tr><td>Existing warehouse tables (if any)</td><td>Events, cardholders, doors</td><td>Contacts, opportunities, history</td></tr>
+<tr><td>Who sold it to them</td><td>A security installer</td><td>A software licence</td></tr>
+<tr><td>Link to the HubSpot plan</td><td>HubSpot replaces nothing here</td><td>HubSpot may be replacing it for sales (❓ ask)</td></tr>
+</table>
+
+<pre>
+  "Which ACT?"
+      │
+      ├── ACT365 door access ──► Path A (section 3): daily, privacy first
+      ├── Act! CRM ───────────► Path B (section 4): usually a one-off export
+      ├── Both ───────────────► do both, two datasets: raw_act365 AND raw_act
+      └── Neither / unsure ───► stop and ask the lead. Write it in decisions.md.
+</pre>
+
+<hr/>
+
+<h3>3. Path A: ACT365 Door Events</h3>
+
+<p><b>First question: do you need ACT365 at all?</b> 📘 Nexudus documents that its ACT365 integration can turn door events into <b>check-ins</b> in Nexudus. If the client has that turned on, you may already get "who came in" from <code>raw_nexudus.checkins</code> (Guide 05), and you can skip this extractor. Ask which one the client trusts for attendance (❓ ask the client), and write the answer down.</p>
+
+<p><b>Getting the data out.</b> Two ways:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Way</th><th>How</th><th>Our view</th></tr>
+<tr><td>API 📘</td><td>ACT365 offers an API for integrations (Nexudus's own integration uses one). Access is usually arranged through the client's installer. Endpoint names: check the current ACT365 docs; we do not guess them here.</td><td>🛠 Preferred. A Cloud Run job <code>extract-act</code> built the same way as Guide 05 (image in the <code>data-jobs</code> repository, runs as <code>sa-extract-act</code>, key in <code>act-api-key</code>), started at 02:15 by the Cloud Scheduler job <code>nightly-extract-act</code>.</td></tr>
+<tr><td>Export</td><td>A CSV export of events from the ACT365 portal, uploaded to a locked bucket, then <code>bq load</code></td><td>Fine for a first look. Not fine for daily use: someone must remember to do it.</td></tr>
+</table>
+
+<h4>The privacy design (the ONE exception to "load raw")</h4>
+
+<p>A door event says when a named person walked in, every day. Under UK GDPR that is <b>personal data</b>. One of its ideas is <b>data minimisation</b>: only collect and keep what you really need for the purpose. Our purpose is company-level attendance ("GreenRoot's attendance fell"), not watching people. So only company × week aggregates move on into marts for dashboards, and person-level door data never reaches marts or the BI tool. Work.Life's brief says the same: "safe data only" and people/HR data excluded (✅ brief). This is not legal advice: the client's data protection lead makes the final call.</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Option 1: aggregate inside the loader</th><th>Option 2: locked raw dataset</th></tr>
+<tr><td>What lands in BigQuery</td><td>Only company × week counts</td><td>Events with names and card numbers removed, in <code>raw_act365</code>, which only <code>sa-extract-act</code> and <code>sa-dbt</code> can read</td></tr>
+<tr><td>What moves on</td><td>The counts</td><td>Only <code>agg_company_week_attendance</code> (company × week, minimum group size 5), built by dbt</td></tr>
+<tr><td>Good</td><td>No person-level door data in the warehouse at all</td><td>If a rule is wrong (main door list, staff groups), you can rebuild history. The join to Nexudus companies stays in dbt, tested.</td></tr>
+<tr><td>The catch</td><td>The loader needs the Nexudus company list (business logic in a loader). A bug means lost history.</td><td>Person-level data exists in one locked place, so the lock and the retention must be right</td></tr>
+</table>
+
+<p>🛠 <b>Our standard: Option 2</b>, with three protections, <b>unless</b> the client's data protection lead says no person-level door data may be stored. Then use Option 1.</p>
+<ol>
+    <li><b>Minimise at load.</b> The loader drops names and card numbers, and never loads staff cardholders at all (staff door data is people/HR data).</li>
+    <li><b>Lock the dataset.</b> Only the two service accounts. No analysts, no BI tool.</li>
+    <li><b>Short retention.</b> Raw events are deleted after 90 days (made up: agree the number with the client). The weekly aggregates stay.</li>
+</ol>
+
+<p>The one place a loader changes data (inside <code>extractors/act/main.py</code>; field names illustrative):</p>
+
+<pre>
+DROP_FIELDS  = {"cardholder_name", "first_name", "last_name", "card_number"}
+STAFF_GROUPS = set(os.environ.get("STAFF_GROUPS", "").split(";"))   # list agreed with client
+
+def minimise(event, cardholder_group):
+    """Door events: keep only what the attendance model needs."""
+    if cardholder_group in STAFF_GROUPS:
+        return None                       # staff = people/HR data: never loaded
+    return {k: v for k, v in event.items() if k not in DROP_FIELDS}
+</pre>
+
+<p>Lock the dataset and set retention with SQL (run as a project owner, in the BigQuery console):</p>
+
+<pre>
+-- Only the two service accounts may touch raw_act365
+GRANT `roles/bigquery.dataEditor` ON SCHEMA `acme-data-prod.raw_act365`
+  TO "serviceAccount:sa-extract-act@acme-data-prod.iam.gserviceaccount.com";
+GRANT `roles/bigquery.dataViewer` ON SCHEMA `acme-data-prod.raw_act365`
+  TO "serviceAccount:sa-dbt@acme-data-prod.iam.gserviceaccount.com";
+
+-- New partitioned tables delete partitions older than 90 days (made up: agree it)
+ALTER SCHEMA `acme-data-prod.raw_act365`
+  SET OPTIONS (default_partition_expiration_days = 90);
+</pre>
+
+<p>⚠️ A dataset lock does not stop people who have BigQuery data roles on the <b>whole project</b>. Check the project's IAM page: nobody except admins should have project-wide BigQuery Data Viewer or Data Editor (Guide 02). The loader must create <code>door_events</code> partitioned by event date, so the 90-day rule works.</p>
+
+<h4>The aggregate that moves on (built in Guide 07)</h4>
+
+<p>🛠 Rules: count <b>unique person-days at the main entrance</b> (people tap several doors), drop contractors (no Nexudus match), and show a company only if it has <b>at least 5 people</b> with active cards. Count the group size from active cardholders, not from who came in that week: otherwise a quiet week would be hidden, and a quiet week is the very signal we want.</p>
+
+<pre>
+-- marts/agg_company_week_attendance.sql (sketch; stg/int model names are Guide 07's)
+WITH visits AS (
+  SELECT DISTINCT
+    m.company_id,
+    e.cardholder_id,
+    DATE(e.event_time_utc, 'Europe/London') AS visit_date
+  FROM {{ ref('stg_act365__door_events') }}      AS e
+  JOIN {{ ref('int_cardholder_company') }}       AS m USING (cardholder_id)  -- drops contractors
+  WHERE e.is_main_entrance AND e.event_type = 'Access Granted'
+),
+group_size AS (
+  SELECT company_id, COUNT(*) AS people
+  FROM {{ ref('int_cardholder_company') }}
+  WHERE is_active
+  GROUP BY company_id
+)
+SELECT
+  v.company_id,
+  DATE_TRUNC(v.visit_date, WEEK(MONDAY)) AS week_start,
+  g.people,
+  COUNT(*)                               AS person_days
+FROM visits AS v
+JOIN group_size AS g USING (company_id)
+WHERE g.people &gt;= 5                      -- minimum group size
+GROUP BY 1, 2, 3
+</pre>
+
+<p><b>Check it against the lab.</b> If you loaded the lab files (Chapter 14, Lab 14.1), this shortcut uses the cardholder group as a stand-in for the company:</p>
+
+<pre>
+WITH people AS (
+  SELECT `group` AS grp, COUNT(*) AS people
+  FROM raw_act365.cardholders
+  WHERE status = 'active' AND nexudus_customer_email IS NOT NULL
+  GROUP BY grp
+),
+visits AS (
+  SELECT DISTINCT c.`group` AS grp, e.cardholder_id, DATE(TIMESTAMP(e.event_time_utc)) AS d
+  FROM raw_act365.door_events AS e
+  JOIN raw_act365.cardholders AS c USING (cardholder_id)
+  WHERE e.door LIKE '%Main Entrance' AND e.event_type = 'Access Granted'
+)
+SELECT v.grp, DATE_TRUNC(v.d, WEEK(MONDAY)) AS week_start, p.people, COUNT(*) AS person_days
+FROM visits AS v JOIN people AS p USING (grp)
+WHERE p.people &gt;= 5
+GROUP BY 1, 2, 3
+ORDER BY 2;
+</pre>
+
+<p>Expected: only <b>Reading Office 201</b> (GreenRoot, 6 people) appears, with 17, 22, 12, 7 and 1 person-days for the weeks starting 31 Aug, 7, 14, 21 and 28 Sep. That matches Chapter 08 (week 2: 22 ÷ (6 × 5) = 73%). Pixel Chai has only 4 active cards, so it is hidden: the minimum group size is working. Only this aggregate moves on into marts for dashboards; nothing person-level from <code>raw_act365</code> ever reaches marts or the BI tool.</p>
+
+<hr/>
+
+<h3>4. Path B: Act! CRM (Usually Old History)</h3>
+
+<p>If ACT is the Act! CRM, and the client is moving sales to HubSpot (✅ brief: HubSpot is being integrated), Act! is usually <b>old, frozen history</b>: lead sources, lost deals and churn reasons from before HubSpot. 🛠 Our standard: <b>one export, loaded once, kept safely</b>. No daily extractor for a system that is being retired. (If Act! is still in daily use, ❓ ask: then build <code>extract-act</code> on Act!'s web API like Guide 05, if the client's edition offers one 📘.)</p>
+
+<ol>
+    <li><b>Agree what to export</b>: contacts, companies, opportunities, and maybe history notes. Free-text notes can hold sensitive personal details. Leave them out unless a model really needs them (data minimisation again).</li>
+    <li><b>Export to CSV</b> from Act! (the client's admin usually does this). Save as UTF-8 if the option exists.</li>
+    <li><b>Keep the files in a locked bucket</b> in the UK, never on a laptop or in email. The bucket name is our example: add it to <code>docs/decisions.md</code>.</li>
+</ol>
+
+<pre>
+gcloud storage buckets create gs://acme-data-prod-act-export \
+  --project=acme-data-prod --location=europe-west2 \
+  --uniform-bucket-level-access --public-access-prevention
+
+gcloud storage cp act_contacts.csv act_opportunities.csv \
+  gs://acme-data-prod-act-export/2026-10-28/
+</pre>
+
+<ol start="4">
+    <li><b>Load to <code>raw_act</code> with every column as STRING</b> and clean column names (Act! headers like <code>ID/Status</code> are not valid BigQuery names, so we give our own schema and skip the header row):</li>
+</ol>
+
+<pre>
+bq load --location=europe-west2 --source_format=CSV --skip_leading_rows=1 \
+  --allow_quoted_newlines --replace \
+  acme-data-prod:raw_act.contacts \
+  gs://acme-data-prod-act-export/2026-10-28/act_contacts.csv \
+  contact:STRING,company:STRING,e_mail:STRING,phone:STRING,title:STRING,id_status:STRING,referred_by:STRING,create_date:STRING
+
+bq update --description "Act! export taken 2026-10-28, one-off, file in gs://acme-data-prod-act-export/2026-10-28/" \
+  acme-data-prod:raw_act.contacts
+</pre>
+
+<p>Do the same for opportunities (one STRING column per header, in order). If £ signs look broken, the file is probably not UTF-8: add <code>--encoding=ISO-8859-1</code> and load again.</p>
+
+<ol start="5">
+    <li><b>Check the counts</b>: rows in BigQuery = lines in the file minus the header. With the lab files: 7 contacts and 7 opportunities; open pipeline £7,000 a month and win rate 3 of 5 (Chapter 08).</li>
+    <li><b>Map it later, not now.</b> Act! has no shared ID with Nexudus or HubSpot, and emails and company names are spelled differently (Chapter 11). The matching belongs in dbt (<code>member_xref</code>, Guide 07). <code>raw_act</code> holds contacts (personal data), so contact-level rows never reach marts or the BI tool; only company-level facts like churn reasons move on into marts.</li>
+</ol>
+
+<hr/>
+
+<h2>Part B — Excel</h2>
+
+<h3>5. Which Files, and Lock the Template</h3>
+
+<p>Most clients have one or two spreadsheets that hold numbers no system has: <b>sellable capacity</b> per site and the <b>budget</b> (✅ brief lists Excel as a source; which files, ❓ ask the client). In the lab this is <code>excel_capacity_budget_2026.csv</code>. Ask for each file: what is in it, who owns it, how often it changes, and which report uses it. Load only files a model needs.</p>
+
+<p>Then <b>lock a template</b> with the owner. A pipeline can only read a file that keeps its shape.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Rule</th><th>How, in Excel or Google Sheets</th></tr>
+<tr><td>One named table</td><td>Excel: Insert → Table, name it <code>tbl_capacity_budget</code>. Sheets: Data → Named ranges, name it <code>capacity_budget_2026</code>.</td></tr>
+<tr><td>Fixed column names, lowercase, no spaces</td><td><code>site_code, month, sellable_desks, budget_revenue_gbp, budget_desk_occupancy, budget_direct_costs_gbp, notes</code>. Protect the header row.</td></tr>
+<tr><td>One row per site per month</td><td>Months go down the rows, not across the columns. A new month = a new row, not a new column.</td></tr>
+<tr><td>Codes, not free text</td><td>Data validation on <code>site_code</code>: a drop-down list from a "lists" tab (SOHO, RDG, …). No "Soho site (new)".</td></tr>
+<tr><td>Clean values</td><td><code>month</code> as text <code>YYYY-MM</code>; numbers only in number columns; no merged cells, no totals rows, no notes outside the table</td></tr>
+<tr><td>One owner</td><td>A "README" tab: owner (a role, for example Finance), what each column means, "do not rename columns, ask the data team first"</td></tr>
+</table>
+
+<hr/>
+
+<h3>6. Move It to a Shared Place and Load It With Fivetran</h3>
+
+<p>A file on someone's laptop cannot be loaded. 🛠 Our standard: move it to a <b>Google Sheet</b> owned by a client account (or a shared drive folder if the client uses Microsoft 365 📘: Fivetran lists file connectors for shared drives; check which ones exist today). Then:</p>
+
+<ol>
+    <li>In the sheet, check the named range covers the headers and all rows (and leave spare empty rows inside the range for future months, or extend the range when adding a year).</li>
+    <li>In Fivetran: add a connection → <b>Google Sheets</b> 📘. Destination: the BigQuery destination from Guide 03. Destination schema: <code>raw_excel</code>. Table name: <code>capacity_budget_2026</code>. Fivetran may not let you rename these later, so get them right (check the current Fivetran docs).</li>
+    <li>Paste the sheet link, pick the named range, and share the sheet <b>view-only</b> with the email address Fivetran shows you.</li>
+    <li>Set the sync to daily (made up: budgets change rarely) and run the first sync. One named range = one table.</li>
+</ol>
+
+<p><b>No Fivetran?</b> For a one-off, export the sheet to CSV and load it with every column as STRING, the same way as section 4:</p>
+
+<pre>
+bq load --location=europe-west2 --source_format=CSV --skip_leading_rows=1 --replace \
+  acme-data-prod:raw_excel.capacity_budget_2026 capacity_budget_2026.csv \
+  site_code:STRING,month:STRING,sellable_desks:STRING,budget_revenue_gbp:STRING,budget_desk_occupancy:STRING,budget_direct_costs_gbp:STRING,notes:STRING
+</pre>
+
+<p>For a repeating load without Fivetran, a small script on a Cloud Run job does the same thing (Chapter 06, section 9). Fivetran may pick its own column types (numbers as FLOAT, for example); staging uses <code>SAFE_CAST</code> either way.</p>
+
+<hr/>
+
+<h3>7. When Someone Renames a Column</h3>
+
+<p>Picture it: the budget owner renames <code>budget_revenue_gbp</code> to <code>Budget Revenue</code> to make it "look nicer". Fivetran does <b>not</b> fail. It adds a new column, and the old column stops getting values (Chapter 13, Lab 13.1). Your model now reads blanks, and "revenue vs budget" quietly breaks. A test must catch it.</p>
+
+<p>In the dbt sources file (Guide 07 owns the full file):</p>
+
+<pre>
+sources:
+  - name: raw_excel
+    schema: raw_excel
+    loaded_at_field: _fivetran_synced
+    freshness:
+      error_after: {count: 3, period: day}
+    tables:
+      - name: capacity_budget_2026
+        columns:
+          - name: site_code
+            tests: [not_null, {accepted_values: {values: ['SOHO', 'RDG']}}]   # lab sites
+          - name: month
+            tests: [not_null]
+          - name: budget_revenue_gbp
+            tests: [not_null]       # a renamed column turns into NULLs: this fails
+          - name: sellable_desks
+            tests: [not_null]
+</pre>
+
+<p>And a test that fails if any expected column is missing (save as <code>dbt/tests/assert_excel_budget_columns_exist.sql</code>; a dbt test passes when it returns zero rows):</p>
+
+<pre>
+WITH expected AS (
+  SELECT col FROM UNNEST(['site_code', 'month', 'sellable_desks', 'budget_revenue_gbp',
+                          'budget_desk_occupancy', 'budget_direct_costs_gbp']) AS col
+)
+SELECT e.col AS missing_column
+FROM expected AS e
+LEFT JOIN raw_excel.INFORMATION_SCHEMA.COLUMNS AS c
+  ON c.table_name = 'capacity_budget_2026' AND c.column_name = e.col
+WHERE c.column_name IS NULL
+</pre>
+
+<p>⚠️ After a rename, the old column still exists (with blanks in new rows), so the <code>not_null</code> test is the one that fires. Keep both. When a test fails: ask the owner to put the name back. Do not "fix" it by changing the model to the new name without agreeing it.</p>
+
+<hr/>
+
+<h3>8. Check It Worked</h3>
+
+<pre>
+-- Excel: compare with the sheet's own totals (lab numbers shown)
+SELECT site_code,
+       COUNT(*)                                          AS months,
+       SUM(SAFE_CAST(budget_revenue_gbp AS NUMERIC))     AS budget_revenue,
+       MAX(SAFE_CAST(sellable_desks AS INT64))           AS sellable_desks
+FROM raw_excel.capacity_budget_2026
+GROUP BY site_code;
+-- Lab: SOHO 3 months, £27,400, 34 desks; RDG 3 months, £9,400, 31 desks
+
+-- ACT365: nothing personal leaked, and no staff
+SELECT column_name FROM raw_act365.INFORMATION_SCHEMA.COLUMNS
+WHERE table_name = 'door_events';            -- expect no name or card number columns
+</pre>
+
+<p>Also: open the dataset sharing page for <code>raw_act365</code> and confirm only <code>sa-extract-act</code> and <code>sa-dbt</code> are listed, and run <code>dbt build</code> once with a column renamed in a test copy of the sheet to see the test fail.</p>
+
+<hr/>
+
+<h3>9. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td>Nobody can say which ACT it is</td><td>The name means different things to different teams</td><td>Ask Ops and Sales separately; check the Nexudus integrations page. Do not build until answered.</td></tr>
+<tr><td>Attendance far too high</td><td>Counting events, not person-days; office members tap two doors</td><td>Unique person-days at the main entrance only</td></tr>
+<tr><td>Cleaners or staff in "member attendance"</td><td>Contractor or staff cards</td><td>Staff dropped in the loader; contractors dropped by the Nexudus match</td></tr>
+<tr><td>A visit lands on the wrong day</td><td>Grouping by UTC date</td><td>Convert to Europe/London before taking the date</td></tr>
+<tr><td>An analyst can still read <code>raw_act365</code></td><td>A project-wide BigQuery role</td><td>Remove it; give dataset-level access only</td></tr>
+<tr><td>Act! CSV loads with broken £ signs or split rows</td><td>Not UTF-8; line breaks inside notes</td><td><code>--encoding=ISO-8859-1</code>; <code>--allow_quoted_newlines</code></td></tr>
+<tr><td>Budget numbers suddenly blank</td><td>Column renamed in the sheet</td><td>The <code>not_null</code> test fails; ask the owner to rename it back</td></tr>
+<tr><td>New month missing</td><td>Row added outside the named range</td><td>Extend the range; leave spare rows inside it</td></tr>
+<tr><td>Fivetran says it cannot read the sheet</td><td>Not shared with Fivetran's address, or named range deleted</td><td>Share view-only again; recreate the named range with the same name</td></tr>
+<tr><td>Freshness test fails on <code>raw_excel</code></td><td>Sync paused or broken</td><td>Check the Fivetran connection status and its alert email</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>"Which ACT?" is answered in writing and recorded in <code>docs/decisions.md</code></td></tr>
+<tr><td>☐</td><td>ACT365: the privacy option is chosen, and the client's data protection lead agreed it</td></tr>
+<tr><td>☐</td><td>ACT365: names, card numbers and staff never land; <code>raw_act365</code> is readable only by <code>sa-extract-act</code> and <code>sa-dbt</code>; retention is set</td></tr>
+<tr><td>☐</td><td>ACT365: <code>extract-act</code> is started by <code>nightly-extract-act</code> at 02:15 Europe/London (or the attendance source is Nexudus check-ins, written down)</td></tr>
+<tr><td>☐</td><td>ACT365: only <code>agg_company_week_attendance</code> (minimum group size 5) moves on into marts, and no person-level ACT data reaches marts or the BI tool</td></tr>
+<tr><td>☐</td><td>Act!: the export is in the locked UK bucket, loaded to <code>raw_act</code> as STRING, row counts match the files</td></tr>
+<tr><td>☐</td><td>Excel: each file has a named owner, a locked template and a README tab</td></tr>
+<tr><td>☐</td><td>Excel: Fivetran syncs into <code>raw_excel</code> daily, and the totals match the sheet</td></tr>
+<tr><td>☐</td><td>Excel: you renamed a column on purpose in a test copy and a dbt test failed</td></tr>
+<tr><td>☐</td><td>The register rows and runbook entries are written</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>All the raw data is now landing. Next is <a href="integration-07-dbt-raw-to-marts.html">Guide 07 — dbt: From Raw to Marts</a>, where you turn it into clean, tested marts for the BI dashboards. Need the big picture again? Go back to <a href="integration-01-start-here.html">Guide 01 — Start Here</a>. 🚀</p>
+
+<p>Background reading: <a href="../season-1-source-systems/chapter-08-act.html">Chapter 08 (ACT)</a>, <a href="../season-1-source-systems/chapter-06-excel.html">Chapter 06 (Excel)</a>, <a href="../season-2-pipeline/chapter-13-fivetran.html">Chapter 13 (Fivetran)</a> and <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (the integration map, I10 and I11)</a>.</p>

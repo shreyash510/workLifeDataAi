@@ -1,0 +1,458 @@
+<h2>Integration Guide 08 — Scheduling, Monitoring and the Fix-It Runbook</h2>
+
+<p>Hi! 🙏 Up to now every piece of the pipeline has been run by hand. This guide makes it <b>run by itself every night, in the right order</b>, and makes sure that when something breaks, a person finds out before the leadership team does.</p>
+
+<p>It is for the engineer who has finished Guide 05 (the Nexudus job works when run by hand) and Guide 07 (dbt builds and tests pass). At the end you will have: a nightly schedule, alerts to email and chat, a stale-data guard, a list of routine checks, cost monitoring, and a <b>fix-it runbook</b> that someone who has never seen the pipeline can follow at 8am on a Monday.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>our standard setup</b> 🛠, not a copy of Work.Life's real pipeline. The brief only says the pipeline is "kept running by an external data partner" (✅ brief); how and when it runs there is unknown ❓. Google Cloud and Fivetran screens change often: if a menu name below does not match, check the vendor's current docs. All times, limits and amounts marked "(made up)" are examples.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Before you start</li>
+    <li>The nightly run order</li>
+    <li>Scheduling each piece (Cloud Scheduler and Fivetran)</li>
+    <li>The dbt-build job and the stale-data guard</li>
+    <li>Alerts: notification channels, job failure alerts, log-based alerts</li>
+    <li>Check it worked: break it on purpose</li>
+    <li>Daily, weekly and monthly checks</li>
+    <li>Cost monitoring</li>
+    <li>Re-running a job by hand, and backfills</li>
+    <li>The fix-it runbook</li>
+    <li>Common problems, and the "done when" list</li>
+</ul>
+
+<hr/>
+
+<h3>1. Before You Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>You need</th><th>From</th></tr>
+<tr><td>Cloud Run jobs <code>extract-nexudus</code> (and <code>extract-act</code> if used) deployed and working when run by hand</td><td>Guides 05, 06</td></tr>
+<tr><td>Fivetran connectors for NetSuite, HubSpot and Excel syncing</td><td>Guides 03, 04, 06</td></tr>
+<tr><td>The dbt project in Git, with source freshness set in <code>_sources.yml</code></td><td>Guide 07</td></tr>
+<tr><td>Projects, service accounts, secrets and the <code>data-jobs</code> image repository</td><td>Guide 02</td></tr>
+<tr><td>An alert email address (a shared mailbox or group, for example <code>data-alerts@acme.com</code>, never one person's inbox)</td><td>Client IT ❓</td></tr>
+<tr><td>The client's chat tool (Slack, Google Chat or Teams) and a webhook for an alerts channel</td><td>Client IT ❓</td></tr>
+<tr><td>Who is on call for failures, and in which hours</td><td>❓ Ask the client (support hours are part of the brief's Section 7 questions)</td></tr>
+</table>
+
+<pre>
+export PROD=acme-data-prod REGION=europe-west2
+</pre>
+
+<hr/>
+
+<h3>2. The Nightly Run Order</h3>
+
+<p>The order matters more than the exact times. <b>Load first, then check freshness, then build, then test.</b> If any step fails, the steps after it must not publish half-fresh numbers.</p>
+
+<pre>
+  UK TIME (Europe/London)                                          ON FAILURE
+  ─────────────────────────────────────────────────────────────────────────────────
+  00:30 UTC  Fivetran: NetSuite, HubSpot, Excel syncs start        Fivetran emails
+             (must finish before 03:00 UK)                         + freshness catches it
+
+  02:00      Cloud Scheduler ──► Cloud Run job  extract-nexudus    job fails ──► alert
+                                 └─► raw_nexudus
+
+  02:15      Cloud Scheduler ──► Cloud Run job  extract-act        job fails ──► alert
+                                 └─► raw_act365 / raw_act
+
+  03:00      Cloud Scheduler ──► Cloud Run job  dbt-build
+               1. dbt source freshness   any source too old?  ──► stop, job fails ──► alert
+               2. dbt build              seeds ► models ► tests, in graph order
+                    a test fails ──► every model after it is SKIPPED
+                    (marts keep yesterday's good data)     ──► job fails ──► alert
+
+  ~03:30     BI dashboards read fresh, tested data
+  ─────────────────────────────────────────────────────────────────────────────────
+  Any failed job ──► Cloud Monitoring alert ──► email + chat channel
+</pre>
+
+<p>Why these times? 🛠 Overnight, nobody is editing contracts in Nexudus, so the data is calm. 03:00 leaves room for the extractors to finish. Before you lock the times in, run each job by hand a few times and note how long it takes. If <code>extract-nexudus</code> often takes 50 minutes, move it earlier, not dbt later.</p>
+
+<p>⚠️ <b>Simple time-based order, not a chain.</b> dbt does not "wait" for the extractors; it just starts at 03:00. That is fine for a client this size, because the freshness check is the safety net: if an extractor did not finish, its data is old and freshness says so. If you later find yourself juggling many timings, that is the moment to look at a proper workflow tool (for example Cloud Workflows), not before. Write the choice in <code>docs/decisions.md</code>.</p>
+
+<hr/>
+
+<h3>3. Scheduling Each Piece</h3>
+
+<h4>3a. Give each job's own service account the right to start its job</h4>
+
+<p>📘 Cloud Scheduler starts a Cloud Run job by calling the Cloud Run API with a token for a service account. 🛠 We use the job's <b>own</b> service account and give it <b>Cloud Run Invoker</b> on that one job only, so we do not need an extra account.</p>
+
+<pre>
+gcloud run jobs add-iam-policy-binding extract-nexudus --region=$REGION --project=$PROD \
+  --member=serviceAccount:sa-extract-nexudus@$PROD.iam.gserviceaccount.com \
+  --role=roles/run.invoker
+# repeat for extract-act (sa-extract-act) and dbt-build (sa-dbt)
+</pre>
+
+<h4>3b. Set a timeout on each job</h4>
+
+<p>A job that hangs forever is a silent failure. 🛠 Give each job a time limit and a retry count:</p>
+
+<pre>
+gcloud run jobs update extract-nexudus --region=$REGION --project=$PROD \
+  --task-timeout=45m --max-retries=1          # made up: base it on real run times
+gcloud run jobs update dbt-build --region=$REGION --project=$PROD \
+  --task-timeout=60m --max-retries=0          # never auto-retry dbt; a person should look
+</pre>
+
+<h4>3c. Create the Cloud Scheduler jobs</h4>
+
+<pre>
+mksched () {  # usage: mksched NAME "CRON" CLOUD_RUN_JOB SERVICE_ACCOUNT
+  gcloud scheduler jobs create http $1 --project=$PROD --location=$REGION \
+    --schedule="$2" --time-zone="Europe/London" \
+    --http-method=POST \
+    --uri="https://run.googleapis.com/v2/projects/$PROD/locations/$REGION/jobs/$3:run" \
+    --oauth-service-account-email=$4@$PROD.iam.gserviceaccount.com \
+    --attempt-deadline=180s
+}
+
+mksched nightly-extract-nexudus "0 2 * * *"  extract-nexudus sa-extract-nexudus
+mksched nightly-extract-act     "15 2 * * *" extract-act     sa-extract-act
+mksched nightly-dbt-build       "0 3 * * *"  dbt-build       sa-dbt
+</pre>
+
+<p>The <code>--schedule</code> value is a <b>cron</b> line: <code>minute hour day-of-month month day-of-week</code>. So <code>"15 2 * * *"</code> means 02:15 every day. With <code>--time-zone="Europe/London"</code>, Google moves the run with British Summer Time for you.</p>
+
+<p>📘 The Scheduler only <b>starts</b> the job; the call returns as soon as the run begins, so a "success" in Cloud Scheduler does <b>not</b> mean the job worked. The job's own result is what the alerts in section 5 watch. You can also create these from the console: <b>Cloud Run → Jobs → your job → Triggers → Add scheduler trigger</b>. Some docs show an older address form (<code>https://europe-west2-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT/jobs/JOB:run</code>); either works today, but check the current docs.</p>
+
+<h4>3d. Fivetran sync times</h4>
+
+<p>📘 In Fivetran, open each connector → <b>Setup</b> tab → <b>Sync frequency</b>. Pick <b>24 hours</b> (or 12), then set the <b>sync start time</b>. ⚠️ Check in the current Fivetran docs which time zone that screen uses. If it is UTC, then 00:30 UTC is 00:30 UK in winter and 01:30 UK in summer: both well before 03:00.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Connector</th><th>Frequency (🛠)</th><th>Start (made up)</th><th>Typical run (measure it)</th></tr>
+<tr><td>NetSuite</td><td>24 hours</td><td>00:30 UTC</td><td>❓ measure</td></tr>
+<tr><td>HubSpot</td><td>24 hours</td><td>00:30 UTC</td><td>❓ measure</td></tr>
+<tr><td>Excel / Sheets</td><td>24 hours</td><td>00:30 UTC</td><td>❓ measure</td></tr>
+</table>
+
+<p>💡 Fivetran's price is based on rows changed (📘 "monthly active rows"), not on how often it syncs, but more syncs can still add cost on some connectors. Daily is enough for board-pack and monthly KPI dashboards, which mostly look at closed months. Guide 01's register says "every 6 hours"; that is fine too if the client wants fresher CRM data. Pick one and write it in the register.</p>
+
+<hr/>
+
+<h3>4. The dbt-build Job and the Stale-Data Guard</h3>
+
+<p>🛠 The <code>dbt-build</code> Cloud Run job runs a small script, <code>dbt/run.sh</code>, built into its image (Guide 07 builds the image):</p>
+
+<pre>
+#!/usr/bin/env bash
+# dbt/run.sh  -  entrypoint of the dbt-build Cloud Run job
+set -euo pipefail              # any failing command stops the script with an error
+
+dbt deps
+echo "Step 1: source freshness"
+dbt source freshness --target prod          # ERROR on any source = exit 1 = job fails
+
+echo "Step 2: build"
+dbt build --target prod "$@"                # extra args allow manual runs (section 9)
+</pre>
+
+<p><b>Source freshness</b> is the stale-data guard. It looks at the newest load time in each raw table (<code>_loaded_at</code> for our Python loaders, <code>_fivetran_synced</code> for Fivetran tables) and compares it to now. 📘 A <code>warn_after</code> only prints a warning; an <code>error_after</code> makes the command fail.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Source</th><th>warn after</th><th>error after</th><th>Why (🛠)</th></tr>
+<tr><td>nexudus</td><td>24 hours</td><td>48 hours</td><td>Loaded every night; two missed nights is a real problem</td></tr>
+<tr><td>netsuite</td><td>24 hours</td><td>72 hours</td><td>Finance changes slowly (Chapter 17)</td></tr>
+<tr><td>hubspot</td><td>24 hours</td><td>48 hours</td><td>Daily sync</td></tr>
+<tr><td>excel</td><td>7 days</td><td>35 days</td><td>Budget sheets change rarely. Use the load time, not the edit time.</td></tr>
+<tr><td>act365 / act</td><td>24 hours</td><td>48 hours</td><td>If it is a one-off export, turn freshness off and say so in the register</td></tr>
+</table>
+
+<p>Why is this so important? Because the worst failure is a <b>silent</b> one. An extractor that "succeeds" with zero rows, or a Scheduler job someone paused, sends no failure alert at all. Freshness catches both the next night (<a href="../season-2-pipeline/chapter-17-dbt-in-depth.html">Chapter 17</a>, Lab 17.4).</p>
+
+<p>⚠️ When freshness fails, <b>nothing</b> is rebuilt, and dashboards keep showing the last good data. That is the safe choice: old but correct beats fresh but half-loaded. The alert tells the team to fix it the same morning.</p>
+
+<hr/>
+
+<h3>5. Alerts</h3>
+
+<h4>5a. Notification channels</h4>
+
+<p>A <b>notification channel</b> is where Cloud Monitoring sends an alert. Create them once in <code>acme-data-prod</code>: <b>Monitoring → Alerting → Edit notification channels</b>, or from the command line:</p>
+
+<pre>
+gcloud beta monitoring channels create --project=$PROD \
+  --display-name="Data alerts email" --type=email \
+  --channel-labels=email_address=data-alerts@acme.com
+
+gcloud beta monitoring channels list --project=$PROD \
+  --format="table(name,displayName,type)"      # copy the channel IDs for later
+</pre>
+
+<p>For chat:</p>
+<ul>
+    <li><b>Slack</b>: 📘 Cloud Monitoring has a built-in Slack channel type. Set it up in the console, because it asks you to log in to Slack and approve it.</li>
+    <li><b>Google Chat or Microsoft Teams</b>: ⚠️ Cloud Monitoring's plain webhook sends its own message format, which these tools may not show nicely. Check the current docs. If it does not work, 🛠 send alerts to a Pub/Sub topic and use a tiny function that reads <code>alert-webhook-url</code> from Secret Manager and posts a short message. Give that function its own service account with Secret Accessor on that one secret. Write it in <code>docs/decisions.md</code>.</li>
+</ul>
+
+<h4>5b. Alert policy: a Cloud Run job execution failed</h4>
+
+<p>📘 Cloud Run records a metric for every finished job run, with a <code>result</code> label of <code>succeeded</code> or <code>failed</code>. We alert on any failed run.</p>
+
+<p>Console: <b>Monitoring → Alerting → Create policy → Select a metric → Cloud Run Job → Job → Completed Executions</b>. Add a filter <code>result = failed</code>. Set the threshold to <b>above 0</b>, over a 5 minute window. Add both notification channels. Name it <code>Cloud Run job failed</code>. In the documentation box, paste: <i>"Open the runbook: docs/runbook.md. Find the job name in this alert."</i></p>
+
+<p>Or as a file, <code>infra/alert-job-failed.yaml</code> (check field names in the current docs):</p>
+
+<pre>
+displayName: "Cloud Run job failed"
+combiner: OR
+conditions:
+  - displayName: "Any failed execution"
+    conditionThreshold:
+      filter: >
+        resource.type = "cloud_run_job" AND
+        metric.type = "run.googleapis.com/job/completed_execution_count" AND
+        metric.labels.result = "failed"
+      comparison: COMPARISON_GT
+      thresholdValue: 0
+      duration: 0s
+      aggregations:
+        - alignmentPeriod: 300s
+          perSeriesAligner: ALIGN_SUM
+notificationChannels:
+  - projects/acme-data-prod/notificationChannels/EMAIL_CHANNEL_ID
+  - projects/acme-data-prod/notificationChannels/CHAT_CHANNEL_ID
+documentation:
+  content: "A pipeline job failed. Follow docs/runbook.md (Guide 08, section 10)."
+</pre>
+
+<pre>
+gcloud alpha monitoring policies create --project=$PROD \
+  --policy-from-file=infra/alert-job-failed.yaml
+</pre>
+
+<h4>5c. Log-based alerts</h4>
+
+<p>A <b>log-based alert</b> fires when a matching line appears in Cloud Logging. It catches things the metric does not, for example the Scheduler failing to start a job at all. Console: <b>Logging → Logs Explorer</b>, paste a query, click <b>Run query</b>, check it finds real past errors, then <b>Actions → Create log alert</b>. Set a notification limit (for example one alert per hour) so one problem does not flood the channel.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Alert name</th><th>Logs query</th></tr>
+<tr><td>Scheduler could not start a job</td><td><code>resource.type="cloud_scheduler_job" severity&gt;=ERROR</code></td></tr>
+<tr><td>Extractor auth error (401/403)</td><td><code>resource.type="cloud_run_job" resource.labels.job_name=~"extract-" textPayload:("401" OR "403")</code></td></tr>
+<tr><td>dbt freshness ERROR</td><td><code>resource.type="cloud_run_job" resource.labels.job_name="dbt-build" textPayload:"ERROR STALE"</code></td></tr>
+</table>
+
+<p>The second and third queries depend on what your code actually prints. Run a failing job once, look at the real log lines, and adjust the query to match them (the exact dbt wording changes between versions).</p>
+
+<h4>5d. Fivetran's own alerts</h4>
+
+<p>📘 Fivetran emails account users when a connector fails or needs attention. In Fivetran, go to your user settings → <b>Notifications</b> and make sure <code>data-alerts@acme.com</code> (or a user whose email forwards there) gets connector failure emails. Do not rely on one person's inbox.</p>
+
+<hr/>
+
+<h3>6. Check It Worked: Break It on Purpose</h3>
+
+<p>An alert you have never seen fire is an alert you cannot trust (Guide 01, section 9). Do each test in the dev setup or in a quiet hour, and put things back after.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Break it like this</th><th>You should see</th></tr>
+<tr><td>1</td><td>Add a new version of <code>nexudus-api-token</code> with a wrong value, run <code>gcloud run jobs execute extract-nexudus --region=$REGION --wait</code></td><td>The job fails; email and chat alert within about 10 minutes; the 401 log alert fires. Then disable the bad version and enable the good one again.</td></tr>
+<tr><td>2</td><td>Pause the Nexudus Scheduler job for 2 nights (<code>gcloud scheduler jobs pause nightly-extract-nexudus --location=$REGION</code>)</td><td>Night 2: <code>dbt source freshness</code> errors for nexudus; dbt-build fails; alert. Then <code>resume</code> it.</td></tr>
+<tr><td>3</td><td>In a branch, add a test that always fails, deploy to a test job, run it</td><td>dbt-build fails; models after the test are SKIPPED; alert</td></tr>
+<tr><td>4</td><td>Pause one Fivetran connector</td><td>Freshness warning the next morning, error after the error limit</td></tr>
+<tr><td>5</td><td><code>gcloud scheduler jobs run nightly-dbt-build --location=$REGION</code></td><td>A normal run starts now; the job shows "Succeeded" in Cloud Run</td></tr>
+</table>
+
+<p>Write the date and result of each test in <code>docs/runbook.md</code>. It is proof for go-live (Guide 09).</p>
+
+<hr/>
+
+<h3>7. Daily, Weekly and Monthly Checks</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>When</th><th>Check</th><th>Where</th><th>Takes</th></tr>
+<tr><td>Daily (morning)</td><td>Any alert overnight? If not, still glance at last night's runs: all three jobs "Succeeded"</td><td>Chat channel; <b>Cloud Run → Jobs</b></td><td>2 min</td></tr>
+<tr><td>Daily</td><td>Any freshness <b>warnings</b> (they do not alert, but they warn of trouble)</td><td>dbt-build logs</td><td>2 min</td></tr>
+<tr><td>Weekly</td><td>Fivetran: all connectors green; any schema change notices?</td><td>Fivetran dashboard</td><td>5 min</td></tr>
+<tr><td>Weekly</td><td>Row counts per day in each raw source look normal (no sudden drop to zero or doubling)</td><td>A saved query on <code>_loaded_at</code> / <code>_fivetran_synced</code></td><td>5 min</td></tr>
+<tr><td>Weekly</td><td>The top 10 most expensive queries (section 8)</td><td><code>INFORMATION_SCHEMA.JOBS</code></td><td>5 min</td></tr>
+<tr><td>Monthly</td><td>Cloud bill vs budget; Fivetran usage vs plan</td><td>Billing reports; Fivetran usage page</td><td>15 min</td></tr>
+<tr><td>Monthly (after finance close)</td><td>Reconcile revenue per site with Finance's report; Ops checks members and occupancy</td><td>Reconciliation tests (Guide 07, Chapter 17)</td><td>1–2 hours</td></tr>
+<tr><td>Monthly</td><td>Access review: who is in each group? Any leavers?</td><td>Client IT, Google groups</td><td>15 min</td></tr>
+<tr><td>Every 3–6 months (🛠)</td><td>Rotate the Nexudus and ACT tokens</td><td>Secret Manager (section 10, row G)</td><td>30 min</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. Cost Monitoring</h3>
+
+<p>✅ The brief says it "cannot become a six figure operation". Watch four places:</p>
+
+<p><b>1. Budget alerts</b> (set in Guide 02). Check they reach the right people. Look at <b>Billing → Reports</b>, grouped by <b>Project</b> and then by <b>SKU</b> (the line item, for example "Analysis" for BigQuery queries), to see where money goes.</p>
+
+<p><b>2. The most expensive BigQuery queries</b> in the last 7 days. Run this in each project:</p>
+
+<pre>
+bq query --project_id=acme-data-prod --location=europe-west2 --use_legacy_sql=false '
+SELECT
+  user_email,
+  job_id,
+  creation_time,
+  ROUND(total_bytes_billed / POW(1024, 4), 4) AS tib_billed,
+  LEFT(query, 120)                           AS query_start
+FROM `region-europe-west2`.INFORMATION_SCHEMA.JOBS
+WHERE creation_time &gt;= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+  AND job_type = "QUERY"
+  AND statement_type != "SCRIPT"          -- avoid counting scripts twice
+ORDER BY total_bytes_billed DESC
+LIMIT 20'
+</pre>
+
+<p>Multiply <code>tib_billed</code> by the current on-demand price per TiB (check current pricing for <code>europe-west2</code>). Look for: a BI dashboard scanning a whole table every few minutes, a <code>SELECT *</code> on a big raw table, or dbt rebuilding a large table in full every night that could be incremental (<a href="../season-2-pipeline/chapter-15-bigquery.html">Chapter 15</a>).</p>
+
+<p><b>3. Fivetran usage.</b> 📘 In Fivetran, open the account <b>Usage</b> page (the menu name may differ; check the docs). It shows monthly active rows per connector. A connector whose rows jump overnight usually means a full re-sync or a table you did not need. Untick tables you do not use.</p>
+
+<p><b>4. Cloud Run jobs.</b> 📘 Cloud Run jobs are charged only while they run (CPU and memory time). Three short nightly jobs should cost very little. In <b>Billing → Reports</b>, filter the service to <b>Cloud Run</b>. If the cost grows, check <b>Cloud Run → Jobs → your job → Executions</b> for runs that got much longer, or that retried many times (a hanging extractor, or a dbt model that is no longer incremental). The task timeout from section 3b puts a ceiling on each run.</p>
+
+<hr/>
+
+<h3>9. Re-running a Job by Hand, and Backfills</h3>
+
+<h4>Re-run a job now</h4>
+
+<pre>
+gcloud run jobs execute extract-nexudus --region=$REGION --project=$PROD --wait
+gcloud run jobs execute dbt-build       --region=$REGION --project=$PROD --wait
+# --wait keeps the command running until the job ends and shows the result
+</pre>
+
+<p>Always re-run in order: the failed extractor first, then <code>dbt-build</code>. Running dbt alone does not bring in new data.</p>
+
+<h4>Backfill: load or rebuild an older period</h4>
+
+<p>A <b>backfill</b> means loading or rebuilding data for days that were missed or wrong.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Piece</th><th>How</th></tr>
+<tr><td>Nexudus extractor</td><td>Run once with an override that moves the start point back. 🛠 Our Guide 05 extractor reads a start-date setting from an environment variable; use the exact name from <code>extractors/nexudus/README.md</code>. Example: <code>gcloud run jobs execute extract-nexudus --region=$REGION --update-env-vars=SINCE=2026-09-01 --wait</code>. This applies to this one run only. Duplicates are fine: staging keeps the latest version per id (Chapter 14).</td></tr>
+<tr><td>Fivetran</td><td>📘 Connector → <b>Setup</b> → re-sync one table, or re-sync all historical data. ⚠️ A full re-sync can add a lot of usage; ask the lead first for big sources like NetSuite.</td></tr>
+<tr><td>dbt</td><td>Pass extra args through <code>run.sh</code>: <code>gcloud run jobs execute dbt-build --region=$REGION --args="--select,fct_contract_month+,--full-refresh" --wait</code>. The <code>+</code> after the model name also rebuilds everything that depends on it. ⚠️ <code>--args</code> replaces the job's normal arguments for this run; check the current docs and test it in dev first.</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. The Fix-It Runbook</h3>
+
+<p>Copy this section into <code>docs/runbook.md</code> and fill in the client's real names for each role. Every entry follows the same shape: <b>symptoms → how to check → how to fix → who to tell</b>. If a fix is not working after an hour, stop and tell the lead (Guide 01, section 10).</p>
+
+<p>Useful command for every entry, to read a job's last logs:</p>
+
+<pre>
+gcloud logging read \
+  'resource.type="cloud_run_job" AND resource.labels.job_name="extract-nexudus"' \
+  --project=$PROD --freshness=1d --limit=100 --format="value(textPayload)"
+
+gcloud run jobs executions list --job=extract-nexudus --region=$REGION --project=$PROD --limit=5
+</pre>
+
+<h4>A. Nexudus job failed</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td>"Cloud Run job failed" alert for <code>extract-nexudus</code></td></tr>
+<tr><th>How to check</th><td>Read the logs (above). Find the HTTP status code.</td></tr>
+<tr><th>How to fix</th><td>
+<b>401 / 403</b> (not allowed): the token is wrong, expired, or the API user was turned off or lost rights. Do <b>not</b> retry in a loop. Ask the Nexudus admin to check the API user. If they issue a new token: <code>printf '%s' "$NEW" | gcloud secrets versions add nexudus-api-token --data-file=-</code>, then disable the old version, then re-run.<br/>
+<b>429</b> (too many requests): the extractor already waits and retries (Chapter 14). If it still fails, run again later in the morning, and lower the page size or request rate in the extractor config.<br/>
+<b>500 / 502 / 503 / 504</b> (Nexudus side): wait 30–60 minutes and re-run. If it lasts hours, check the vendor's status page.<br/>
+<b>400 / 404</b>: the API probably changed. Check the vendor's change notes, fix the code in a branch, deploy, re-run.<br/>
+After any fix: re-run <code>extract-nexudus</code>, then <code>dbt-build</code>.</td></tr>
+<tr><th>Who to tell</th><td>Chat channel: "Nexudus load failed, data is from yesterday, fixing". If it was the API user, the Ops / Nexudus admin.</td></tr>
+</table>
+
+<h4>B. Fivetran connector broken, or a schema change</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td>Fivetran failure email; connector shows red or "broken" in Fivetran; freshness warning for that source</td></tr>
+<tr><th>How to check</th><td>Fivetran → connector → <b>Status</b> / logs. Is it a login problem (password or token changed, integration user turned off) or a <b>schema change</b> (a column or table added, renamed or removed in the source)?</td></tr>
+<tr><th>How to fix</th><td><b>Login</b>: ask the system admin (for example the NetSuite finance systems admin) to check the integration user and role; update the login in Fivetran's Setup tab; click re-sync.<br/>
+<b>Schema change</b>: 📘 Fivetran usually adds new columns by itself. A <b>renamed</b> or removed column can break a dbt staging model. Run <code>dbt build --select source:netsuite+</code> in dev; fix the staging model so later layers keep the same column names; merge; re-run <code>dbt-build</code>.</td></tr>
+<tr><th>Who to tell</th><td>The source system's admin; chat channel if the data will be late</td></tr>
+</table>
+
+<h4>C. Freshness test failed</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td><code>dbt-build</code> failed; logs show <code>ERROR STALE</code> for a source</td></tr>
+<tr><th>How to check</th><td>Which source? When did it last load? <code>SELECT MAX(_loaded_at) FROM `acme-data-prod.raw_nexudus.&lt;table&gt;`</code> (or <code>_fivetran_synced</code>). Then check that loader: did its job run? Is its Scheduler job paused? (<code>gcloud scheduler jobs list --location=$REGION</code>)</td></tr>
+<tr><th>How to fix</th><td>Fix the loader (entry A or B), re-run it, then re-run <code>dbt-build</code>. If the source is <b>meant</b> to be quiet (for example a budget sheet in a quiet month), raise its <code>error_after</code> in <code>_sources.yml</code> through a pull request and note why.</td></tr>
+<tr><th>Who to tell</th><td>Chat channel: "Data is from &lt;date&gt;, fix in progress". Leadership only if it lasts past midday.</td></tr>
+</table>
+
+<h4>D. dbt test failed</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td><code>dbt-build</code> failed; logs show <code>FAIL</code> on a test and <code>SKIP</code> on models after it</td></tr>
+<tr><th>How to check</th><td>Find the test name in the logs. Run it in dev with <code>dbt test --select &lt;test_name&gt; --store-failures</code> to see the bad rows. Ask: is it a <b>data</b> problem (a duplicate member, a contract with no site) or a <b>code</b> problem (a recent change)?</td></tr>
+<tr><th>How to fix</th><td><b>Data</b>: tell the source owner what to correct in the source system (never patch raw by hand). Re-run after they fix it.<br/>
+<b>Code</b>: revert or fix the change through a pull request, then re-run.<br/>
+⚠️ Never delete or turn off a test just to get green. If a rule really changed, change the test through a pull request, with a reason in <code>docs/decisions.md</code>.</td></tr>
+<tr><th>Who to tell</th><td>Chat channel. Note that <code>marts</code> (and so the dashboards) still hold yesterday's good data.</td></tr>
+</table>
+
+<h4>E. Numbers do not match finance</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td>Finance says revenue (or another money number) differs from their report</td></tr>
+<tr><th>How to check</th><td>1. Same period? Was the month <b>closed</b> in finance? An open month will change and should be labelled provisional. 2. Same definition? For example invoiced vs recognised revenue, or credit notes included or not. 3. Same data date? When did Fivetran last sync? 4. Compare by site and by account, to find where the gap sits.</td></tr>
+<tr><th>How to fix</th><td>Timing → wait for the next sync, or re-sync. Definition → agree the right one with the Finance owner and record it. Mapping (wrong account or site) → fix the dbt mapping and add a golden-number test so it cannot happen again (Chapter 17, Lab 17.2).</td></tr>
+<tr><th>Who to tell</th><td>Finance owner the same day if the number is in a board paper. Log the result.</td></tr>
+</table>
+
+<h4>F. Cost spike</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td>Budget alert email; or the monthly bill is much higher than last month</td></tr>
+<tr><th>How to check</th><td>Billing reports by project and SKU. Then: BigQuery → the expensive-queries query (section 8); Fivetran → Usage page; Cloud Run → job run times.</td></tr>
+<tr><th>How to fix</th><td>Expensive dashboard → add filters, use partitioned tables, lower refresh rate. Runaway script → stop it (<code>gcloud run jobs executions cancel</code>), fix it. Fivetran re-sync → untick unneeded tables. If needed, lower the BigQuery daily quota for a while.</td></tr>
+<tr><th>Who to tell</th><td>The lead and the client's budget owner, with the cause and the fix</td></tr>
+</table>
+
+<h4>G. A leaver's access</h4>
+<table border="1" cellpadding="10">
+<tr><th>Symptoms</th><td>HR or a manager says someone with data access is leaving (or has left)</td></tr>
+<tr><th>How to check</th><td>Which groups were they in? Any direct grants? <code>gcloud projects get-iam-policy acme-data-prod --flatten="bindings[].members" --filter="bindings.members:user:" --format="table(bindings.role,bindings.members)"</code> (repeat for dev). Fivetran user? BI tool user? Did they ever see a secret value?</td></tr>
+<tr><th>How to fix</th><td>Client IT removes them from the Google groups (all rights go at once). Remove any direct grants. Remove their Fivetran and BI accounts. If they knew a token: get a new one from the vendor, add it as a new secret version, disable the old one, re-run the job to prove it works. Check the audit logs for unusual reads in their last weeks if the client asks.</td></tr>
+<tr><th>Who to tell</th><td>Client IT; the lead. Note the date in <code>docs/runbook.md</code>.</td></tr>
+</table>
+
+<hr/>
+
+<h3>11. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td>Scheduler shows <code>PERMISSION_DENIED</code></td><td>The service account lacks Cloud Run Invoker on the job</td><td>Section 3a</td></tr>
+<tr><td>Scheduler shows success but nothing ran</td><td>Wrong job name or region in the URI</td><td>Check the URI; run <code>gcloud scheduler jobs run</code> and watch <b>Cloud Run → Jobs → Executions</b></td></tr>
+<tr><td>Jobs run an hour early or late</td><td><code>--time-zone</code> missing, so UTC was used</td><td><code>gcloud scheduler jobs update http NAME --time-zone="Europe/London" --location=$REGION</code></td></tr>
+<tr><td>No alert when a job failed</td><td>Policy has no channel, wrong filter, or the email went to spam</td><td>Open the policy, check channels; send a test from the channel page; re-do the break-it test</td></tr>
+<tr><td>Too many alerts for one problem</td><td>No notification limit</td><td>Set a limit on log alerts; set auto-close on the policy</td></tr>
+<tr><td>Freshness always fails for Excel</td><td>Error limit too short for a file that rarely changes</td><td>Longer <code>error_after</code>, or load the file daily so the load time moves</td></tr>
+<tr><td>dbt-build starts before Fivetran ends</td><td>Fivetran start time in UTC, run longer than you thought</td><td>Move Fivetran earlier; measure the real run time</td></tr>
+</table>
+
+<hr/>
+
+<h3>12. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Three Scheduler jobs exist, in <code>Europe/London</code> time, at 02:00, 02:15 and 03:00</td></tr>
+<tr><td>☐</td><td>Fivetran connectors are set to finish before 03:00 UK (measured, not guessed)</td></tr>
+<tr><td>☐</td><td>Every Cloud Run job has a timeout; dbt-build does not auto-retry</td></tr>
+<tr><td>☐</td><td><code>dbt-build</code> runs freshness first, then build; a failed test skips everything after it</td></tr>
+<tr><td>☐</td><td>Every source has freshness limits, or a written reason why not</td></tr>
+<tr><td>☐</td><td>Email and chat channels work; the job-failed policy and log alerts point to both</td></tr>
+<tr><td>☐</td><td>Fivetran failure emails reach the shared alerts address</td></tr>
+<tr><td>☐</td><td>All five break-it tests in section 6 were done, with dates written down</td></tr>
+<tr><td>☐</td><td>The expensive-queries query is saved, and budget alerts reach the right people</td></tr>
+<tr><td>☐</td><td>The daily / weekly / monthly checks have a named owner (a role) each</td></tr>
+<tr><td>☐</td><td>The fix-it runbook is in <code>docs/runbook.md</code> with real role names, and someone other than you has followed one entry without help</td></tr>
+<tr><td>☐</td><td>Alert files and Scheduler commands are in <code>infra/</code> in Git</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>The pipeline now runs itself and shouts when it breaks. The last step is to prove the numbers with the client and hand it all over: <a href="integration-09-go-live-handover.html">Guide 09 — Go-Live and Handover</a>. 🚀</p>
+
+<p>Back to the plan: <a href="integration-01-start-here.html">Guide 01 — Start Here</a>. Background in the series: <a href="../season-2-pipeline/chapter-14-python-extractors.html">Chapter 14 (retries and failing loudly)</a>, <a href="../season-2-pipeline/chapter-17-dbt-in-depth.html">Chapter 17 (freshness and the nightly run)</a>, <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (what breaks)</a> and <a href="../season-5-delivery/chapter-36-documentation-handover.html">Chapter 36 (runbooks)</a>.</p>

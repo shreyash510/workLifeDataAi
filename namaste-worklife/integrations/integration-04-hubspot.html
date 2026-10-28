@@ -1,0 +1,293 @@
+<h2>Integration Guide 04 — HubSpot to BigQuery</h2>
+
+<p>Hi! 🙏 This guide is for the engineer who has finished <a href="integration-03-fivetran-netsuite.html">Guide 03</a>, so a Fivetran account and a BigQuery destination already exist. Now we add the client's CRM.</p>
+
+<p>At the end you will have: a Fivetran HubSpot connector that copies companies, contacts, deals, pipelines, owners and the links between them into <code>raw_hubspot</code>, on a schedule, with failure emails, a cost check, and three tests: counts that match HubSpot's screens, a duplicate check and a list of companies with no Nexudus ID.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>our standard setup</b>. The brief says HubSpot "is being integrated" and "is expected to become the source of truth for member data" (✅ brief). It does not say how HubSpot data reaches the warehouse, so a Fivetran HubSpot connector at Work.Life is <b>inferred, not confirmed</b>. Fivetran and HubSpot change screens, table names and prices often: <b>check the current docs</b> before you click. Numbers marked (made up) are examples only.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Words you need (objects, properties, associations, OAuth, scopes)</li>
+    <li>What "source of truth for member data" means for loading</li>
+    <li>Before you start: the needs list</li>
+    <li>Step-by-step: create the connector, log in, choose tables</li>
+    <li>Schedule, alerts and schema-change settings</li>
+    <li>HubSpot traps you must know about</li>
+    <li>Check it worked (counts, duplicates, missing Nexudus IDs)</li>
+    <li>Common problems and fixes</li>
+    <li>Cost check</li>
+    <li>Done when</li>
+</ul>
+
+<hr/>
+
+<h3>1. Words You Need</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>Simple meaning</th></tr>
+<tr><td><b>Object</b></td><td>A kind of record in HubSpot: company, contact, deal (<a href="../season-1-source-systems/chapter-10-hubspot.html">Chapter 10</a>).</td></tr>
+<tr><td><b>Property</b></td><td>A field on an object, for example a company's <code>domain</code>. Clients add their own <b>custom properties</b>.</td></tr>
+<tr><td><b>Association</b></td><td>A link between two records. Many-to-many: a contact can link to two companies, a deal to three contacts.</td></tr>
+<tr><td><b>Pipeline / stage</b></td><td>The steps a deal moves through, for example "New Business" or "Renewals".</td></tr>
+<tr><td><b>Owner</b></td><td>The HubSpot user (a staff member) a record is assigned to.</td></tr>
+<tr><td><b>Property history</b></td><td>Every past value of a property with the time it changed. Useful, but can be large.</td></tr>
+<tr><td><b>Merge</b></td><td>Joining two duplicate records into one. One record ID disappears 📘.</td></tr>
+<tr><td><b>OAuth</b></td><td>A "log in with HubSpot" screen. A HubSpot user approves access for Fivetran; no password is shared.</td></tr>
+<tr><td><b>Scopes</b></td><td>The list of things the app is allowed to do (for example "read contacts"). Shown on the approval screen.</td></tr>
+</table>
+
+<hr/>
+
+<h3>2. What "Source of Truth for Member Data" Means for Loading</h3>
+
+<p>✅ The brief says HubSpot "is expected to become the source of truth for member data". Two words matter: <b>expected</b> and <b>become</b>. Today some member facts live in Nexudus, and the move happens while you build. So:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>What it means</th><th>What you do when loading</th></tr>
+<tr><td>Truth is decided <b>per field</b>, not per system (Chapter 10, section 11). Names and emails may come from HubSpot; contracts and invoices stay in Nexudus.</td><td>Load HubSpot <b>in full</b> (all companies and contacts, not only synced ones). The choice of "which system wins for this field" is made in dbt, not in Fivetran.</td></tr>
+<tr><td>HubSpot holds leads and past members too, not only current members</td><td>Do not filter to "members" while loading. Member status is worked out in the warehouse from contracts.</td></tr>
+<tr><td>The two systems are joined by an ID, not by names</td><td>Make sure the custom property holding the <b>Nexudus ID</b> is loaded. It is the bridge for matching (section 6, trap 4).</td></tr>
+<tr><td>The switch happens over time</td><td>Write the date each field's owner changes in <code>docs/decisions.md</code>. Keep property history for the key fields, so you can explain old numbers.</td></tr>
+</table>
+
+<p>📘 The <b>Nexudus ↔ HubSpot sync</b> (contacts ↔ customers, companies ↔ teams, deals → opportunities) is an <b>operational</b> integration between the two tools. We do not build or change it. We only read both sides. Which fields it syncs at the client is ❓ (Chapter 39, I2). If it causes duplicates, raise it with the client's CRM admin; do not fix it in the pipeline.</p>
+
+<hr/>
+
+<h3>3. Before You Start: The Needs List</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>You need</th><th>From (role)</th></tr>
+<tr><td>☐</td><td>Guide 03 done: Fivetran account and the BigQuery destination for <code>&lt;client&gt;-data-prod</code> work</td><td>You</td></tr>
+<tr><td>☐</td><td>Dataset <code>raw_hubspot</code> exists in <code>europe-west2</code>, and Fivetran's identity has Data Editor on it (Guide 02/03)</td><td>You</td></tr>
+<tr><td>☐</td><td>A HubSpot <b>super admin</b> who can approve the connection, on a call with you 📘</td><td>CRM admin</td></tr>
+<tr><td>☐</td><td>The names of the custom properties that hold the Nexudus IDs on companies and contacts ❓ (in our lab: <code>nexudus_team_id</code> and <code>nexudus_customer_id</code>; the client's may differ, and the Nexudus integration may add its own 📘)</td><td>CRM admin</td></tr>
+<tr><td>☐</td><td>Which pipelines are in use (new business, renewals, others) ❓</td><td>Sales</td></tr>
+<tr><td>☐</td><td>Whether emails, calls and notes (engagements) are needed. 🛠 Our standard: no, they hold free text about people.</td><td>Data owner</td></tr>
+<tr><td>☐</td><td>Whether "deals by owner" reporting is wanted. Owner data is about staff, so check with the client ❓ (✅ brief: people/HR data excluded)</td><td>Data owner</td></tr>
+</table>
+
+<hr/>
+
+<h3>4. Step-by-Step: Create the Connector</h3>
+
+<p><b>Step 1 — Add the connector.</b> In Fivetran: <b>Connectors → Add connector</b>, search "HubSpot", pick it and choose the same BigQuery destination as Guide 03 📘.</p>
+
+<p><b>Step 2 — Name the destination schema.</b> Type <code>raw_hubspot</code>. Look at the preview under the field to make sure the dataset will be exactly <code>raw_hubspot</code> (not a prefix plus another name). 📘 At the time of writing it cannot be renamed later, so check before you go on.</p>
+
+<p><b>Step 3 — Log in with OAuth.</b> Click <b>Authorize</b>. A HubSpot window opens.</p>
+<ul>
+    <li>The <b>super admin</b> logs in (on the call, with you watching). Never use your own HubSpot user, and never ask for their password.</li>
+    <li>Pick the right HubSpot account (portal). Clients often have a test portal too; the account ID is shown on the screen 📘.</li>
+    <li><b>Read the scopes list.</b> 📘 Fivetran asks for a fixed set of scopes; at the time of writing they are for reading data. 🛠 If you see any write scope (create, update, delete), stop and check Fivetran's current HubSpot docs before you approve.</li>
+    <li>Click <b>Connect app</b>. Back in Fivetran you should see a green tick.</li>
+</ul>
+
+<p>Where the secret lives: the OAuth token is stored by Fivetran. It is not in Git or anywhere else. 📘 If the super admin who approved it is later removed from HubSpot, the token may stop working. Write in the runbook: "re-authorise with another super admin if the HubSpot connector breaks after a staff change."</p>
+
+<p>💡 Another way, if the client will not use OAuth: a HubSpot <b>private app</b> with read-only scopes, used by a Python script (Chapter 10, section 12). That is more code to look after, so 🛠 we only use it if Fivetran is not allowed.</p>
+
+<p><b>Step 4 — Choose tables.</b> Fivetran writes HubSpot properties as columns with a <code>property_</code> prefix, for example <code>property_name</code>, <code>property_domain</code> 📘. Table names below are typical; <b>check what your connector shows</b>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Table (typical name 📘)</th><th>What it holds</th><th>Select?</th></tr>
+<tr><td><code>company</code></td><td>Companies with all their properties, including the Nexudus team ID property</td><td>✅ Yes</td></tr>
+<tr><td><code>contact</code></td><td>People: name, email, phone, lifecycle stage, Nexudus customer ID property</td><td>✅ Yes, but it is personal data: raw access stays restricted</td></tr>
+<tr><td><code>deal</code></td><td>Deals: amount, stage, close date, pipeline</td><td>✅ Yes</td></tr>
+<tr><td><code>deal_pipeline</code>, <code>deal_pipeline_stage</code></td><td>Pipeline and stage names (the labels for the IDs on deals)</td><td>✅ Yes (small)</td></tr>
+<tr><td><code>owner</code></td><td>HubSpot users records are assigned to</td><td>❓ Only if the client agrees (staff data)</td></tr>
+<tr><td>Association tables (names like <code>deal_company</code>, <code>deal_contact</code>, <code>contact_company</code>)</td><td>Which deal belongs to which company and contact</td><td>✅ Yes</td></tr>
+<tr><td><code>property</code>, <code>property_option</code></td><td>Property definitions: dropdown values and their labels</td><td>✅ Yes (small, needed for labels)</td></tr>
+<tr><td>Merge tables or merge columns (names like <code>merged_deal</code>, or a property like <code>hs_merged_object_ids</code>)</td><td>Which old IDs were merged into which record</td><td>✅ Yes</td></tr>
+<tr><td><code>company_property_history</code>, <code>contact_property_history</code>, <code>deal_property_history</code></td><td>Every past value of every property</td><td>🛠 Deal history yes (stage changes). Contact and company history: only if needed, they drive MAR (section 9).</td></tr>
+<tr><td>Engagements (emails, calls, meetings, notes), tickets, marketing emails, forms</td><td>Free text and activity about people</td><td>❌ Not by default</td></tr>
+</table>
+
+<p><b>Step 5 — Columns.</b> Inside <code>contact</code>, untick columns you do not need and that are sensitive (for example free-text notes, date of birth, anything health-related, if they exist) 📘. Keep the IDs, email (needed for duplicate checks), lifecycle stage, company link, created and last modified dates and the Nexudus ID property.</p>
+
+<hr/>
+
+<h3>5. Schedule, Alerts and Schema-Change Settings</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Setting</th><th>🛠 Our standard</th></tr>
+<tr><td>Sync frequency</td><td>Every 6 hours (made up as a starting point). Lower it if MAR is high.</td></tr>
+<tr><td>Finish time</td><td>A sync must finish <b>before 03:00 Europe/London</b>, when <code>dbt-build</code> runs <code>dbt source freshness</code> then <code>dbt build</code> (Guide 08). Check the sync history.</td></tr>
+<tr><td>Schema changes</td><td>"Allow new columns, block new tables" (option names 📘). In HubSpot every new custom property becomes a new column, so check new columns once a week for personal data.</td></tr>
+<tr><td>Failure emails</td><td>Same as Guide 03: sync failures go to the shared data alerts address.</td></tr>
+</table>
+
+<p>Click <b>Save &amp; Test</b>, then <b>Start initial sync</b>. A small HubSpot account usually syncs in minutes to an hour; property history can make it much longer 📘.</p>
+
+<hr/>
+
+<h3>6. HubSpot Traps You Must Know About</h3>
+
+<p>These do not stop the load, but they break numbers later if you forget them. Each one is handled in dbt (Guide 07); here you only make sure the data needed to handle it is loaded.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Trap</th><th>What happens</th><th>What to load now</th></tr>
+<tr><td>1</td><td><b>Merged records</b></td><td>When two contacts are merged, one ID disappears 📘. Old rows may point at a dead ID, or a person is counted twice in history.</td><td>The merge table or merged-IDs property, so dbt can map old IDs to the surviving one</td></tr>
+<tr><td>2</td><td><b>Values vs labels</b></td><td>Dropdowns store an internal value (<code>hybrid_remote</code>); the screen shows a label ("Hybrid / remote") 📘. Pipeline stages are stored as IDs.</td><td><code>property_option</code>, <code>deal_pipeline_stage</code></td></tr>
+<tr><td>3</td><td><b>Many-to-many associations</b></td><td>A deal linked to two companies gets counted twice if you join without care.</td><td>Association tables, including any "primary" flag 📘</td></tr>
+<tr><td>4</td><td><b>The Nexudus ID property</b></td><td>It is the bridge between HubSpot and Nexudus. If it is empty or typed by hand, matching fails and revenue lands under "unknown company" (Chapter 39).</td><td>The custom property column, for both companies and contacts</td></tr>
+<tr><td>5</td><td><b>Deleted (archived) records</b></td><td>Fivetran marks deleted rows instead of removing them 📘 (<code>_fivetran_deleted</code>, and some tables have their own deleted flag).</td><td>Nothing extra; filter in staging</td></tr>
+<tr><td>6</td><td><b>Lifecycle stage only moves forward</b> by default 📘</td><td>A member who left can still show as "customer"</td><td>Nothing extra; member status comes from contracts, not lifecycle stage</td></tr>
+<tr><td>7</td><td><b>Leads are mixed with members</b></td><td>Counting all contacts gives a wrong "members" number</td><td>Load all; filter in dbt</td></tr>
+</table>
+
+<p>⚠️ <b>Privacy.</b> <code>raw_hubspot</code> holds names, emails and phone numbers. Only the pipeline service accounts and the data owner can read it. 🛠 Personal contact details stay in raw and staging. The marts and BI dashboards get company-level facts only, like deal amounts by stage, built by dbt.</p>
+
+<hr/>
+
+<h3>7. Check It Worked</h3>
+
+<p><b>Check 1 — Counts vs the HubSpot screens.</b> In HubSpot, open <b>Contacts</b>, <b>Companies</b> and <b>Deals</b>; each list view shows a record count at the top 📘. Then run:</p>
+
+<pre>
+-- Live (not deleted) records per object, and freshness
+SELECT 'company' AS obj, COUNTIF(NOT COALESCE(_fivetran_deleted, FALSE)) AS live_rows,
+       MAX(_fivetran_synced) AS last_synced
+FROM `&lt;client&gt;-data-prod.raw_hubspot.company`
+UNION ALL
+SELECT 'contact', COUNTIF(NOT COALESCE(_fivetran_deleted, FALSE)), MAX(_fivetran_synced)
+FROM `&lt;client&gt;-data-prod.raw_hubspot.contact`
+UNION ALL
+SELECT 'deal', COUNTIF(NOT COALESCE(_fivetran_deleted, FALSE)), MAX(_fivetran_synced)
+FROM `&lt;client&gt;-data-prod.raw_hubspot.deal`;
+</pre>
+
+<p>What you should see: counts equal to the HubSpot screens (allow a few for records changed since the last sync). If yours is higher, you may be counting archived or merged rows; check the tables' own deleted flag columns.</p>
+
+<p><b>Check 2 — Deals by pipeline and stage, with labels.</b> Compare with the deal board in HubSpot:</p>
+
+<pre>
+SELECT p.label AS pipeline, s.label AS stage,
+       COUNT(*) AS deals, SUM(d.property_amount) AS amount
+FROM `&lt;client&gt;-data-prod.raw_hubspot.deal` AS d
+LEFT JOIN `&lt;client&gt;-data-prod.raw_hubspot.deal_pipeline` AS p
+       ON p.pipeline_id = d.deal_pipeline_id
+LEFT JOIN `&lt;client&gt;-data-prod.raw_hubspot.deal_pipeline_stage` AS s
+       ON s.stage_id = d.deal_pipeline_stage_id
+WHERE NOT COALESCE(d._fivetran_deleted, FALSE)
+GROUP BY 1, 2
+ORDER BY 1, 2;
+-- Column names are typical for Fivetran's HubSpot schema; check yours.
+</pre>
+
+<p><b>Check 3 — Possible duplicate companies (same email domain).</b></p>
+
+<pre>
+-- Companies that share a website domain: likely duplicates to review
+SELECT LOWER(TRIM(property_domain)) AS domain,
+       COUNT(*)                     AS companies,
+       STRING_AGG(property_name, ' | ') AS names
+FROM `&lt;client&gt;-data-prod.raw_hubspot.company`
+WHERE NOT COALESCE(_fivetran_deleted, FALSE)
+  AND property_domain IS NOT NULL
+GROUP BY 1
+HAVING COUNT(*) &gt; 1
+ORDER BY companies DESC;
+
+-- Contacts whose email domain does not match any company (for review, not for fixing here)
+SELECT LOWER(SPLIT(property_email, '@')[SAFE_OFFSET(1)]) AS email_domain, COUNT(*) AS contacts
+FROM `&lt;client&gt;-data-prod.raw_hubspot.contact`
+WHERE NOT COALESCE(_fivetran_deleted, FALSE)
+GROUP BY 1
+ORDER BY contacts DESC
+LIMIT 20;
+</pre>
+
+<p>Free email domains (gmail.com and similar) will top the second list: that is normal for freelancers and coworking members. Send the first list to the CRM admin; duplicates are fixed by merging <b>in HubSpot</b>, never in BigQuery.</p>
+
+<p><b>Check 4 — Companies without the Nexudus ID.</b> Replace <code>property_nexudus_team_id</code> with the client's real property column ❓.</p>
+
+<pre>
+SELECT COUNT(*)                                             AS companies,
+       COUNTIF(property_nexudus_team_id IS NULL
+               OR TRIM(property_nexudus_team_id) = '')      AS missing_nexudus_id,
+       ROUND(100 * SAFE_DIVIDE(
+         COUNTIF(property_nexudus_team_id IS NULL OR TRIM(property_nexudus_team_id) = ''),
+         COUNT(*)), 1)                                      AS pct_missing
+FROM `&lt;client&gt;-data-prod.raw_hubspot.company`
+WHERE NOT COALESCE(_fivetran_deleted, FALSE)
+  AND property_lifecyclestage = 'customer';     -- customers should all have one
+</pre>
+
+<p>What you should see: ideally 0 missing for customers. Leads without a Nexudus ID are normal (they have not signed yet). Also check the other way: two HubSpot companies with the <b>same</b> Nexudus ID means a duplicate. Keep the results; they become dbt tests in Guide 07.</p>
+
+<hr/>
+
+<h3>8. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td>Authorize fails or shows "insufficient permissions"</td><td>The person approving is not a super admin 📘</td><td>Ask a super admin to approve</td></tr>
+<tr><td>Data is from the wrong portal (test data)</td><td>Wrong HubSpot account picked on the OAuth screen</td><td>Delete the connector and re-create it; check the account ID first</td></tr>
+<tr><td>Connector broke months later with an auth error</td><td>The approving user left or lost super admin rights</td><td>Re-authorise with another super admin; note it in the runbook</td></tr>
+<tr><td>Contact count higher than HubSpot shows</td><td>Archived or merged records counted</td><td>Filter deleted flags; use the merge data</td></tr>
+<tr><td>Nexudus ID column missing</td><td>Property created after the connector, and new columns are blocked, or the property is on another object</td><td>Allow the column in the schema tab; re-sync that table if needed</td></tr>
+<tr><td>Dropdown columns show codes, not words</td><td>Normal: HubSpot stores values 📘</td><td>Join <code>property_option</code> in staging</td></tr>
+<tr><td>Deal amounts double when joined to companies</td><td>Many-to-many associations</td><td>Use a primary association rule in dbt</td></tr>
+<tr><td>MAR much higher than planned</td><td>Property history tables, or a workflow that touches every contact daily</td><td>Untick history tables you do not need; ask the CRM admin about bulk workflows</td></tr>
+<tr><td>Same person appears in Nexudus and HubSpot with different emails</td><td>The operational sync matched badly, or legacy data</td><td>Report to the CRM admin; matching on the Nexudus ID in dbt avoids most of it</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. Cost Check</h3>
+
+<p>CRM data changes more than finance data: every email open, lifecycle change or workflow update can touch a contact. HubSpot's own automation can also update thousands of records at once 📘.</p>
+
+<pre>
+  (MADE UP — method only; replace with the client's real numbers)
+  Contacts touched per month   (count with lastmodifieddate in the month)     ≈ 1,500
+  Companies touched per month                                                ≈   300
+  Deals touched per month                                                    ≈   200
+  Association rows changed                                                   ≈   200
+  Property history rows (only if selected — can be many times the above!)    ≈    ?
+                                                                             ─────────
+  HubSpot MAR per month without history tables                               ≈ 2,200
+</pre>
+
+<p>Get the real number after the first sync:</p>
+
+<pre>
+-- How many contacts change each month? (a good proxy for contact MAR)
+SELECT FORMAT_TIMESTAMP('%Y-%m', property_lastmodifieddate) AS month, COUNT(*) AS contacts_changed
+FROM `&lt;client&gt;-data-prod.raw_hubspot.contact`
+GROUP BY 1 ORDER BY 1 DESC LIMIT 6;
+-- This only sees the LAST change of each contact, so it is a lower bound.
+</pre>
+
+<p>Then open Fivetran's <b>Usage</b> page 📘 after one week and after the first month end. Look at MAR per table. If a property history table is the biggest line, ask whether anyone needs it. If a single day shows a huge jump, ask the CRM admin what bulk update ran. Pricing rules change: <b>check Fivetran's current pricing page</b> before you put a number in a plan.</p>
+
+<hr/>
+
+<h3>10. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Connector approved by a super admin with OAuth; scopes checked and read-only; no personal login of yours used</td></tr>
+<tr><td>☐</td><td>The right HubSpot portal (production, not test) is connected</td></tr>
+<tr><td>☐</td><td>Data lands only in <code>raw_hubspot</code> in <code>europe-west2</code></td></tr>
+<tr><td>☐</td><td>Companies, contacts, deals, pipelines, stages, associations, property options and merge data selected; engagements not selected</td></tr>
+<tr><td>☐</td><td>The Nexudus ID properties are present as columns</td></tr>
+<tr><td>☐</td><td>Owner table decision written down (loaded or not, and why)</td></tr>
+<tr><td>☐</td><td>Sync every 6 hours (or agreed), finishing before 03:00 Europe/London; "block new tables" on</td></tr>
+<tr><td>☐</td><td>Failure email tested once and reached the shared alerts address</td></tr>
+<tr><td>☐</td><td>Counts match the HubSpot screens; duplicate and missing-Nexudus-ID lists sent to the CRM admin</td></tr>
+<tr><td>☐</td><td>Raw access to <code>raw_hubspot</code> limited; personal contact details will never reach the marts or BI dashboards</td></tr>
+<tr><td>☐</td><td>Field ownership (which system wins for which field) and any switch dates written in <code>docs/decisions.md</code></td></tr>
+<tr><td>☐</td><td>MAR estimate written; Usage page checked after week one</td></tr>
+<tr><td>☐</td><td>Register row and runbook entry written (including "re-authorise if the approving admin leaves")</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Fivetran now loads finance and CRM data. The biggest source has no ready-made connector in our standard setup, so we write code: <a href="integration-05-nexudus-python.html">Guide 05 — Nexudus with Python on Cloud Run</a>. 🚀</p>
+
+<p>Back to the plan: <a href="integration-01-start-here.html">Guide 01 — Start Here</a>. Background reading: <a href="../season-1-source-systems/chapter-10-hubspot.html">Chapter 10 (HubSpot)</a>, <a href="../season-2-pipeline/chapter-13-fivetran.html">Chapter 13 (Fivetran)</a> and <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (integrations I2 and I9)</a>.</p>

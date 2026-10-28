@@ -273,7 +273,8 @@ function chapterLink(item, route) {
 }
 
 function groupHtml(g, route) {
-  const open = state.open.get(g.key) ?? g.items.some((it) => it.state !== 'planned')
+  // Only the first season (the start of the reading order) is open until the reader toggles others.
+  const open = state.open.get(g.key) ?? g.key === 'season-0'
   return (
     `<li class="group ${g.status || ''}${open ? ' open' : ''}">` +
     `<button class="group-head" data-group="${esc(g.key)}" title="${esc(g.sub || '')}">` +

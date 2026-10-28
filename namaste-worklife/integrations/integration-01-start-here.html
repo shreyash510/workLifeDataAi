@@ -1,0 +1,254 @@
+<h2>Integration Guide 01 — Start Here: How We Set Up the Data Integrations</h2>
+
+<p>Hi! 🙏 This set of guides is a <b>handover playbook</b>. It shows, step by step, how to connect a coworking client's business systems to one data warehouse, clean the data, and show it in dashboards. It covers the data flow only (sources → loaders → BigQuery → dbt → BI). Any AI layer on top is a separate project and is not part of these guides.</p>
+
+<p>It is written for an engineer who is setting this up <b>for a new client</b>, with the same kind of stack as Work.Life: Nexudus, NetSuite, HubSpot, ACT and Excel, loaded with Fivetran and Python into BigQuery, then modelled with dbt. If you follow the guides in order, you will end with a working, tested, documented pipeline that someone else can run.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>our standard setup</b>, built from the decisions made across this series. It is not a copy of Work.Life's real pipeline: the brief only says their data moves "through Fivetran and Python" and is "kept running by an external data partner". Which tool loads which system there is not confirmed. Vendor screens and prices change often, so always check the vendor's current docs before you click. All day counts and names of example clients in these guides are <b>made up</b>.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>The big picture: what you are building</li>
+    <li>The 9 guides and the order to do them in</li>
+    <li>A week-by-week plan</li>
+    <li>Questions to ask the client before you touch anything</li>
+    <li>The access request list</li>
+    <li>Naming rules (use these exactly)</li>
+    <li>The golden rules</li>
+    <li>The integration register</li>
+    <li>"Done" means done: the checklist for every integration</li>
+    <li>When to stop and ask</li>
+</ul>
+
+<p>The labels you will see in every guide:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Label</th><th>Meaning</th></tr>
+<tr><td>✅ Confirmed</td><td>Written in the Work.Life scoping brief</td></tr>
+<tr><td>📘 Vendor-documented</td><td>How the tool works, from the vendor's own docs. Check the current version.</td></tr>
+<tr><td>🛠 Our standard</td><td>Our own choice for how to set it up. You can change it, but write down why.</td></tr>
+<tr><td>❓ Ask the client</td><td>Unknown until the client tells you</td></tr>
+</table>
+
+<hr/>
+
+<h3>1. The Big Picture</h3>
+
+<p>Every integration in these guides does one job: copy data from a business system into BigQuery <b>without changing it</b>. All cleaning happens later, inside the warehouse, with dbt. This is called <b>ELT</b>: Extract, Load, then Transform (Chapter 12).</p>
+
+<pre>
+  SOURCE SYSTEMS              LOADERS                  BIGQUERY (europe-west2)
+  ──────────────              ───────                  ───────────────────────
+
+  NetSuite  (finance) ───┐                       ┌──► raw_netsuite ──┐
+  HubSpot   (CRM)     ───┼──► Fivetran ──────────┼──► raw_hubspot  ──┤
+  Excel / Sheets      ───┘    (Guides 03, 04, 06)└──► raw_excel    ──┤
+                                                                     │   dbt (Guide 07)
+  Nexudus   (members) ──────► Python on Cloud Run ──► raw_nexudus  ──┼──► staging
+  ACT       (which one?) ───► Python or export   ──► raw_act365 /  ──┤    ──► intermediate
+                              (Guides 05, 06)        raw_act       ──┘    ──► marts ──► BI dashboards
+                                                                                        (Tableau today,
+                                                                                         under review)
+</pre>
+
+<p>Three layers of work, in this order:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Layer</th><th>What it means</th><th>Guides</th></tr>
+<tr><td><b>Foundation</b></td><td>Cloud projects, datasets, service accounts, secrets, budgets</td><td>02</td></tr>
+<tr><td><b>Loaders</b></td><td>One integration per source system, each landing in its own <code>raw_*</code> dataset</td><td>03, 04, 05, 06</td></tr>
+<tr><td><b>Models and running it</b></td><td>dbt models and tests, the nightly schedule, alerts, go-live and handover</td><td>07, 08, 09</td></tr>
+</table>
+
+<hr/>
+
+<h3>2. The 9 Guides and the Order to Do Them In</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Guide</th><th>What you build</th><th>Rough effort (made up)</th><th>Needs first</th></tr>
+<tr><td>01 Start Here</td><td>The plan, the questions, the access list (this page)</td><td>1 day</td><td>Nothing</td></tr>
+<tr><td><a href="integration-02-foundation-gcp-bigquery.html">02 Foundation</a></td><td>Google Cloud projects, BigQuery datasets, service accounts, Secret Manager, budgets</td><td>1–2 days</td><td>01</td></tr>
+<tr><td><a href="integration-03-fivetran-netsuite.html">03 Fivetran + NetSuite</a></td><td>Fivetran account, BigQuery destination, NetSuite connector</td><td>2–3 days</td><td>02, NetSuite access</td></tr>
+<tr><td><a href="integration-04-hubspot.html">04 HubSpot</a></td><td>HubSpot connector into <code>raw_hubspot</code></td><td>1 day</td><td>03 (Fivetran ready)</td></tr>
+<tr><td><a href="integration-05-nexudus-python.html">05 Nexudus</a></td><td>Python extractor on a Cloud Run job, with a watermark and retries</td><td>3–5 days</td><td>02, Nexudus API user</td></tr>
+<tr><td><a href="integration-06-act-and-excel.html">06 ACT + Excel</a></td><td>Find out which ACT, load it safely; load the budget and capacity sheets</td><td>2–3 days</td><td>02, 03</td></tr>
+<tr><td><a href="integration-07-dbt-raw-to-marts.html">07 dbt</a></td><td>Staging, intermediate, marts for the dashboards, tests, CI</td><td>8–12 days</td><td>03–06 loading</td></tr>
+<tr><td><a href="integration-08-scheduling-monitoring.html">08 Scheduling + Monitoring</a></td><td>Nightly run order, freshness checks, alerts, the fix-it runbook</td><td>2–3 days</td><td>05, 07</td></tr>
+<tr><td><a href="integration-09-go-live-handover.html">09 Go-Live + Handover</a></td><td>Reconciliation sign-off, docs, access handover, final checks</td><td>3–5 days</td><td>All of the above</td></tr>
+</table>
+
+<p>💡 You can run Guides 03–06 side by side once Guide 02 is done. Start the <b>access requests on day one</b>: waiting for a NetSuite role or a Nexudus API user is the most common reason these projects slip.</p>
+
+<hr/>
+
+<h3>3. A Week-by-Week Plan (made up)</h3>
+
+<pre>
+  WEEK 1   Kick-off questions (section 4) · send access requests (section 5)
+           Guide 02: projects, datasets, service accounts, secrets, budget alerts
+  WEEK 2   Guide 03 + 04: Fivetran, NetSuite, HubSpot syncing
+           Guide 05: Nexudus extractor running by hand
+  WEEK 3   Guide 05: extractor on a schedule · Guide 06: ACT + Excel
+           Guide 07: dbt project, sources, staging models
+  WEEK 4   Guide 07: intermediate, marts, tests · connect the BI tool to marts
+  WEEK 5   Guide 08: nightly order, alerts · reconcile numbers with the client
+  WEEK 6   Guide 09: sign-off, docs, handover
+</pre>
+
+<p>This is a plan for one engineer on a client the size of Work.Life (about 14 sites, about 8,000 members, ✅ brief). A client with more sources, or messy data, takes longer. Tell the lead early if a week slips.</p>
+
+<hr/>
+
+<h3>4. Before You Start: Questions to Ask the Client</h3>
+
+<p>Never design around a guess. Ask these in the first meeting and write the answers in the integration register (section 8).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Question</th><th>Why it matters</th></tr>
+<tr><td>1</td><td>Which systems hold your data today, and which one is the "source of truth" for members, contracts, money and sales?</td><td>Decides which system wins when two disagree</td></tr>
+<tr><td>2</td><td>Is anything already loading into a warehouse? Who runs it? Can we see it?</td><td>You may be extending a pipeline, not building one</td></tr>
+<tr><td>3</td><td>When you say "ACT", do you mean ACT365 door access or the Act! CRM?</td><td>Two completely different systems (Chapter 08)</td></tr>
+<tr><td>4</td><td>Which Excel files matter? Who owns them? How often do they change?</td><td>Excel files break pipelines when columns move</td></tr>
+<tr><td>5</td><td>How fresh must the data be? Nightly, hourly, or real time?</td><td>Changes the tools, the schedule and the cost</td></tr>
+<tr><td>6</td><td>How is a "site" tagged in finance (a NetSuite segment such as class, department or location)?</td><td>Without this you cannot build a P&amp;L per site</td></tr>
+<tr><td>7</td><td>When does a month "close" in finance? Who confirms it?</td><td>Open months change; answers must say "provisional"</td></tr>
+<tr><td>8</td><td>Which data must never be loaded (HR, salaries, health, anything else)?</td><td>Some data should never enter the warehouse at all</td></tr>
+<tr><td>9</td><td>Which cloud account and region must we use? Who pays the cloud bill?</td><td>Data should stay in the UK (europe-west2) and in the client's own account</td></tr>
+<tr><td>10</td><td>Who signs off that the numbers are right: Finance for money, Ops for members and occupancy?</td><td>No sign-off, no go-live (Guide 09)</td></tr>
+<tr><td>11</td><td>Which reports do you trust today? Can we have last month's copy?</td><td>These are the "golden numbers" your models must match</td></tr>
+<tr><td>12</td><td>Who will own the pipeline after handover?</td><td>Shapes how much you document and train (Guide 09)</td></tr>
+</table>
+
+<hr/>
+
+<h3>5. The Access Request List</h3>
+
+<p>Send this list on day one. Ask for <b>read-only</b> access and a <b>separate integration user</b> for every system, never a staff member's personal login. If a staff member leaves, their login is turned off and your pipeline breaks.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>System</th><th>What to ask for</th><th>Usually given by (role)</th><th>Guide</th></tr>
+<tr><td>Google Cloud</td><td>A project (or the right to create one) in the client's own organisation, with billing linked. Owner or editor rights for you during the build only.</td><td>IT / cloud admin</td><td>02</td></tr>
+<tr><td>NetSuite</td><td>SuiteAnalytics Connect turned on, plus an integration user with a read-only custom role and token-based login 📘</td><td>Finance systems admin</td><td>03</td></tr>
+<tr><td>HubSpot</td><td>A super admin to approve the Fivetran connection (or a private app) with read scopes only 📘</td><td>Marketing / CRM admin</td><td>04</td></tr>
+<tr><td>Nexudus</td><td>A dedicated API user with read-only rights to only the modules needed 📘</td><td>Ops / Nexudus admin</td><td>05</td></tr>
+<tr><td>ACT</td><td>First, which ACT (question 3). Then an API key or an export, read-only.</td><td>Ops / IT</td><td>06</td></tr>
+<tr><td>Excel</td><td>The files' location (SharePoint, OneDrive or Google Drive) and the owner's name for each file</td><td>Finance / Ops</td><td>06</td></tr>
+<tr><td>Fivetran</td><td>Who owns the Fivetran account and pays for it (the client, not us)</td><td>IT / finance</td><td>03</td></tr>
+<tr><td>Git</td><td>A repository in the client's own Git organisation</td><td>IT</td><td>02</td></tr>
+</table>
+
+<p>🛠 <b>Our standard:</b> every account, key and tool lives in the <b>client's</b> name and is paid by the client. On handover day nothing should depend on our own accounts. The brief asks for exactly this: "secure by design", Work.Life accounts only (✅ brief).</p>
+
+<hr/>
+
+<h3>6. Naming Rules (Use These Exactly)</h3>
+
+<p>Every guide uses these names. Replace <code>&lt;client&gt;</code> with a short lowercase client code, for example <code>acme</code>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Thing</th><th>Name</th><th>Notes</th></tr>
+<tr><td>Data project (prod)</td><td><code>&lt;client&gt;-data-prod</code></td><td>Raw data, staging, intermediate, marts</td></tr>
+<tr><td>Data project (dev)</td><td><code>&lt;client&gt;-data-dev</code></td><td>Your dbt work and CI test runs</td></tr>
+<tr><td>Region</td><td><code>europe-west2</code> (London)</td><td>Every dataset, every job, every bucket</td></tr>
+<tr><td>Raw datasets</td><td><code>raw_nexudus</code>, <code>raw_netsuite</code>, <code>raw_hubspot</code>, <code>raw_excel</code>, <code>raw_act365</code> or <code>raw_act</code></td><td>One per source. Loaders write here and nowhere else.</td></tr>
+<tr><td>Model datasets</td><td><code>staging</code>, <code>intermediate</code>, <code>marts</code></td><td>Written only by dbt</td></tr>
+<tr><td>dbt dev / CI datasets</td><td><code>dbt_&lt;yourname&gt;</code>, <code>ci_pr_&lt;number&gt;</code></td><td>In the dev project</td></tr>
+<tr><td>Service accounts</td><td><code>sa-fivetran</code>, <code>sa-extract-nexudus</code>, <code>sa-extract-act</code>, <code>sa-dbt</code>, <code>sa-dbt-ci</code>, <code>sa-bi-reader</code></td><td>One job, one account (Guide 02; <code>sa-dbt-ci</code> is added in Guide 07 for test runs)</td></tr>
+<tr><td>Secrets</td><td><code>nexudus-api-token</code>, <code>act-api-key</code>, <code>alert-webhook-url</code></td><td>In Secret Manager, never in Git</td></tr>
+<tr><td>Cloud Run jobs</td><td><code>extract-nexudus</code>, <code>extract-act</code>, <code>dbt-build</code></td><td>Guides 05, 06, 08</td></tr>
+<tr><td>Git repository</td><td><code>&lt;client&gt;-data-platform</code></td><td>One repo for everything (layout below)</td></tr>
+</table>
+
+<pre>
+  &lt;client&gt;-data-platform/
+  ├── README.md                 how to run everything, who owns what
+  ├── docs/
+  │   ├── integration-register.md   (section 8)
+  │   ├── runbook.md                (Guide 08)
+  │   └── decisions.md              every "why did we do it this way?"
+  ├── infra/                    setup commands for projects, datasets, IAM (Guide 02)
+  ├── extractors/
+  │   ├── nexudus/              main.py, requirements.txt, Dockerfile (Guide 05)
+  │   └── act/                  (Guide 06)
+  ├── dbt/                      the dbt project (Guide 07)
+  └── .github/workflows/        CI: dbt build on every pull request (Guide 07)
+</pre>
+
+<p>🛠 Why these exact names? Because the next person (maybe you in six months) should be able to guess where anything lives. Do not invent new names per client.</p>
+
+<hr/>
+
+<h3>7. The Golden Rules</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Rule</th><th>Why</th></tr>
+<tr><td>1</td><td><b>Read-only, always.</b> No loader ever writes back to a source system.</td><td>A bug in our code must never change a member's contract or an invoice</td></tr>
+<tr><td>2</td><td><b>Load raw, clean later.</b> Loaders do not rename, filter or fix data (one exception: door events, Guide 06).</td><td>If cleaning is wrong, you can rebuild from raw. If you cleaned while loading, the original is gone.</td></tr>
+<tr><td>3</td><td><b>Secrets never in Git</b>, chat or email. Only in Secret Manager or the tool's own vault.</td><td>One leaked Nexudus token can read every member's personal details</td></tr>
+<tr><td>4</td><td><b>One job, one service account</b>, with the smallest rights that work.</td><td>If one key leaks, the damage stays small</td></tr>
+<tr><td>5</td><td><b>Fail loudly.</b> A loader that fails must exit with an error and send an alert. Zero rows is suspicious.</td><td>The worst failure is a silent one: dashboards look fine but are a week old</td></tr>
+<tr><td>6</td><td><b>Protect personal data. HR data is not loaded at all.</b> Dashboards get only the personal details they truly need; door data goes in at company level only.</td><td>✅ Brief principles: safe data only, people/HR data excluded</td></tr>
+<tr><td>7</td><td><b>Match the client's own reports</b> before you call a number right.</td><td>✅ Brief: accuracy is a launch gate</td></tr>
+<tr><td>8</td><td><b>Write down every decision</b> in <code>docs/decisions.md</code> on the day you make it.</td><td>✅ Brief: documented and handover-ready</td></tr>
+<tr><td>9</td><td><b>Watch the cost</b> from day one: budget alerts, Fivetran usage, query costs.</td><td>✅ Brief: it "cannot become a six figure operation"</td></tr>
+</table>
+
+<hr/>
+
+<h3>8. The Integration Register</h3>
+
+<p>Keep one row per integration in <code>docs/integration-register.md</code>. Fill it in as you go. On handover day it is the first page the client's team reads (Chapter 39 has the Work.Life version).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Source</th><th>Loader</th><th>Lands in</th><th>Schedule</th><th>Auth (where the secret lives)</th><th>Client owner (role)</th><th>Status</th></tr>
+<tr><td>NetSuite</td><td>Fivetran</td><td><code>raw_netsuite</code></td><td>Every 6 hours (made up)</td><td>Token-based, stored in Fivetran</td><td>Finance systems admin</td><td>☐ syncing ☐ tested ☐ signed off</td></tr>
+<tr><td>HubSpot</td><td>Fivetran</td><td><code>raw_hubspot</code></td><td>Every 6 hours (made up)</td><td>OAuth, stored in Fivetran</td><td>CRM admin</td><td>☐ ☐ ☐</td></tr>
+<tr><td>Nexudus</td><td>Python, Cloud Run job</td><td><code>raw_nexudus</code></td><td>Daily 02:00 UK</td><td><code>nexudus-api-token</code> in Secret Manager</td><td>Ops / Nexudus admin</td><td>☐ ☐ ☐</td></tr>
+<tr><td>ACT (which one? ❓)</td><td>Python or export</td><td><code>raw_act365</code> / <code>raw_act</code></td><td>Daily or one-off</td><td><code>act-api-key</code> in Secret Manager</td><td>Ops / IT</td><td>☐ ☐ ☐</td></tr>
+<tr><td>Excel budget + capacity</td><td>Fivetran (Google Sheets or file)</td><td><code>raw_excel</code></td><td>Daily</td><td>Shared with the Fivetran account</td><td>Finance</td><td>☐ ☐ ☐</td></tr>
+<tr><td>raw → marts</td><td>dbt</td><td><code>staging</code> → <code>intermediate</code> → <code>marts</code></td><td>Daily 03:00 UK (freshness check, then build)</td><td><code>sa-dbt</code></td><td>Data owner after handover</td><td>☐ ☐ ☐</td></tr>
+</table>
+
+<hr/>
+
+<h3>9. "Done" Means Done: The Checklist for Every Integration</h3>
+
+<p>An integration is not done when the first sync works. It is done when all of these are true. Every guide ends with its own version of this list.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Uses its own read-only integration user and its own service account</td></tr>
+<tr><td>☐</td><td>No secret in Git, code, chat or email</td></tr>
+<tr><td>☐</td><td>Lands only in its own <code>raw_*</code> dataset, in <code>europe-west2</code></td></tr>
+<tr><td>☐</td><td>Runs on a schedule with nobody touching it</td></tr>
+<tr><td>☐</td><td>Fails loudly: you broke it on purpose once and the alert arrived</td></tr>
+<tr><td>☐</td><td>Has a dbt source freshness test (Guide 07)</td></tr>
+<tr><td>☐</td><td>Row counts match the source system's own count (or the gap is explained)</td></tr>
+<tr><td>☐</td><td>Deletes and updates are handled (a deleted record does not live forever in raw)</td></tr>
+<tr><td>☐</td><td>Time zones checked: raw times are UTC, and you know what the API sends</td></tr>
+<tr><td>☐</td><td>The register row and the runbook entry are written</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. When to Stop and Ask</h3>
+
+<p>Stop and ask the lead (do not guess) if:</p>
+<ul>
+    <li>A client asks you to use a personal login or to share a password.</li>
+    <li>You find HR, salary or health data in any source.</li>
+    <li>A number does not match the client's report and you cannot explain the gap within a day.</li>
+    <li>Something needs write access to a source system.</li>
+    <li>A tool's price or usage looks much higher than the plan (for example, Fivetran usage doubling in a week).</li>
+    <li>The client wants data copied to a region outside the UK, or into an account they do not own.</li>
+</ul>
+
+<p>Asking early is cheap. Fixing a wrong design after go-live is not.</p>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Start with <a href="integration-02-foundation-gcp-bigquery.html">Guide 02 — Foundation: Google Cloud, BigQuery, Service Accounts and Secrets</a>. Everything else is built on top of it. 🚀</p>
+
+<p>Background reading in the series, if a step feels unclear: <a href="../season-2-pipeline/chapter-12-etl-vs-elt.html">Chapter 12 (ELT)</a>, <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (the integration map)</a> and <a href="../season-5-delivery/chapter-36-documentation-handover.html">Chapter 36 (documentation and handover)</a>.</p>

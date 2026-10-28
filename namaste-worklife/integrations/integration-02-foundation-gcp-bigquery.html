@@ -1,0 +1,502 @@
+<h2>Integration Guide 02 — Foundation: Google Cloud, BigQuery, Service Accounts and Secrets</h2>
+
+<p>Hi! 🙏 This guide builds the <b>ground floor</b> that every other guide stands on. It is for the engineer who has finished <a href="integration-01-start-here.html">Guide 01</a>, has the client's answers to the kick-off questions, and now has access to the client's Google Cloud.</p>
+
+<p>At the end of this guide you will have: two Google Cloud projects with billing linked, the right APIs turned on, every BigQuery dataset created in London (<code>europe-west2</code>), one service account per job with only the rights it needs, secrets stored safely, a place to keep job images, budget alerts, audit logs, and one script in <code>infra/</code> that can build all of it again.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>our standard setup</b> 🛠. Work.Life's real Google Cloud layout is not described in the brief: the brief only says data lands in BigQuery and is modelled with dbt (✅ brief). The commands below are correct as far as we know, but Google changes flags and console screens. If a command fails, check the current Google Cloud docs before you change anything else. We use <code>acme</code> as the made-up client code.</p>
+
+<p>What we will cover:</p>
+<ul>
+    <li>Before you start: what you need</li>
+    <li>Step 1: Create the two projects and link billing</li>
+    <li>Step 2: Turn on the APIs</li>
+    <li>Step 3: Create the BigQuery datasets</li>
+    <li>Step 4: Google groups for humans</li>
+    <li>Step 5: Service accounts and their rights</li>
+    <li>Step 6: Secret Manager</li>
+    <li>Step 7: Artifact Registry for job images</li>
+    <li>Step 8: Budget alerts and query limits</li>
+    <li>Step 9: Audit logs</li>
+    <li>Step 10: Put it all in one script</li>
+    <li>Check it worked, common problems, and the "done when" list</li>
+</ul>
+
+<hr/>
+
+<h3>1. Before You Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>You need</th><th>Why</th><th>Where it comes from</th></tr>
+<tr><td>The client's Google Cloud <b>organisation ID</b> (or a folder ID)</td><td>Projects should live inside the client's own organisation, not a personal account</td><td>Client IT / cloud admin ❓</td></tr>
+<tr><td>A <b>billing account ID</b> (looks like <code>0X0X0X-0X0X0X-0X0X0X</code>)</td><td>Nothing in Google Cloud runs without billing linked</td><td>Client finance or cloud admin ❓</td></tr>
+<tr><td>Rights for you: Project Creator, Billing Account User, and Owner on the new projects <b>during the build only</b></td><td>To create everything below</td><td>Client cloud admin (Guide 01, section 5)</td></tr>
+<tr><td>The <code>gcloud</code> and <code>bq</code> command line tools</td><td>Every step below uses them</td><td>Install the Google Cloud CLI, then run <code>gcloud auth login</code></td></tr>
+<tr><td>The client's Git repository <code>acme-data-platform</code></td><td>The setup script goes in <code>infra/</code></td><td>Client IT</td></tr>
+<tr><td>A budget number agreed with the client</td><td>For budget alerts</td><td>❓ Ask the client</td></tr>
+<tr><td>The client's group email names (for example <code>data-engineers@acme.com</code>)</td><td>Humans get rights through groups</td><td>Client IT (Google Workspace or Cloud Identity admin) ❓</td></tr>
+</table>
+
+<p>Some words you will meet:</p>
+<ul>
+    <li><b>Project</b>: a box in Google Cloud that holds resources and has its own bill and its own permissions.</li>
+    <li><b>Dataset</b>: a folder inside BigQuery that holds tables and views. Permissions can be set per dataset.</li>
+    <li><b>IAM</b> (Identity and Access Management): the system that says <i>who</i> can do <i>what</i> on <i>which</i> thing. You give a <b>role</b> to a <b>principal</b> (a person, group or service account) on a <b>resource</b>.</li>
+    <li><b>Service account</b>: a login for a program, not a person. Our jobs run as service accounts.</li>
+    <li><b>Secret</b>: a password or API token, kept in Secret Manager and never in code.</li>
+</ul>
+
+<p>Set some shell variables first, so you can copy every command below as it is:</p>
+
+<pre>
+export CLIENT=acme
+export ORG_ID=123456789012                      # made up: ask the client
+export BILLING=0X0X0X-0X0X0X-0X0X0X             # made up: ask the client
+export REGION=europe-west2
+export PROD=${CLIENT}-data-prod
+export DEV=${CLIENT}-data-dev
+</pre>
+
+<hr/>
+
+<h3>2. Step 1: Create the Two Projects and Link Billing</h3>
+
+<p>🛠 Our standard uses two projects. Why two? The prod project holds the real data that dashboards read, and only service accounts write to it. The dev project keeps your experiments and test runs away from real numbers, with its own bill, so you can see what development costs.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Project</th><th>Holds</th></tr>
+<tr><td><code>acme-data-prod</code></td><td><code>raw_*</code>, <code>staging</code>, <code>intermediate</code>, <code>marts</code>; the Cloud Run jobs; the secrets</td></tr>
+<tr><td><code>acme-data-dev</code></td><td><code>dbt_&lt;yourname&gt;</code> and <code>ci_pr_&lt;number&gt;</code> datasets</td></tr></table>
+
+<pre>
+for P in $PROD $DEV; do
+  gcloud projects create $P --organization=$ORG_ID --labels=client=$CLIENT,owner=data-platform
+  gcloud billing projects link $P --billing-account=$BILLING
+done
+</pre>
+
+<p>What you should see: <code>Create in progress for [https://cloudresourcemanager.googleapis.com/v1/projects/acme-data-prod]</code>, then a line showing <code>billingEnabled: true</code> for each link.</p>
+
+<p>💡 Project IDs are <b>unique across all of Google Cloud</b> and can never be reused, even after deletion. If <code>acme-data-prod</code> is taken, add a short suffix (for example <code>acme-data-prod-01</code>), and write the real IDs in <code>docs/decisions.md</code>. If the client wants projects in a folder, use <code>--folder=FOLDER_ID</code> instead of <code>--organization</code>.</p>
+
+<hr/>
+
+<h3>3. Step 2: Turn On the APIs</h3>
+
+<p>An <b>API</b> here is a Google Cloud service. Each one is off until you turn it on in a project.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>API</th><th>Used for</th><th>Projects</th></tr>
+<tr><td><code>bigquery.googleapis.com</code></td><td>The warehouse</td><td>both</td></tr>
+<tr><td><code>bigquerystorage.googleapis.com</code></td><td>Fast reads (dbt, BI tools)</td><td>both</td></tr>
+<tr><td><code>iam.googleapis.com</code>, <code>iamcredentials.googleapis.com</code></td><td>Service accounts and short-lived tokens</td><td>both</td></tr>
+<tr><td><code>cloudresourcemanager.googleapis.com</code></td><td>Reading and setting project permissions</td><td>both</td></tr>
+<tr><td><code>logging.googleapis.com</code>, <code>monitoring.googleapis.com</code></td><td>Logs and alerts (Guide 08)</td><td>both</td></tr>
+<tr><td><code>run.googleapis.com</code></td><td>Cloud Run jobs (extractors, dbt)</td><td>data-prod</td></tr>
+<tr><td><code>cloudscheduler.googleapis.com</code></td><td>The nightly timer (Guide 08)</td><td>data-prod</td></tr>
+<tr><td><code>secretmanager.googleapis.com</code></td><td>Secrets</td><td>data-prod</td></tr>
+<tr><td><code>artifactregistry.googleapis.com</code>, <code>cloudbuild.googleapis.com</code></td><td>Building and storing job images</td><td>data-prod</td></tr>
+<tr><td><code>billingbudgets.googleapis.com</code></td><td>Budget alerts from the command line</td><td>data-prod (the project your gcloud uses)</td></tr>
+</table>
+
+<pre>
+COMMON="bigquery.googleapis.com bigquerystorage.googleapis.com iam.googleapis.com \
+  iamcredentials.googleapis.com cloudresourcemanager.googleapis.com \
+  logging.googleapis.com monitoring.googleapis.com"
+
+for P in $PROD $DEV; do
+  gcloud services enable $COMMON --project=$P
+done
+
+gcloud services enable run.googleapis.com cloudscheduler.googleapis.com \
+  secretmanager.googleapis.com artifactregistry.googleapis.com \
+  cloudbuild.googleapis.com billingbudgets.googleapis.com --project=$PROD
+</pre>
+
+<p>Check: <code>gcloud services list --enabled --project=$PROD</code> should list all of them. Turning on an API can take a minute or two.</p>
+
+<hr/>
+
+<h3>4. Step 3: Create the BigQuery Datasets</h3>
+
+<p>📘 A dataset's <b>location is fixed when you create it</b>. You cannot move a dataset later; you would have to copy every table into a new one. So always pass <code>--location=europe-west2</code>. Every dataset gets a description (people read it in the console) and labels (so the bill can be split by layer).</p>
+
+<pre>
+mkds () {   # usage: mkds PROJECT DATASET LAYER "description"
+  bq --location=$REGION mk --dataset \
+     --description="$4" \
+     --label=client:$CLIENT --label=layer:$3 \
+     $1:$2
+}
+
+# Raw: one per source. Loaders write here and nowhere else.
+mkds $PROD raw_nexudus  raw "Raw Nexudus API data. Written only by sa-extract-nexudus. Do not edit."
+mkds $PROD raw_netsuite raw "Raw NetSuite data. Written only by Fivetran (sa-fivetran)."
+mkds $PROD raw_hubspot  raw "Raw HubSpot data. Written only by Fivetran (sa-fivetran)."
+mkds $PROD raw_excel    raw "Raw budget and capacity sheets. Written only by Fivetran."
+mkds $PROD raw_act365   raw "Raw ACT data. Name depends on which ACT (Guide 06). Written only by sa-extract-act."
+
+# Models: written only by dbt
+mkds $PROD staging      staging      "dbt staging models: renamed, typed, de-duplicated. Written only by sa-dbt."
+mkds $PROD intermediate intermediate "dbt intermediate models. Written only by sa-dbt."
+mkds $PROD marts        marts        "dbt marts: the tables BI reads. Written only by sa-dbt."
+</pre>
+
+<p>What you should see for each: <code>Dataset 'acme-data-prod:raw_nexudus' successfully created.</code></p>
+
+<p>Notes:</p>
+<ul>
+    <li>❓ <b>ACT:</b> only create <code>raw_act365</code> (door access) or <code>raw_act</code> (CRM) once the client has told you which ACT they mean (Guide 01, question 3). Do not guess. If they use both, create both.</li>
+    <li>🛠 We pre-create the raw datasets for Fivetran so it does not need rights to create datasets. Fivetran's setup may still ask for wider rights; check Fivetran's current BigQuery destination docs in Guide 03.</li>
+    <li>🛠 dev datasets (<code>dbt_&lt;yourname&gt;</code>, <code>ci_pr_&lt;number&gt;</code>) are created by dbt itself in Guide 07. Set a <b>default table expiry</b> on CI datasets so old ones clean themselves up, for example <code>bq update --default_table_expiration 259200 acme-data-dev:ci_pr_12</code> (3 days, in seconds).</li>
+</ul>
+
+<hr/>
+
+<h3>5. Step 4: Google Groups for Humans</h3>
+
+<p>🛠 <b>Humans get rights through groups, never one by one.</b> When someone joins, IT adds them to a group. When they leave, IT removes them, and every right goes with them in one move. Humans use their <b>own</b> Google accounts; they never log in as a service account.</p>
+
+<p>Ask client IT to create these groups (the names are our standard; the client may have its own naming ❓):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Group</th><th>Who</th><th>data-prod</th><th>data-dev</th></tr>
+<tr><td><code>data-engineers@acme.com</code></td><td>People who build and fix the pipeline</td><td>BigQuery Job User; Data Viewer (project); Cloud Run Developer; Logs Viewer; Monitoring Editor</td><td>BigQuery Job User; BigQuery Data Editor (project)</td></tr>
+<tr><td><code>data-analysts@acme.com</code></td><td>People who build reports</td><td>BigQuery Job User; Data Viewer on <code>marts</code> only (no <code>raw_*</code>, so no member contact details or door events)</td><td>BigQuery Job User; Data Editor on their own <code>dbt_&lt;name&gt;</code></td></tr>
+<tr><td><code>data-admins@acme.com</code></td><td>One or two client owners after handover</td><td>Owner</td><td>Owner</td></tr>
+<tr><td><code>billing-viewers@acme.com</code></td><td>Finance, to see the cloud bill</td><td colspan="2">Billing Account Viewer (on the billing account, not the projects)</td></tr>
+</table>
+
+<p>⚠️ No human group has <b>write</b> rights on the prod datasets. Only service accounts write to prod. If an engineer must fix a table by hand in an emergency, a data admin grants it for that day and removes it after, and it goes in <code>docs/decisions.md</code>.</p>
+
+<pre>
+G=group:data-engineers@acme.com
+for R in roles/bigquery.jobUser roles/bigquery.dataViewer roles/run.developer \
+         roles/logging.viewer roles/monitoring.editor; do
+  gcloud projects add-iam-policy-binding $PROD --member=$G --role=$R --condition=None
+done
+for R in roles/bigquery.jobUser roles/bigquery.dataEditor; do
+  gcloud projects add-iam-policy-binding $DEV --member=$G --role=$R --condition=None
+done
+</pre>
+
+<p>📘 To deploy a Cloud Run job that runs as a service account, the person deploying also needs <b>Service Account User</b> on that service account. Give it to <code>data-engineers</code> on each job's service account (Step 5).</p>
+
+<hr/>
+
+<h3>6. Step 5: Service Accounts and Their Rights</h3>
+
+<p>🛠 <b>One job, one service account</b>, with the smallest rights that work (Golden Rule 4). Two kinds of grant:</p>
+<ul>
+    <li><b>BigQuery Job User on a project</b>: lets the account <i>run</i> queries and load jobs in that project. It does not let it see any data.</li>
+    <li><b>Data Viewer / Data Editor on a dataset</b>: lets the account <i>read</i> or <i>write</i> tables in that one dataset.</li>
+</ul>
+
+<table border="1" cellpadding="10">
+<tr><th>Service account</th><th>Lives in</th><th>Project roles</th><th>Dataset and secret roles</th><th>Runs</th></tr>
+<tr><td><code>sa-fivetran</code></td><td>data-prod</td><td>Job User (data-prod)</td><td>Data Editor on <code>raw_netsuite</code>, <code>raw_hubspot</code>, <code>raw_excel</code></td><td>Fivetran loads</td></tr>
+<tr><td><code>sa-extract-nexudus</code></td><td>data-prod</td><td>Job User (data-prod)</td><td>Data Editor on <code>raw_nexudus</code>; Secret Accessor on <code>nexudus-api-token</code></td><td>Cloud Run job <code>extract-nexudus</code></td></tr>
+<tr><td><code>sa-extract-act</code></td><td>data-prod</td><td>Job User (data-prod)</td><td>Data Editor on <code>raw_act365</code> / <code>raw_act</code>; Secret Accessor on <code>act-api-key</code></td><td>Cloud Run job <code>extract-act</code></td></tr>
+<tr><td><code>sa-dbt</code></td><td>data-prod</td><td>Job User (data-prod, data-dev)</td><td>Data Viewer on every <code>raw_*</code>; Data Editor on <code>staging</code>, <code>intermediate</code>, <code>marts</code></td><td>Cloud Run job <code>dbt-build</code></td></tr>
+<tr><td><code>sa-bi-reader</code></td><td>data-prod</td><td>Job User (data-prod)</td><td>Data Viewer on <code>marts</code> only. <b>No rights on <code>raw_*</code>, <code>staging</code> or <code>intermediate</code>.</b></td><td>The BI tool (dashboards)</td></tr>
+</table>
+
+<h4>5a. Create the accounts</h4>
+
+<pre>
+for SA in sa-fivetran sa-extract-nexudus sa-extract-act sa-dbt sa-bi-reader; do
+  gcloud iam service-accounts create $SA --project=$PROD --display-name="$SA"
+done
+
+# a helper to build the full email
+sa () { echo "serviceAccount:$1@$2.iam.gserviceaccount.com"; }
+</pre>
+
+<h4>5b. Project-level Job User</h4>
+
+<pre>
+for SA in sa-fivetran sa-extract-nexudus sa-extract-act sa-dbt sa-bi-reader; do
+  gcloud projects add-iam-policy-binding $PROD --member=$(sa $SA $PROD) \
+    --role=roles/bigquery.jobUser --condition=None
+done
+gcloud projects add-iam-policy-binding $DEV --member=$(sa sa-dbt $PROD) \
+  --role=roles/bigquery.jobUser --condition=None
+</pre>
+
+<h4>5c. Dataset-level roles</h4>
+
+<p>The simplest way that works today is BigQuery's own <code>GRANT</code> statement (📘 "BigQuery DCL"). You run it as a query in the dataset's region. In BigQuery SQL a dataset is called a <b>schema</b>.</p>
+
+<pre>
+grant () {  # usage: grant PROJECT DATASET ROLE MEMBER
+  bq query --project_id=$1 --location=$REGION --use_legacy_sql=false \
+    "GRANT \`roles/bigquery.$3\` ON SCHEMA \`$1.$2\` TO \"$4\""
+}
+
+# Loaders: write their own raw dataset only
+for D in raw_netsuite raw_hubspot raw_excel; do
+  grant $PROD $D dataEditor "$(sa sa-fivetran $PROD)"
+done
+grant $PROD raw_nexudus dataEditor "$(sa sa-extract-nexudus $PROD)"
+grant $PROD raw_act365  dataEditor "$(sa sa-extract-act $PROD)"
+
+# dbt: read raw, write the model layers
+for D in raw_nexudus raw_netsuite raw_hubspot raw_excel raw_act365; do
+  grant $PROD $D dataViewer "$(sa sa-dbt $PROD)"
+done
+for D in staging intermediate marts; do
+  grant $PROD $D dataEditor "$(sa sa-dbt $PROD)"
+done
+
+# Readers: marts only
+grant $PROD marts dataViewer "$(sa sa-bi-reader $PROD)"
+grant $PROD marts dataViewer "group:data-analysts@acme.com"
+</pre>
+
+<p>What you should see: <code>Waiting on bqjob_... (0s) Current status: DONE</code> for each grant. Another way to do the same thing is the console: BigQuery → click the dataset → <b>Sharing</b> → <b>Permissions</b> → <b>Add principal</b>.</p>
+
+<p>⚠️ <code>sa-bi-reader</code> gets <code>marts</code> and nothing else. That is the whole point: the raw datasets hold personal data (member names and emails from Nexudus and HubSpot, and door events if ACT is ACT365). Even a badly built dashboard cannot reach them, because the account simply has no rights there. Personal data that must stay out of dashboards is also kept out of <code>marts</code> by dbt (Guide 07), and door data only reaches <code>marts</code> as company-level totals. Never "fix" a missing column by giving <code>sa-bi-reader</code> access to <code>raw_*</code>; add the column to a mart through dbt instead.</p>
+
+<h4>5d. Let engineers deploy jobs that run as these accounts</h4>
+
+<pre>
+for SA in sa-extract-nexudus sa-extract-act sa-dbt; do
+  gcloud iam service-accounts add-iam-policy-binding $SA@$PROD.iam.gserviceaccount.com \
+    --member=group:data-engineers@acme.com --role=roles/iam.serviceAccountUser --project=$PROD
+done
+</pre>
+
+<h4>5e. No key files</h4>
+
+<p>🛠 A <b>service account key</b> is a JSON file that works like a password forever. Our jobs run <b>on</b> Google Cloud as their service account, so they never need a key. The one likely exception is Fivetran: depending on how you connect it, it may ask for a key for <code>sa-fivetran</code> or offer to use its own Google service account instead (📘 check Fivetran's docs in Guide 03). If a key is needed, create it, paste it straight into Fivetran, delete the file from your laptop, and write that in <code>docs/decisions.md</code>. Never put it in Git. The same rule covers the second possible exception, the BI tool: if it cannot sign in to BigQuery any other way, a key for <code>sa-bi-reader</code> goes only into the BI tool's own credential store, owned by the client (Guide 09). For GitHub Actions CI, use <b>Workload Identity Federation</b> (a keyless login from GitHub to Google), covered in Guide 07.</p>
+
+<hr/>
+
+<h3>7. Step 6: Secret Manager</h3>
+
+<p>📘 Secret Manager stores secrets with <b>versions</b>: when you rotate a token, you add a new version and turn off the old one. We keep secret copies in London only.</p>
+
+<pre>
+for S in nexudus-api-token act-api-key alert-webhook-url; do
+  gcloud secrets create $S --project=$PROD \
+    --replication-policy=user-managed --locations=$REGION \
+    --labels=client=$CLIENT
+done
+
+# Add the real value WITHOUT it landing in your shell history:
+read -s -p "Paste Nexudus token: " TOKEN; echo
+printf '%s' "$TOKEN" | gcloud secrets versions add nexudus-api-token --project=$PROD --data-file=-
+unset TOKEN
+# do the same for act-api-key (once you know which ACT) and alert-webhook-url (Guide 08)
+
+# Only the job that needs a secret can read it
+gcloud secrets add-iam-policy-binding nexudus-api-token --project=$PROD \
+  --member=$(sa sa-extract-nexudus $PROD) --role=roles/secretmanager.secretAccessor
+gcloud secrets add-iam-policy-binding act-api-key --project=$PROD \
+  --member=$(sa sa-extract-act $PROD) --role=roles/secretmanager.secretAccessor
+</pre>
+
+<p>Notes:</p>
+<ul>
+    <li>Use <code>printf '%s'</code>, not <code>echo</code>: <code>echo</code> adds a line break at the end, and the API will reject the token with a 401 that is very hard to spot.</li>
+    <li>The token itself comes from the client's Nexudus admin, created for a dedicated read-only API user (Guide 05). Ask them to share it through a password manager, not email or chat.</li>
+    <li><code>alert-webhook-url</code> holds the chat webhook address used for alerts. It is a secret because anyone with the URL can post into the client's chat. Guide 08 explains who reads it.</li>
+    <li>Engineers get <b>no</b> Secret Accessor role. If you must check a value, a data admin does it.</li>
+</ul>
+
+<hr/>
+
+<h3>8. Step 7: Artifact Registry for Job Images</h3>
+
+<p>A Cloud Run job runs a <b>container image</b>: a packed copy of your code and its libraries. Artifact Registry is where those images are stored. 🛠 We use one Docker repository called <code>data-jobs</code> (this name is ours; change it if the client has a rule).</p>
+
+<pre>
+gcloud artifacts repositories create data-jobs --project=$PROD \
+  --repository-format=docker --location=$REGION \
+  --description="Images for extract-nexudus, extract-act and dbt-build"
+
+# Your image names will look like:
+#   europe-west2-docker.pkg.dev/acme-data-prod/data-jobs/extract-nexudus:2026-10-28
+</pre>
+
+<p>💡 Add a cleanup policy so old images do not pile up (📘 Artifact Registry "cleanup policies", for example keep the latest 10 versions). It is a small cost, but small costs add up.</p>
+
+<hr/>
+
+<h3>9. Step 8: Budget Alerts and Query Limits</h3>
+
+<p>✅ The brief says the work "cannot become a six figure operation". 🛠 We guard cost in two ways from day one.</p>
+
+<h4>8a. A budget with alerts</h4>
+
+<pre>
+gcloud billing budgets create --billing-account=$BILLING \
+  --display-name="$CLIENT data platform" \
+  --budget-amount=300GBP \
+  --filter-projects=projects/$PROD,projects/$DEV \
+  --threshold-rule=percent=0.5 \
+  --threshold-rule=percent=0.9 \
+  --threshold-rule=percent=1.0 \
+  --threshold-rule=percent=1.0,basis=forecasted-spend
+</pre>
+
+<p>The £300/month is <b>made up</b>; use the number the client agreed. The currency must match the billing account's currency. By default the alert emails go to the billing account admins; to send them to the data team too, add a Cloud Monitoring notification channel with <code>--notifications-rule-monitoring-notification-channels</code> (check the current docs; Guide 08 creates the channels).</p>
+
+<p>⚠️ 📘 A budget only <b>warns</b>. It does not stop spending. That is why we also set limits.</p>
+
+<h4>8b. BigQuery query limits (custom quotas)</h4>
+
+<p>📘 BigQuery lets you cap how many bytes queries can scan per day, for the whole project and per user. Set these in the console: <b>IAM &amp; Admin → Quotas &amp; System Limits</b>, filter for <b>BigQuery API</b>, then find <b>Query usage per day</b> and <b>Query usage per day per user</b>, tick it and click <b>Edit</b>. (The screen names change from time to time; check the current docs.)</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Project</th><th>Per day, whole project (made up)</th><th>Per user per day (made up)</th></tr>
+<tr><td>data-prod</td><td>500 GB</td><td>100 GB</td></tr>
+<tr><td>data-dev</td><td>200 GB</td><td>50 GB</td></tr>
+</table>
+
+<p>For scale: a client the size of Work.Life has small tables (thousands of members, not billions of rows), so a nightly dbt build plus normal dashboard use should scan far less than this. Measure your real use for two weeks with the query in Guide 08, section 8, then set the caps a few times above it, so they only bite when something goes wrong. When a cap is hit, queries fail with a quota error until the next day (Pacific time, 📘). Tell the team that, so they do not think the warehouse is broken.</p>
+
+<hr/>
+
+<h3>10. Step 9: Audit Logs</h3>
+
+<p>An <b>audit log</b> records who did what and when. 📘 Two kinds matter:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Log</th><th>Records</th><th>On by default?</th></tr>
+<tr><td>Admin Activity</td><td>Changes: creating datasets, granting roles, deploying jobs</td><td>Yes, always on, cannot be turned off</td></tr>
+<tr><td>Data Access (BigQuery)</td><td>Who read or queried which data</td><td>Yes for BigQuery</td></tr>
+<tr><td>Data Access (other services, for example Secret Manager)</td><td>Who read a secret</td><td><b>No</b>: turn it on</td></tr>
+</table>
+
+<p>Turn on Data Access logs for Secret Manager in each project: <b>IAM &amp; Admin → Audit Logs</b>, tick <b>Secret Manager API</b>, tick <b>Data Read</b>, click <b>Save</b>. 📘 Default keeping times are about 400 days for Admin Activity and 30 days for Data Access (check current docs). If the client needs longer, ask the lead before adding a log sink, because stored logs cost money.</p>
+
+<p>Why this matters: when a leaver's access is reviewed, or the client asks "who looked at member data?", the answer is here.</p>
+
+<hr/>
+
+<h3>11. Step 10: Put It All in One Script</h3>
+
+<p>🛠 Everything above goes into <code>infra/setup.sh</code> in the client's repo, so the next engineer can read exactly what was built, and rebuild it. Keep the helpers (<code>mkds</code>, <code>sa</code>, <code>grant</code>) at the top.</p>
+
+<pre>
+acme-data-platform/infra/
+├── setup.sh          projects, APIs, datasets, service accounts, grants, secrets (empty), registry
+├── budget.sh         the budget (run once, needs billing rights)
+├── config.env        CLIENT, ORG_ID, BILLING, REGION  (IDs only, NO secrets)
+└── README.md         how to run it, what it does NOT do (quotas, audit log ticks, group creation)
+</pre>
+
+<pre>
+#!/usr/bin/env bash
+# infra/setup.sh  -  safe to re-run: "already exists" errors are ignored
+set -uo pipefail
+source "$(dirname "$0")/config.env"
+PROD=${CLIENT}-data-prod; DEV=${CLIENT}-data-dev
+
+step () { echo; echo "=== $1 ==="; }
+try  () { "$@" 2>&amp;1 | grep -v -i "already exists" || true; }
+
+step "Projects";         for P in $PROD $DEV; do try gcloud projects create $P --organization=$ORG_ID; done
+step "Billing";          for P in $PROD $DEV; do gcloud billing projects link $P --billing-account=$BILLING; done
+step "APIs";             # ... Step 2 commands
+step "Datasets";         # ... Step 3 commands, each wrapped in try
+step "Service accounts"; # ... Step 5a, wrapped in try
+step "Grants";           # ... Steps 4, 5b, 5c, 5d (grants are safe to repeat)
+step "Secrets";          # ... Step 6 create + accessor grants (NOT the values)
+step "Registry";         # ... Step 7
+echo "Done. Now run the checks in Guide 02, section 12."
+</pre>
+
+<p>Rules for this script:</p>
+<ul>
+    <li><b>No secret values</b> in it, ever. Secrets are added by hand with <code>read -s</code> as in Step 6.</li>
+    <li>Run it through a pull request like any code change, so there is a record.</li>
+    <li>Things that only the console can do (quotas, audit log ticks) go in <code>infra/README.md</code> as a checklist.</li>
+    <li>💡 Bigger teams use <b>Terraform</b> (a tool that describes cloud setup as files) instead of a shell script. That is fine too; a shell script is simpler to hand over to a small team. Write the choice in <code>docs/decisions.md</code>.</li>
+</ul>
+
+<hr/>
+
+<h3>12. Check It Worked</h3>
+
+<p>Run each check and compare with "you should see".</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Command</th><th>You should see</th></tr>
+<tr><td>1</td><td><code>gcloud billing projects describe acme-data-prod</code></td><td><code>billingEnabled: true</code> (repeat for dev)</td></tr>
+<tr><td>2</td><td><code>bq ls --project_id=acme-data-prod</code></td><td>The 5 raw datasets (or 4, plus the right ACT one), <code>staging</code>, <code>intermediate</code>, <code>marts</code></td></tr>
+<tr><td>3</td><td><code>bq ls --project_id=acme-data-dev</code></td><td>Empty for now (dbt creates <code>dbt_&lt;yourname&gt;</code> in Guide 07)</td></tr>
+<tr><td>4</td><td><code>bq show --format=prettyjson acme-data-prod:raw_nexudus | grep -E '"location"|"description"'</code></td><td><code>"location": "europe-west2"</code> and your description. Check every dataset.</td></tr>
+<tr><td>5</td><td><code>gcloud iam service-accounts list --project=acme-data-prod</code></td><td>Your 5 accounts (plus any default accounts Google made)</td></tr>
+<tr><td>6</td><td><code>gcloud iam service-accounts keys list --iam-account=sa-dbt@acme-data-prod.iam.gserviceaccount.com --managed-by=user</code></td><td>Nothing. No user-made keys (repeat per account; only <code>sa-fivetran</code> may have one, if Fivetran needs it)</td></tr>
+<tr><td>7</td><td>Project roles for one account (below)</td><td><code>roles/bigquery.jobUser</code> only</td></tr>
+<tr><td>8</td><td>Dataset grants (below)</td><td>Only the members in the table in Step 5</td></tr>
+<tr><td>9</td><td><code>gcloud secrets list --project=acme-data-prod</code> and <code>gcloud secrets get-iam-policy nexudus-api-token --project=acme-data-prod</code></td><td>3 secrets; only <code>sa-extract-nexudus</code> as accessor on the Nexudus token</td></tr>
+<tr><td>10</td><td><code>gcloud artifacts repositories list --project=acme-data-prod --location=europe-west2</code></td><td><code>data-jobs</code>, format DOCKER</td></tr>
+<tr><td>11</td><td><code>gcloud billing budgets list --billing-account=$BILLING</code></td><td>Your budget with 4 threshold rules</td></tr>
+</table>
+
+<pre>
+# 7. Project roles held by one service account
+gcloud projects get-iam-policy acme-data-prod \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:sa-extract-nexudus@" \
+  --format="table(bindings.role)"
+
+# 8. Who has rights on one dataset
+bq query --project_id=acme-data-prod --location=europe-west2 --use_legacy_sql=false '
+SELECT object_name, privilege_type, grantee
+FROM `acme-data-prod`.`region-europe-west2`.INFORMATION_SCHEMA.OBJECT_PRIVILEGES
+WHERE object_name = "raw_nexudus"'
+</pre>
+
+<p>💡 <b>The negative test</b> is the one that matters most. Once Guide 07 has built <code>marts</code>, prove that <code>sa-bi-reader</code> <b>can</b> read <code>marts</code> but <b>cannot</b> read raw data. One way is to impersonate the account (you need the Service Account Token Creator role on it for a short time; check current docs for how <code>bq</code> picks up impersonation). Run <code>SELECT 1 FROM `acme-data-prod.marts.dim_site` LIMIT 1</code>: it should work. Then run <code>SELECT 1 FROM `acme-data-prod.raw_nexudus.&lt;any table&gt;` LIMIT 1</code> and the same on <code>raw_act365</code> (door events): you should get <b>Access Denied</b>. Remove your Token Creator role after. Write the result, with the date, in <code>docs/decisions.md</code>.</p>
+
+<hr/>
+
+<h3>13. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td><code>The project ID you specified is already in use by another project</code></td><td>Project IDs are global and never reused</td><td>Add a suffix (<code>-01</code>), record the real ID in <code>docs/decisions.md</code> and <code>infra/config.env</code></td></tr>
+<tr><td><code>Cloud billing quota exceeded</code> when linking</td><td>The billing account has a limit on linked projects</td><td>Ask the client's billing admin to raise it, or ask Google support</td></tr>
+<tr><td><code>API [x] not enabled on project</code></td><td>Step 2 missed for that project</td><td>Enable it; wait a minute; retry</td></tr>
+<tr><td>A dataset was made in <code>US</code> or <code>EU</code></td><td><code>--location</code> forgotten</td><td>Delete it while it is still empty and create it again in <code>europe-west2</code>. If it has data, copy the tables, then delete.</td></tr>
+<tr><td>Query error: <code>Not found: Dataset ... was not found in location europe-west2</code></td><td>Query running in a different location from the dataset</td><td>Pass <code>--location=europe-west2</code> to <code>bq query</code>; in the console set the location under <b>More → Query settings</b></td></tr>
+<tr><td><code>Access Denied: ... User does not have bigquery.jobs.create permission</code></td><td>Missing Job User in the project where the query runs</td><td>Grant Job User in <b>that</b> project (the billing project of the query, not the data project)</td></tr>
+<tr><td><code>Permission iam.serviceAccounts.actAs denied</code> when deploying a job</td><td>Deployer lacks Service Account User on the job's account</td><td>Step 5d</td></tr>
+<tr><td><code>Constraint iam.disableServiceAccountKeyCreation violated</code></td><td>The client's organisation blocks key files (good!)</td><td>Use Fivetran's own service account option instead of a key, or ask client IT for a one-off exception</td></tr>
+<tr><td>Extractor gets 401 from Nexudus although the token is right</td><td>Line break saved with the secret (<code>echo</code> instead of <code>printf</code>)</td><td>Add a new secret version with <code>printf '%s'</code>; disable the old version</td></tr>
+<tr><td>Budget command fails on currency</td><td>Amount currency differs from the billing account currency</td><td>Use the billing account's currency code</td></tr>
+</table>
+
+<hr/>
+
+<h3>14. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Two projects exist in the client's organisation, all with billing linked, all paid by the client</td></tr>
+<tr><td>☐</td><td>Every dataset exists, in <code>europe-west2</code>, with a description and labels</td></tr>
+<tr><td>☐</td><td>The ACT dataset name matches the client's confirmed answer (not a guess)</td></tr>
+<tr><td>☐</td><td>Humans get rights only through groups; no human has write rights on prod datasets</td></tr>
+<tr><td>☐</td><td>5 service accounts exist; each has exactly the rights in the Step 5 table</td></tr>
+<tr><td>☐</td><td>No service account key files exist (or only one each for Fivetran and the BI tool, recorded in <code>docs/decisions.md</code>)</td></tr>
+<tr><td>☐</td><td><code>sa-bi-reader</code> can read <code>marts</code> and gets Access Denied on <code>raw_*</code> (negative test done and dated)</td></tr>
+<tr><td>☐</td><td>3 secrets exist in London; only the right account can read each one</td></tr>
+<tr><td>☐</td><td>The <code>data-jobs</code> Artifact Registry repository exists in <code>europe-west2</code></td></tr>
+<tr><td>☐</td><td>Budget with alerts at 50 / 90 / 100% (and forecast) is set; query quotas are set on both projects</td></tr>
+<tr><td>☐</td><td>Secret Manager Data Access logs are on</td></tr>
+<tr><td>☐</td><td><code>infra/setup.sh</code>, <code>config.env</code> and <code>infra/README.md</code> are merged in Git, with no secrets in them</td></tr>
+<tr><td>☐</td><td>Every check in section 12 passed, and the real project IDs are in <code>docs/decisions.md</code></td></tr>
+<tr><td>☐</td><td>Your own Owner rights are listed in <code>docs/decisions.md</code> as "remove at handover" (Guide 09)</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>The ground floor is built. Next, connect the first source: <a href="integration-03-fivetran-netsuite.html">Guide 03 — Fivetran + NetSuite</a>, where <code>sa-fivetran</code> and <code>raw_netsuite</code> get their first real data. 🚀</p>
+
+<p>Back to the plan: <a href="integration-01-start-here.html">Guide 01 — Start Here</a>. Background in the series: <a href="../season-2-pipeline/chapter-14-python-extractors.html">Chapter 14 (secrets and least privilege)</a>, <a href="../season-2-pipeline/chapter-15-bigquery.html">Chapter 15 (BigQuery: locations, costs and permissions)</a> and <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (the integration map)</a>.</p>

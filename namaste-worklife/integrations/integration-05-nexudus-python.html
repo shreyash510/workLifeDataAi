@@ -1,0 +1,635 @@
+<h2>Integration Guide 05 — Nexudus to BigQuery With a Python Extractor</h2>
+
+<p>Hi! 🙏 Nexudus is the system that runs the buildings: members, teams, contracts, bookings, invoices and check-ins. For Work.Life it is "the largest source" (✅ brief). In this guide you build a small Python program (an <b>extractor</b>) that copies Nexudus records into <code>raw_nexudus</code> every night, safely and without losing anything.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>our standard setup</b>. Work.Life's brief says data moves "through Fivetran and Python", but which tool loads Nexudus there is not confirmed (❓ ask the client). The Nexudus API paths, filter names and field names in this guide follow the pattern Nexudus documents, but treat them as <b>illustrative</b>: check the current Nexudus API docs before you rely on any of them. Vendor APIs change.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Decide first: Python, the Nexudus BigQuery integration, or Fivetran</li>
+    <li>Before you start</li>
+    <li>Create the Nexudus API user and store the token</li>
+    <li>Which entities to pull (and their old names)</li>
+    <li>The extractor: main.py, requirements.txt, Dockerfile</li>
+    <li>Run it on your laptop</li>
+    <li>Build and deploy it as a Cloud Run job, then schedule it</li>
+    <li>First full load, nightly loads and the weekly ID scan for deletes</li>
+    <li>The time zone check</li>
+    <li>The de-duplication pattern you hand to Guide 07</li>
+    <li>Check it worked, common problems, and "Done when"</li>
+</ul>
+
+<hr/>
+
+<h3>1. Decide First: Which Way Out of Nexudus?</h3>
+
+<p>There are three real ways to get Nexudus data into BigQuery on a schedule (Chapter 07, section 14). Pick one <b>before</b> you write code, and write the reason in <code>docs/decisions.md</code>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Option</th><th>How it works</th><th>Cost</th><th>The catch</th></tr>
+<tr><td><b>Python extractor</b> (this guide)</td><td>Our code calls the Nexudus REST API each night and loads JSON into <code>raw_nexudus</code></td><td>Cloud Run runs a few minutes a night: usually pennies to a few pounds a month (estimate)</td><td>Someone must look after the code when the API changes</td></tr>
+<tr><td><b>Nexudus native BigQuery integration</b> 📘</td><td>Turned on in Nexudus settings; Nexudus sends changes to BigQuery as they happen</td><td>Listed at £100 per location per month at the time of writing. For 14 sites that is about £16,800 a year. Check the current price.</td><td>No code, but you get Nexudus's table shapes and a per-site bill that grows with the client</td></tr>
+<tr><td><b>Fivetran</b></td><td>A managed connector, if one exists</td><td>Priced on monthly active rows (Chapter 13)</td><td>At the time of writing we did not find a ready-made Nexudus connector in Fivetran's list. Check again. Fivetran's "build your own" options still mean writing code.</td></tr>
+</table>
+
+<p>🛠 <b>Our standard decision rule:</b></p>
+<ul>
+    <li>Client is cost conscious and has (or buys) someone to look after a small script → <b>Python</b>.</li>
+    <li>Client wants zero code and the per-site price is fine for them → <b>native integration</b>. Skip sections 5 to 8 of this guide, but still do sections 9 to 13 (time zones, de-dup, checks).</li>
+    <li>A real Fivetran connector appears → compare its monthly active rows cost with the two above.</li>
+</ul>
+
+<p>For Work.Life, the brief says the stack must stay cost conscious: it "cannot become a six figure operation" (✅ brief). That points to Python, but ask the client what runs today before you change anything (❓ ask the client).</p>
+
+<hr/>
+
+<h3>2. Before You Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>You need</th><th>From</th></tr>
+<tr><td>☐</td><td>Projects <code>&lt;client&gt;-data-prod</code> and <code>&lt;client&gt;-data-dev</code> in <code>europe-west2</code>, with the dataset <code>raw_nexudus</code> created in prod</td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>Service account <code>sa-extract-nexudus</code> with: BigQuery Job User (project), BigQuery Data Editor on <code>raw_nexudus</code> only, Secret Manager Secret Accessor on <code>nexudus-api-token</code> only</td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>The secret <code>nexudus-api-token</code> (it can be empty for now), and the Artifact Registry Docker repository <code>data-jobs</code> in <code>europe-west2</code></td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>You are in the group <code>data-engineers@</code>, which has Service Account User on <code>sa-extract-nexudus</code>, so you can deploy a job that runs as it</td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>These Google Cloud APIs turned on: Cloud Run, Cloud Scheduler, Artifact Registry, Cloud Build, Secret Manager, BigQuery</td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>On your laptop: the Google Cloud CLI (<code>gcloud</code>), Python 3.11 or newer, Git, and the repo <code>&lt;client&gt;-data-platform</code></td><td>You</td></tr>
+<tr><td>☐</td><td>A Nexudus admin on the client side who can create an API user</td><td>Client (Ops / Nexudus admin)</td></tr>
+<tr><td>☐</td><td>An answer to: "How many years of history do you want loaded?" (bookings and invoices can be big)</td><td>❓ Ask the client</td></tr>
+</table>
+
+<p>Two words you will see a lot: a <b>watermark</b> is "how far did we get last time?", stored as the newest <code>updated_on</code> value already in BigQuery. An <b>incremental load</b> fetches only records changed since the watermark.</p>
+
+<hr/>
+
+<h3>3. Create the Nexudus API User and Store the Token</h3>
+
+<p>Ask the client's Nexudus admin to do this with you on a call. Never use a staff member's own login (Guide 01, section 5).</p>
+
+<ol>
+    <li><b>Create a new admin user</b> in Nexudus (look under the settings for users or admin users; menu names change, so check the current Nexudus help pages 📘). Use a shared mailbox the client owns, for example <code>data-integration@&lt;client domain&gt;</code>, not a person's email.</li>
+    <li><b>Give it read-only rights</b> to only the modules you need: customers and teams, billing (contracts, plans, invoices), resources and bookings, check-ins. No rights to change anything, no HR or staff modules.</li>
+    <li><b>Get an API token</b> for that user, the way the current Nexudus API docs describe (bearer token 📘). Find out if the token <b>expires</b>. If it does, see the warning note in section 5.</li>
+    <li><b>Store it in Secret Manager</b> without it ever touching a file, chat or your shell history:</li>
+</ol>
+
+<pre>
+# read -s hides what you type and keeps it out of your shell history
+read -s NEXUDUS_TOKEN
+printf '%s' "$NEXUDUS_TOKEN" | gcloud secrets versions add nexudus-api-token \
+    --data-file=- --project=acme-data-prod
+</pre>
+
+<ol start="5">
+    <li><b>Test it with one tiny request</b> (one record only). You should see JSON with a <code>Records</code> list and a <code>HasNextPage</code> flag. The path is illustrative:</li>
+</ol>
+
+<pre>
+curl -s -H "Authorization: Bearer $NEXUDUS_TOKEN" \
+  "https://spaces.nexudus.com/api/spaces/coworkers?page=1&amp;size=1" | head -c 600
+</pre>
+
+<p>Write the API user's email, its rights, and who to call if it is locked out into <code>docs/integration-register.md</code>. Replace <code>acme</code> with your client code everywhere in this guide.</p>
+
+<hr/>
+
+<h3>4. Which Entities to Pull (and Their Old Names)</h3>
+
+<p>The Nexudus screens use new names, but the API uses <b>old names</b> (Chapter 07, section 4). In raw we keep the API's names, because raw means "exactly what the source sent". dbt staging renames them later.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>On screen</th><th>API name (raw table)</th><th>Why we need it</th><th>Weekly ID scan?</th></tr>
+<tr><td>Location</td><td>Business → <code>businesses</code></td><td>The list of sites</td><td>Yes</td></tr>
+<tr><td>Customer</td><td>Coworker → <code>coworkers</code></td><td>Members (personal data: only counts and company-level facts move on into marts)</td><td>Yes</td></tr>
+<tr><td>Team</td><td>Team → <code>teams</code></td><td>Companies</td><td>Yes</td></tr>
+<tr><td>Contract</td><td>CoworkerContract → <code>coworker_contracts</code></td><td>MRR, occupancy, churn: the most important table</td><td>Yes</td></tr>
+<tr><td>Plan</td><td>Tariff → <code>tariffs</code></td><td>Plan names and list prices</td><td>Yes</td></tr>
+<tr><td>Resource</td><td>Resource → <code>resources</code></td><td>Offices, desks, meeting rooms, capacity</td><td>Yes</td></tr>
+<tr><td>Booking</td><td>Booking → <code>bookings</code></td><td>Meeting room use and revenue</td><td>No (big)</td></tr>
+<tr><td>Cancelled booking</td><td>CancelledBookings → <code>cancelled_bookings</code></td><td>If you skip this, cancellations silently vanish</td><td>No</td></tr>
+<tr><td>Invoice</td><td>CoworkerInvoice → <code>coworker_invoices</code></td><td>What was billed</td><td>No (big)</td></tr>
+<tr><td>Invoice line</td><td>CoworkerInvoiceLines → <code>coworker_invoice_lines</code></td><td>Billed amount per product and financial account</td><td>No (big)</td></tr>
+<tr><td>Check-in</td><td>Checkins → <code>checkins</code></td><td>Who came in (personal data, aggregate only, like door events in Guide 06)</td><td>No (big)</td></tr>
+</table>
+
+<p>🛠 Start with these. Add more (proposals, plan history, booking credits, financial accounts) only when a dbt model needs them. Fewer entities means fewer API calls and less to look after.</p>
+
+<hr/>
+
+<h3>5. The Extractor: <code>extractors/nexudus/main.py</code></h3>
+
+<p>This is a complete, readable skeleton. It follows the golden rules: read-only, load raw (the whole record as JSON text), secrets from the environment only, and fail loudly. Read the comments: each one explains a choice from Chapter 14.</p>
+
+<pre>
+"""extract-nexudus: copy Nexudus records into BigQuery raw_nexudus, unchanged.
+
+MODE (environment variable):
+  auto         (default) full on Sundays (UK date), incremental on other days
+  incremental  only records changed since the last run (the watermark)
+  full         every record, plus a list of current ids, so dbt can spot deletes
+SINCE (optional, ISO date like 2026-09-01): reload from that date instead of the
+  watermark, for every table, with no weekly scan (backfill, used by Guide 08)
+Exit code 0 = success. Anything else = failure, and Cloud Monitoring alerts.
+"""
+import json
+import logging
+import os
+import random
+import sys
+import tempfile
+import time
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+import requests
+from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
+
+# ---------- settings: all from the environment, nothing secret in code ----------
+PROJECT    = os.environ["GCP_PROJECT"]                  # for example acme-data-prod
+DATASET    = os.environ.get("BQ_DATASET", "raw_nexudus")
+LOCATION   = os.environ.get("BQ_LOCATION", "europe-west2")
+MODE       = os.environ.get("MODE", "auto")
+START_FROM = os.environ.get("START_FROM", "2000-01-01T00:00")   # big tables only: agree with client
+EARLIEST   = "2000-01-01T00:00"         # small tables: always the whole history
+SINCE      = os.environ.get("SINCE", "").strip()           # optional backfill date, replaces the watermark
+BASE_URL   = os.environ.get("NEXUDUS_BASE_URL", "https://spaces.nexudus.com/api")
+TOKEN      = os.environ["NEXUDUS_TOKEN"]    # Cloud Run fills this from Secret Manager
+
+PAGE_SIZE     = 100
+OVERLAP_HOURS = 2       # re-read the last 2 hours every run: safe, staging de-duplicates
+MAX_TRIES     = 6
+
+# raw table -&gt; (API path, "updated since" filter, include in weekly ID scan?)
+# ILLUSTRATIVE: check every path and filter name in the current Nexudus API docs.
+ENTITIES = {
+    "businesses":             ("sys/businesses",             "from_Business_UpdatedOn",              True),
+    "coworkers":              ("spaces/coworkers",           "from_Coworker_UpdatedOn",              True),
+    "teams":                  ("spaces/teams",               "from_Team_UpdatedOn",                  True),
+    "coworker_contracts":     ("billing/coworkercontracts",  "from_CoworkerContract_UpdatedOn",      True),
+    "tariffs":                ("billing/tariffs",            "from_Tariff_UpdatedOn",                True),
+    "resources":              ("spaces/resources",           "from_Resource_UpdatedOn",              True),
+    "bookings":               ("spaces/bookings",            "from_Booking_UpdatedOn",               False),
+    "cancelled_bookings":     ("spaces/cancelledbookings",   "from_CancelledBooking_UpdatedOn",      False),
+    "coworker_invoices":      ("billing/coworkerinvoices",   "from_CoworkerInvoice_UpdatedOn",       False),
+    "coworker_invoice_lines": ("billing/coworkerinvoicelines", "from_CoworkerInvoiceLine_UpdatedOn", False),
+    "checkins":               ("spaces/checkins",            "from_Checkin_UpdatedOn",               False),
+}
+
+SCHEMA = [
+    bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("updated_on", "STRING"),      # exactly as the API sent it
+    bigquery.SchemaField("payload", "STRING"),         # the whole record, as JSON text
+    bigquery.SchemaField("_loaded_at", "TIMESTAMP"),   # our own clock, in UTC
+]
+ID_SCHEMA = [
+    bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+    bigquery.SchemaField("_loaded_at", "TIMESTAMP"),
+]
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+log = logging.getLogger("extract-nexudus")
+
+
+class FatalApiError(Exception):
+    """A response we must NOT retry: bad token, missing rights, renamed endpoint."""
+
+
+# ---------- 1. Talk to the API politely: retry 429 / 5xx, stop on 4xx ----------
+def get_page(session, path, params):
+    for attempt in range(1, MAX_TRIES + 1):
+        try:
+            r = session.get(f"{BASE_URL}/{path}", params=params, timeout=60)
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            wait = 2 ** attempt + random.random()
+            log.warning("network problem on %s (%s), retry in %.0fs", path, exc, wait)
+            time.sleep(wait)
+            continue
+
+        if r.status_code == 200:
+            return r.json()
+        if r.status_code in (400, 401, 403, 404):
+            # 401/403 = token or rights. 400/404 = the API probably changed. Do not retry.
+            raise FatalApiError(f"HTTP {r.status_code} on {path}: {r.text[:200]}")
+        if r.status_code == 429 or r.status_code &gt;= 500:
+            retry_after = r.headers.get("Retry-After", "")
+            wait = int(retry_after) if retry_after.isdigit() else 2 ** attempt + random.random()
+            log.warning("HTTP %s on %s, try %d of %d, waiting %.0fs",
+                        r.status_code, path, attempt, MAX_TRIES, wait)
+            time.sleep(wait)
+            continue
+        raise FatalApiError(f"unexpected HTTP {r.status_code} on {path}")
+    raise RuntimeError(f"gave up on {path} after {MAX_TRIES} tries")
+
+
+def fetch_records(session, path, filter_name, since):
+    """Yield every record changed on or after `since`, page by page."""
+    params = {"page": 1, "size": PAGE_SIZE, "orderBy": "UpdatedOn", "dir": 0,
+              filter_name: since}
+    while True:
+        body = get_page(session, path, params)
+        yield from body["Records"]                # KeyError here = API changed: fail loudly
+        if not body["HasNextPage"]:
+            return
+        params["page"] += 1
+
+
+# ---------- 2. The watermark: ask BigQuery how far we got ----------
+def read_watermark(bq, table, first_run_from):
+    sql = f"SELECT MAX(updated_on) AS wm FROM `{PROJECT}.{DATASET}.{table}`"
+    try:
+        wm = list(bq.query(sql).result())[0].wm
+    except NotFound:                              # first run: the table does not exist yet
+        return first_run_from
+    if not wm:
+        return first_run_from
+    # Go back OVERLAP_HOURS and fetch with "on or after" (&gt;=), never "after" (&gt;).
+    # This also covers the hour that repeats when the clocks go back in October.
+    since = datetime.fromisoformat(wm[:16]) - timedelta(hours=OVERLAP_HOURS)
+    return since.strftime("%Y-%m-%dT%H:%M")
+
+
+# ---------- 3. Write JSONL and run a BigQuery load job ----------
+def load_records(bq, table, records, loaded_at, keep_ids):
+    ids, n = [], 0
+    with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False,
+                                     encoding="utf-8") as f:
+        for rec in records:
+            row = {"id": str(rec["Id"]),               # no Id = API changed: fail loudly
+                   "updated_on": rec.get("UpdatedOn"),
+                   "payload": json.dumps(rec, ensure_ascii=False),
+                   "_loaded_at": loaded_at}
+            f.write(json.dumps(row) + "\n")
+            n += 1
+            if keep_ids:
+                ids.append(row["id"])
+        file_name = f.name
+    if n:
+        job_config = bigquery.LoadJobConfig(
+            schema=SCHEMA,
+            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,   # never overwrite raw
+            time_partitioning=bigquery.TimePartitioning(field="_loaded_at"),
+        )
+        with open(file_name, "rb") as f:
+            bq.load_table_from_file(f, f"{PROJECT}.{DATASET}.{table}",
+                                    job_config=job_config, location=LOCATION).result()
+    os.remove(file_name)
+    return n, ids
+
+
+def load_current_ids(bq, table, ids, loaded_at):
+    """Weekly: replace the list of ids that exist in Nexudus today."""
+    rows = [{"id": i, "_loaded_at": loaded_at} for i in ids]
+    job_config = bigquery.LoadJobConfig(
+        schema=ID_SCHEMA,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+    )
+    bq.load_table_from_json(rows, f"{PROJECT}.{DATASET}.{table}_current_ids",
+                            job_config=job_config, location=LOCATION).result()
+
+
+# ---------- 4. Main ----------
+def main():
+    if MODE not in ("auto", "incremental", "full"):
+        raise ValueError(f"MODE must be auto, incremental or full, not {MODE!r}")
+    is_sunday = datetime.now(ZoneInfo("Europe/London")).weekday() == 6
+    run_full = not SINCE and (MODE == "full" or (MODE == "auto" and is_sunday))
+    since_override = (datetime.fromisoformat(SINCE).strftime("%Y-%m-%dT%H:%M")
+                      if SINCE else None)          # a bad date fails loudly here
+
+    bq = bigquery.Client(project=PROJECT, location=LOCATION)
+    session = requests.Session()
+    session.headers.update({"Authorization": f"Bearer {TOKEN}",
+                            "Accept": "application/json"})
+    loaded_at = datetime.now(timezone.utc).isoformat()
+    total = 0
+
+    for table, (path, filter_name, in_id_scan) in ENTITIES.items():
+        full = run_full and in_id_scan
+        first_run_from = EARLIEST if in_id_scan else START_FROM
+        if full:
+            since = EARLIEST
+        elif since_override:
+            since = since_override
+        else:
+            since = read_watermark(bq, table, first_run_from)
+        n, ids = load_records(bq, table, fetch_records(session, path, filter_name, since),
+                              loaded_at, keep_ids=full)
+        log.info("%-24s %7d rows  since %s  (%s)", table, n, since,
+                 "full" if full else "incremental")
+        if full:
+            if n == 0:   # a full scan of a real table can never be empty
+                raise RuntimeError(f"full scan of {table} returned 0 rows")
+            load_current_ids(bq, table, ids, loaded_at)
+        total += n
+
+    log.info("DONE: %d rows loaded into %s.%s", total, PROJECT, DATASET)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except FatalApiError as exc:
+        log.error("EXTRACT FAILED (do not retry, check token / rights / API docs): %s", exc)
+        sys.exit(2)
+    except Exception:
+        log.exception("EXTRACT FAILED")
+        sys.exit(1)
+</pre>
+
+<p>Why some choices are made this way:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Choice</th><th>Why</th></tr>
+<tr><td><code>updated_on</code> kept as STRING, exactly as sent</td><td>Load raw. We give the API back its own value as the next watermark, so no time zone change can creep in here. Staging turns it into a real timestamp (section 9).</td></tr>
+<tr><td>Whole record in <code>payload</code></td><td>If Nexudus adds a field, nothing breaks. It is already in the JSON.</td></tr>
+<tr><td><code>WRITE_APPEND</code>, never update</td><td>Every version is kept. Duplicates are expected, and staging removes them (section 10).</td></tr>
+<tr><td>2-hour overlap plus <code>&gt;=</code></td><td>Records changed in the same minute, or during the repeated hour in October, are never skipped</td></tr>
+<tr><td>Partitioned by <code>_loaded_at</code></td><td>Queries that look at recent loads read less data, so they cost less</td></tr>
+<tr><td>Exit code 2 for "do not retry" errors, 1 for everything else</td><td>Both alert. The log line tells the person on call where to look first.</td></tr>
+</table>
+
+<p>⚠️ <b>Warning note on tokens.</b> If the client's Nexudus token expires (for example, after some hours or days), a fixed token in Secret Manager will start failing with 401. In that case store the API user's login details as the secret instead, and add a small function that asks Nexudus for a fresh token at the start of each run, the way the current API docs describe. Check this on day one: it is the most common reason this extractor "suddenly" stops.</p>
+
+<p>⚠️ <b>Summary records.</b> Nexudus documents that list results may not fill in every field (Chapter 07, section 16). After your first run, open a few <code>payload</code> values and check the fields your models need are really there. If not, you may need to fetch some records one by one, which is slower. Write the finding in <code>docs/decisions.md</code>.</p>
+
+<hr/>
+
+<h3>6. <code>requirements.txt</code> and <code>Dockerfile</code></h3>
+
+<p><code>extractors/nexudus/requirements.txt</code> (pin exact versions once it works, so a new library version cannot surprise you):</p>
+
+<pre>
+google-cloud-bigquery&gt;=3.25
+requests&gt;=2.32
+tzdata&gt;=2024.1
+</pre>
+
+<p><code>tzdata</code> gives Python the "Europe/London" time zone rules even inside a slim container.</p>
+
+<p><code>extractors/nexudus/Dockerfile</code>:</p>
+
+<pre>
+FROM python:3.12-slim
+
+# Logs appear in Cloud Logging straight away, not in big chunks
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY main.py .
+
+# No secrets in the image. The token arrives at run time from Secret Manager.
+CMD ["python", "main.py"]
+</pre>
+
+<hr/>
+
+<h3>7. Run It on Your Laptop First</h3>
+
+<p>Your first runs go to <b>your own dev dataset</b>, never to prod raw. That way test rows never mix with real loads.</p>
+
+<pre>
+cd extractors/nexudus
+python -m venv .venv
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# Lets Python use YOUR Google login (opens a browser). No JSON key files, ever.
+gcloud auth application-default login
+
+export GCP_PROJECT=acme-data-dev
+export BQ_DATASET=dbt_yourname         # your own dev dataset (Guide 01 naming)
+export MODE=incremental
+export START_FROM=2026-09-01T00:00     # big tables: only recent rows for this test
+read -s NEXUDUS_TOKEN; export NEXUDUS_TOKEN
+
+python main.py
+</pre>
+
+<p>Expected output looks like this (made up numbers):</p>
+
+<pre>
+INFO businesses                     14 rows  since 2026-09-01T00:00  (incremental)
+INFO coworkers                     612 rows  since 2026-09-01T00:00  (incremental)
+INFO teams                          88 rows  since 2026-09-01T00:00  (incremental)
+...
+INFO DONE: 41207 rows loaded into acme-data-dev.dbt_yourname
+</pre>
+
+<p>Now run it a <b>second time</b>. You should see only a few rows per table (the 2-hour overlap plus anything that changed). If the second run loads everything again, the watermark is not working: stop and fix it before going further.</p>
+
+<hr/>
+
+<h3>8. Build, Deploy and Schedule the Cloud Run Job</h3>
+
+<p>A <b>Cloud Run job</b> runs a container until it finishes, then stops. You pay only while it runs. The job runs <b>as</b> <code>sa-extract-nexudus</code>, so it needs no key file.</p>
+
+<pre>
+PROJECT=acme-data-prod
+REGION=europe-west2
+SA=sa-extract-nexudus@$PROJECT.iam.gserviceaccount.com
+IMAGE=$REGION-docker.pkg.dev/$PROJECT/data-jobs/extract-nexudus
+
+# 1. The Docker repository data-jobs was made in Guide 02. Check it is there:
+gcloud artifacts repositories describe data-jobs \
+  --location=$REGION --project=$PROJECT
+
+# 2. Build the image in the cloud (no Docker needed on your laptop)
+gcloud builds submit extractors/nexudus --tag=$IMAGE:v1 --project=$PROJECT
+
+# 3. Create or update the job
+gcloud run jobs deploy extract-nexudus \
+  --image=$IMAGE:v1 \
+  --region=$REGION --project=$PROJECT \
+  --service-account=$SA \
+  --set-secrets=NEXUDUS_TOKEN=nexudus-api-token:latest \
+  --set-env-vars=GCP_PROJECT=$PROJECT,BQ_DATASET=raw_nexudus,BQ_LOCATION=$REGION,MODE=auto \
+  --tasks=1 --max-retries=1 --task-timeout=3600s --memory=1Gi
+
+# 4. Run it once by hand and wait for the result
+gcloud run jobs execute extract-nexudus --region=$REGION --project=$PROJECT --wait
+</pre>
+
+<p>Then the nightly trigger. The Cloud Scheduler job <code>nightly-extract-nexudus</code> calls the Cloud Run API to start the job at 02:00 UK time (🛠 shared schedule: 02:00 <code>nightly-extract-nexudus</code>, 02:15 <code>nightly-extract-act</code>, 03:00 dbt). Guide 08 adds the alerts and the full run order.</p>
+
+<pre>
+# The job's own account may start ITS OWN job only (Cloud Run Invoker), and
+# Scheduler uses that same account as its OAuth identity (same as Guide 08)
+gcloud run jobs add-iam-policy-binding extract-nexudus \
+  --region=$REGION --project=$PROJECT \
+  --member=serviceAccount:$SA --role=roles/run.invoker
+
+gcloud scheduler jobs create http nightly-extract-nexudus \
+  --location=$REGION --project=$PROJECT \
+  --schedule="0 2 * * *" --time-zone="Europe/London" \
+  --http-method=POST \
+  --uri="https://run.googleapis.com/v2/projects/$PROJECT/locations/$REGION/jobs/extract-nexudus:run" \
+  --oauth-service-account-email=$SA
+</pre>
+
+<p>💡 If a flag is rejected, check the current <code>gcloud</code> docs, or use the Cloud Run console: open the job → <b>Triggers</b> → add a scheduler trigger. Same result.</p>
+
+<p>Why 02:00? In the UK, clocks go forward at 01:00 in March (01:00–02:00 never happens) and back at 02:00 in October (01:00–02:00 happens twice). A job at 02:00 runs exactly once on both days. Avoid schedules between 01:00 and 02:00.</p>
+
+<hr/>
+
+<h3>9. First Load, Nightly Loads, Deletes and Time Zones</h3>
+
+<p><b>First full load.</b> On the very first run no table exists, so the small tables (sites, customers, teams, contracts, plans, resources) load their whole history, and the big tables (bookings, invoices, check-ins) start from <code>START_FROM</code>. With years of bookings and invoices this can take a long time and hit rate limits. 🛠 Do the first load by hand, during the day, with a longer timeout, and watch the logs:</p>
+
+<pre>
+gcloud run jobs execute extract-nexudus --region=$REGION --project=$PROJECT \
+  --update-env-vars=MODE=full,START_FROM=2023-01-01T00:00 --task-timeout=21600s --wait
+</pre>
+
+<p>(The start date is made up: use what the client agreed.) If it times out, just run it again. Tables that finished have a watermark, so they continue from there.</p>
+
+<p><b>Nightly loads.</b> Monday to Saturday, <code>MODE=auto</code> runs incrementally: only changes since the watermark.</p>
+
+<p><b>Reloading from a date (backfill).</b> If a few nights were lost or wrong, set <code>SINCE</code> for one run. It replaces the watermark for every table and skips the weekly scan. Guide 08 uses exactly this:</p>
+
+<pre>
+gcloud run jobs execute extract-nexudus --region=$REGION --project=$PROJECT \
+  --update-env-vars=SINCE=2026-09-01 --wait
+</pre>
+
+<p>The extra rows are safe: staging keeps only the latest version of each id. Write every setting (<code>MODE</code>, <code>START_FROM</code>, <code>SINCE</code>) and an example run in <code>extractors/nexudus/README.md</code>, for example:</p>
+
+<pre>
+## Settings (environment variables)
+GCP_PROJECT   required, for example acme-data-prod
+BQ_DATASET    default raw_nexudus
+MODE          auto (default) | incremental | full
+START_FROM    first-run start for big tables (bookings, invoices, check-ins)
+SINCE         optional backfill date, for example 2026-09-01. Replaces the watermark.
+NEXUDUS_TOKEN set by Cloud Run from Secret Manager (nexudus-api-token). Never in Git.
+</pre>
+
+<p><b>The weekly ID scan for deletes.</b> An "updated since" query never shows a record that was <b>deleted</b>. On Sundays, <code>MODE=auto</code> fetches every record of the small tables (sites, customers, teams, contracts, plans, resources) and replaces <code>&lt;table&gt;_current_ids</code>. Any id in raw but not in that list was deleted in Nexudus. For about 8,000 members (✅ brief) this is small and cheap. The big tables (bookings, invoices, check-ins) are not scanned; cancelled bookings arrive through <code>cancelled_bookings</code>. If the client deletes bookings or invoices often (❓ ask the client), add a scan of the last 90 days for those too.</p>
+
+<p><b>The time zone check.</b> Raw times must be understood before anyone builds on them. Do this once, and write the answer in <code>docs/decisions.md</code>:</p>
+<ol>
+    <li>Ask the client's admin to change one test record at a known time, for example 10:15 UK time.</li>
+    <li>After the next run, look at that record's <code>updated_on</code>. Does it say 09:15 (UTC in summer), 10:15 (UK local time), or 10:15 with an offset like <code>+01:00</code>?</li>
+    <li>Repeat after the late-October clock change (last Sunday in October), when UK time and UTC are the same again. If the API sends local time without an offset, staging must convert it with <code>TIMESTAMP(SAFE_CAST(updated_on AS DATETIME), 'Europe/London')</code>, and you must know about the repeated hour.</li>
+    <li>Also check booking start and end times. A meeting at 09:00 UK time must not show as 08:00 in a dashboard.</li>
+</ol>
+
+<p>🛠 Our standard: everything is stored in UTC in staging and turned into UK time only in marts or the BI tool, for display.</p>
+
+<hr/>
+
+<h3>10. The De-duplication Pattern You Hand to Guide 07</h3>
+
+<p>Because we append and overlap on purpose, raw has many copies of the same record. Every Nexudus staging model in Guide 07 starts with this pattern: keep the latest version of each id, and flag ids that no longer exist. Field names inside <code>JSON_VALUE</code> are illustrative: read them from a real payload.</p>
+
+<pre>
+-- dbt/models/staging/nexudus/stg_nexudus__contracts.sql  (Guide 07 completes it)
+WITH latest AS (
+  SELECT *
+  FROM {{ source('raw_nexudus', 'coworker_contracts') }}
+  WHERE TRUE
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_on DESC, _loaded_at DESC) = 1
+),
+current_ids AS (
+  SELECT id FROM {{ source('raw_nexudus', 'coworker_contracts_current_ids') }}
+)
+SELECT
+  l.id                                                   AS contract_id,
+  JSON_VALUE(l.payload, '$.CoworkerId')                  AS customer_id,
+  JSON_VALUE(l.payload, '$.TariffId')                    AS plan_id,
+  SAFE_CAST(JSON_VALUE(l.payload, '$.Price') AS NUMERIC) AS monthly_price_gbp,
+  -- deleted = missing from the latest weekly scan (only once a scan exists)
+  (c.id IS NULL AND (SELECT COUNT(*) FROM current_ids) &gt; 0) AS is_deleted_in_source,
+  l._loaded_at
+FROM latest AS l
+LEFT JOIN current_ids AS c ON c.id = l.id
+</pre>
+
+<p>Forget the <code>QUALIFY</code> line and MRR counts each contract several times (Chapter 14, Lab 14.2 shows a £5,000 mistake from one missing line). Guide 07 adds a test that every staging model has one row per id.</p>
+
+<hr/>
+
+<h3>11. Check It Worked</h3>
+
+<p>Run these in the BigQuery console (project <code>acme-data-prod</code>). Do them after the first full load and again after the first Sunday.</p>
+
+<pre>
+-- 1. Rows loaded per day, and how many distinct records
+SELECT DATE(_loaded_at) AS load_day, COUNT(*) AS rows_loaded, COUNT(DISTINCT id) AS distinct_ids
+FROM `acme-data-prod.raw_nexudus.coworkers`
+GROUP BY load_day
+ORDER BY load_day DESC;
+
+-- 2. Latest version of every customer: compare with the count in the Nexudus admin
+--    (field names illustrative; check how Nexudus counts archived customers)
+SELECT
+  COUNT(*)                                                    AS customers_in_raw,
+  COUNTIF(JSON_VALUE(payload, '$.Archived') = 'true')         AS archived
+FROM `acme-data-prod.raw_nexudus.coworkers`
+WHERE TRUE
+QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_on DESC, _loaded_at DESC) = 1;
+
+-- 3. One sample record: open the same customer in Nexudus and compare field by field
+SELECT id, updated_on, JSON_VALUE(payload, '$.FullName') AS name,
+       JSON_VALUE(payload, '$.TariffId') AS plan_id, payload
+FROM `acme-data-prod.raw_nexudus.coworkers`
+WHERE id = 'PUT-ONE-ID-HERE'
+ORDER BY _loaded_at DESC
+LIMIT 1;
+</pre>
+
+<p>Also compare: active contracts per site against the Nexudus contracts report, and last month's booking count against the Nexudus bookings report (cancelled ones separately). Write each result, and any gap with its reason, in the register. A gap you cannot explain within a day is a "stop and ask" (Guide 01, section 10).</p>
+
+<hr/>
+
+<h3>12. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>What you see</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td><code>HTTP 401</code> after weeks of working</td><td>Token expired, API user's password changed, or user turned off</td><td>Check with the Nexudus admin. If tokens expire, fetch a fresh one each run (section 5 warning note). Add a new secret version.</td></tr>
+<tr><td><code>HTTP 403</code> on one entity only</td><td>The API user has no rights to that module</td><td>Ask the admin to add read-only rights to that module</td></tr>
+<tr><td><code>HTTP 404</code> or <code>400</code></td><td>Wrong path or filter name, or the API changed</td><td>Check the current Nexudus API docs and fix <code>ENTITIES</code></td></tr>
+<tr><td>Many <code>429</code> warnings, then "gave up"</td><td>Too many calls too fast</td><td>Keep <code>PAGE_SIZE</code> at the documented maximum, add a short sleep between pages, ask Nexudus about limits</td></tr>
+<tr><td>Job stops at the time limit on the first load</td><td>Years of history</td><td>Run again (it continues), or raise <code>--task-timeout</code>, or start from a later <code>START_FROM</code></td></tr>
+<tr><td>Every run loads everything again</td><td>Watermark not read: wrong dataset, or <code>updated_on</code> empty</td><td>Check <code>BQ_DATASET</code>; check the API really returns <code>UpdatedOn</code></td></tr>
+<tr><td>Fields you need are empty in <code>payload</code></td><td>The list endpoint returns summary records</td><td>Fetch those records one by one, or reconsider the native integration</td></tr>
+<tr><td>Cancelled meetings missing from usage numbers</td><td><code>cancelled_bookings</code> not loaded</td><td>Load it; union it with bookings in staging with a status column</td></tr>
+<tr><td>MRR doubled overnight</td><td>A staging model without <code>QUALIFY</code></td><td>Add the de-dup pattern (section 10) and the one-row-per-id test</td></tr>
+<tr><td>A deleted member still counts as active</td><td>No weekly ID scan, or staging ignores <code>is_deleted_in_source</code></td><td>Check Sunday's run loaded <code>*_current_ids</code></td></tr>
+<tr><td>Times one hour off in summer</td><td>API sends UK local time, staging treats it as UTC</td><td>Do the time zone check (section 9) and convert once in staging</td></tr>
+<tr><td><code>Permission denied</code> on the secret, or <code>bigquery.jobs.create</code> denied</td><td>A role from Guide 02 is missing</td><td>Check <code>sa-extract-nexudus</code> has Secret Accessor on the secret, Job User on the project, Data Editor on <code>raw_nexudus</code></td></tr>
+<tr><td>"Not found in location" errors</td><td>Dataset not in <code>europe-west2</code>, or wrong <code>BQ_LOCATION</code></td><td>Every dataset and job in <code>europe-west2</code>; never mix regions</td></tr>
+<tr><td>Scheduler shows <code>PERMISSION_DENIED</code></td><td>The calling account cannot start the job</td><td>Re-run the <code>roles/run.invoker</code> binding in section 8</td></tr>
+</table>
+
+<hr/>
+
+<h3>13. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>The decision (Python vs native vs Fivetran) and its reason are in <code>docs/decisions.md</code></td></tr>
+<tr><td>☐</td><td>A dedicated, read-only Nexudus API user exists, owned by a client mailbox</td></tr>
+<tr><td>☐</td><td>The token is only in Secret Manager (<code>nexudus-api-token</code>); nothing secret in Git, the image or logs</td></tr>
+<tr><td>☐</td><td><code>main.py</code>, <code>requirements.txt</code>, <code>Dockerfile</code> and a <code>README.md</code> (settings, including <code>SINCE</code>) are in <code>extractors/nexudus/</code> and reviewed</td></tr>
+<tr><td>☐</td><td>The Cloud Run job <code>extract-nexudus</code> runs as <code>sa-extract-nexudus</code> in <code>europe-west2</code></td></tr>
+<tr><td>☐</td><td>The Cloud Scheduler job <code>nightly-extract-nexudus</code> starts it at 02:00 Europe/London, and it has run for 3 nights in a row with nobody touching it</td></tr>
+<tr><td>☐</td><td>A second run loads only changes (the watermark works)</td></tr>
+<tr><td>☐</td><td>The first Sunday full scan ran and every <code>*_current_ids</code> table is filled</td></tr>
+<tr><td>☐</td><td>You broke it on purpose once (for example, a wrong secret version) and the job failed with a non-zero exit (the alert itself comes in Guide 08)</td></tr>
+<tr><td>☐</td><td>Customer, contract and booking counts match the Nexudus admin, or the gap is explained in writing</td></tr>
+<tr><td>☐</td><td>The time zone answer (UTC or UK local) is written down, and checked across a clock change</td></tr>
+<tr><td>☐</td><td>The de-dup pattern is handed to whoever builds Guide 07</td></tr>
+<tr><td>☐</td><td>The register row and a runbook entry ("extract-nexudus failed: what to check") are written</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Next is <a href="integration-06-act-and-excel.html">Guide 06 — ACT and Excel: The Two Tricky Sources</a>, where the hard part is not the code but asking the right questions. Need the big picture again? Go back to <a href="integration-01-start-here.html">Guide 01 — Start Here</a>. 🚀</p>
+
+<p>Background reading: <a href="../season-1-source-systems/chapter-07-nexudus.html">Chapter 07 (Nexudus)</a>, <a href="../season-2-pipeline/chapter-14-python-extractors.html">Chapter 14 (Python extractors)</a> and <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (the integration map, I7)</a>.</p>

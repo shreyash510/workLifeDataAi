@@ -1,0 +1,349 @@
+<h2>Integration Guide 03 — Fivetran Setup and the NetSuite Connector</h2>
+
+<p>Hi! 🙏 This guide is for the engineer who has finished <a href="integration-02-foundation-gcp-bigquery.html">Guide 02</a> (projects, datasets and service accounts exist) and now needs the client's finance data in BigQuery.</p>
+
+<p>At the end you will have: a Fivetran account owned by the client, a BigQuery destination in <code>&lt;client&gt;-data-prod</code> (<code>europe-west2</code>), and a NetSuite connector that copies the general ledger, accounts and accounting periods into <code>raw_netsuite</code> on a schedule, with failure emails, a cost check and a trial-balance test that matches NetSuite's own report.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>our standard setup</b>. The Work.Life brief only says data moves "through Fivetran and Python" (✅ brief). It does not say which tool loads NetSuite, so Work.Life's real setup is not confirmed. Fivetran and NetSuite change their screens, menu names and prices often. Every click path below is 📘 "at the time of writing": <b>check the current Fivetran and NetSuite docs</b> before you click. All numbers marked (made up) are examples only.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Words you need (connector, destination, MAR, SuiteAnalytics Connect, token-based login)</li>
+    <li>Before you start: the needs list</li>
+    <li>Part A: the Fivetran account and the BigQuery destination</li>
+    <li>Part B: prepare NetSuite (feature, role, user, integration record, token)</li>
+    <li>Part C: create the NetSuite connector and choose tables</li>
+    <li>Schedule, alerts and schema-change settings</li>
+    <li>The first sync, history and re-syncs</li>
+    <li>Check it worked (row counts and a trial balance)</li>
+    <li>Common problems and fixes</li>
+    <li>Cost check</li>
+    <li>Done when</li>
+</ul>
+
+<hr/>
+
+<h3>1. Words You Need</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>Simple meaning</th></tr>
+<tr><td><b>Fivetran</b></td><td>A paid service that copies data from business tools into a warehouse with no code. It does the E and L of ELT (<a href="../season-2-pipeline/chapter-13-fivetran.html">Chapter 13</a>).</td></tr>
+<tr><td><b>Destination</b></td><td>Where Fivetran writes. For us: one BigQuery project. You set it up once and every connector reuses it.</td></tr>
+<tr><td><b>Connector</b> (Fivetran also says "connection")</td><td>One link from one source account, for example "NetSuite production".</td></tr>
+<tr><td><b>Destination schema</b></td><td>Fivetran's word for the BigQuery <b>dataset</b> a connector writes into. We want <code>raw_netsuite</code>.</td></tr>
+<tr><td><b>Sync</b></td><td>One run of a connector. The first one copies everything (historical sync); later ones copy only changes (incremental sync).</td></tr>
+<tr><td><b>MAR</b> (monthly active rows)</td><td>How Fivetran charges: each row added, changed or deleted in a calendar month counts once that month 📘.</td></tr>
+<tr><td><b>SuiteAnalytics Connect</b></td><td>A NetSuite feature that lets outside tools read NetSuite data with SQL (through ODBC/JDBC drivers) from the <code>NetSuite2.com</code> data source 📘. The Fivetran NetSuite connector reads through it (📘 confirm in Fivetran's NetSuite setup guide).</td></tr>
+<tr><td><b>Token-based authentication (TBA)</b></td><td>A way to log in without a password: an <b>integration record</b> gives a consumer key and secret; an <b>access token</b> for one user and one role gives a token ID and secret. Together they let Fivetran log in as the integration user 📘.</td></tr>
+<tr><td><b>Role</b></td><td>A NetSuite bundle of permissions. We make a <b>custom read-only role</b> just for Fivetran.</td></tr>
+</table>
+
+<hr/>
+
+<h3>2. Before You Start: The Needs List</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>You need</th><th>From (role)</th></tr>
+<tr><td>☐</td><td>Guide 02 done: <code>&lt;client&gt;-data-prod</code> exists, dataset <code>raw_netsuite</code> exists in <code>europe-west2</code>, <code>sa-fivetran</code> exists</td><td>You</td></tr>
+<tr><td>☐</td><td>A Fivetran account in the <b>client's</b> name, paid by the client, with you invited as a user</td><td>IT / finance</td></tr>
+<tr><td>☐</td><td>A NetSuite administrator who can turn on features, create roles, users, integration records and tokens (you will probably watch them do it)</td><td>Finance systems admin</td></tr>
+<tr><td>☐</td><td>Answers to: which segment is "the site" (subsidiary, location, department, class or a custom segment)? ❓ When does a month close and who confirms it? ❓ Is there more than one subsidiary, currency or accounting book? ❓</td><td>Finance</td></tr>
+<tr><td>☐</td><td>A copy of one trusted report for a closed month: the income statement (P&amp;L) and trial balance. These are your "golden numbers".</td><td>Finance</td></tr>
+<tr><td>☐</td><td>The shared data alerts email address (from Guide 02)</td><td>You / IT</td></tr>
+<tr><td>☐</td><td>A list of NetSuite records that must never be loaded (payroll, employee pay, anything HR) ❓</td><td>Finance + data owner</td></tr>
+</table>
+
+<p>💡 Ask for the NetSuite pieces on day one. Licence questions (SuiteAnalytics Connect may need to be bought or switched on by the client's NetSuite account team 📘) can take a week or more.</p>
+
+<hr/>
+
+<h3>3. Part A: The Fivetran Account and the BigQuery Destination</h3>
+
+<p><b>Step A1 — Account.</b> The client signs up for Fivetran (or uses their existing account) and invites you. 🛠 Ask for a role that lets you create destinations and connectors during the build. Write down in <code>docs/decisions.md</code> who the account owner is (a role, not a person's private email).</p>
+
+<p><b>Step A2 — Start the destination.</b> In Fivetran, go to <b>Destinations → Add destination → BigQuery</b> 📘. Give it a clear name, for example <code>&lt;client&gt;_bigquery_prod</code>.</p>
+
+<p><b>Step A3 — Fill in the form</b> (field names 📘, check the current form):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Field</th><th>What to type</th><th>Why</th></tr>
+<tr><td>Project ID</td><td><code>&lt;client&gt;-data-prod</code></td><td>Raw data lives in the prod data project (Guide 01 naming rules)</td></tr>
+<tr><td>Data location</td><td><code>europe-west2</code></td><td>Must match the datasets made in Guide 02. A mismatch makes syncs fail.</td></tr>
+<tr><td>Data processing location (if offered)</td><td>UK or EU, whichever is closest</td><td>Keeps data in the UK/EU while Fivetran moves it 📘</td></tr>
+<tr><td>Time zone (if offered)</td><td>Europe/London</td><td>Only affects how the schedule is shown; raw timestamps stay as the source sends them</td></tr>
+</table>
+
+<p><b>Step A4 — Give Fivetran access to BigQuery.</b> There are two ways. Read Fivetran's BigQuery setup guide and use the one it describes today.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Way</th><th>How it works</th><th>What you do</th></tr>
+<tr><td><b>A. Fivetran's own service account</b> (the common way at the time of writing 📘)</td><td>The form shows an email ending in something like <code>…iam.gserviceaccount.com</code> that belongs to Fivetran</td><td>Grant <b>that email</b> the roles below in <code>&lt;client&gt;-data-prod</code>. In this case <code>sa-fivetran</code> is not used. Write that in <code>docs/decisions.md</code> and the integration register.</td></tr>
+<tr><td><b>B. Your own service account</b> (if the form offers it)</td><td>You upload a key for <code>sa-fivetran</code></td><td>Create a key for <code>sa-fivetran</code>, paste it <b>only</b> into the Fivetran form, then delete the downloaded file. Never put it in Git, chat or email.</td></tr>
+</table>
+
+<p>🛠 <b>Our standard roles</b> (smallest that should work):</p>
+
+<pre>
+  In project &lt;client&gt;-data-prod:
+    BigQuery Job User          (project level: lets it run load and MERGE jobs)
+    BigQuery Data Editor       (on datasets raw_netsuite, raw_hubspot, raw_excel ONLY)
+</pre>
+
+<p>⚠️ 📘 Fivetran's guide has asked for the wider <b>BigQuery User</b> role at project level, because Fivetran likes to create datasets itself and may make extra working datasets or tables for its own use. If the setup test fails with a permission error using our narrow roles, check Fivetran's docs for the exact list. If you must give the wider role, write down why in <code>docs/decisions.md</code>. Never give Owner or Editor on the whole project.</p>
+
+<p><b>Step A5 — Test.</b> Click <b>Save &amp; Test</b>. You should see green ticks for connection and permissions. If you see "location mismatch", the dataset region and the form do not agree.</p>
+
+<hr/>
+
+<h3>4. Part B: Prepare NetSuite</h3>
+
+<p>Do these steps with the client's NetSuite admin. Menu paths are 📘 and change between NetSuite releases, so follow Fivetran's current NetSuite setup guide side by side.</p>
+
+<p><b>Step B1 — Turn on the features.</b> In NetSuite: <b>Setup → Company → Enable Features</b>.</p>
+<ul>
+    <li><b>Analytics</b> tab: tick <b>SuiteAnalytics Connect</b>.</li>
+    <li><b>SuiteCloud</b> tab: tick <b>Token-Based Authentication</b>.</li>
+</ul>
+<p>If SuiteAnalytics Connect is missing, the client may need to add it to their NetSuite licence 📘. Stop and tell the lead: this is a cost and timing issue.</p>
+
+<p><b>Step B2 — Make a custom read-only role.</b> <b>Setup → Users/Roles → Manage Roles → New</b>. Name it <code>Fivetran Read Only</code>. Give it:</p>
+<ul>
+    <li>The SuiteAnalytics Connect permission, plus the login permissions for tokens (names like "Log in using Access Tokens" 📘).</li>
+    <li><b>View</b> level (never Create, Edit or Full) on the transactions and lists you need: accounts, accounting periods, subsidiaries, locations, departments, classes, customers, vendors, and the transaction types (invoices, credit memos, bills, journals).</li>
+    <li>No access to payroll, employee pay or HR records.</li>
+</ul>
+
+<p>⚠️ 📘 NetSuite has a permission called <b>"SuiteAnalytics Connect – Read All"</b>. As the name says, it lets the role read <b>every</b> record through Connect, ignoring the other limits. That would include payroll and HR data, which the brief says must not be connected (✅ brief: people/HR data excluded). Do not use it unless the client's finance lead agrees in writing, and then block the HR tables in Fivetran (Part C). Check the current Fivetran guide for its exact permission list.</p>
+
+<p><b>Step B3 — Make the integration user.</b> A NetSuite user (an employee record or similar, 📘) with a shared, role-based email such as the data alerts address, never a staff member's own login. Give it the <code>Fivetran Read Only</code> role only. A NetSuite user may use a paid licence 📘: ❓ ask the client.</p>
+
+<p><b>Step B4 — Make the integration record.</b> <b>Setup → Integration → Manage Integrations → New</b>.</p>
+<ul>
+    <li>Name: <code>Fivetran</code>. State: Enabled.</li>
+    <li>Tick <b>Token-Based Authentication</b>. Untick the OAuth flows you do not use (📘 check what Fivetran's guide says).</li>
+    <li>Save. NetSuite shows the <b>Consumer Key</b> and <b>Consumer Secret</b> <b>once</b>. Copy them straight into the Fivetran form (Part C) or a password manager the client owns.</li>
+</ul>
+
+<p><b>Step B5 — Make the access token.</b> <b>Setup → Users/Roles → Access Tokens → New</b>. Pick Application = <code>Fivetran</code>, User = the integration user, Role = <code>Fivetran Read Only</code>. Save. NetSuite shows the <b>Token ID</b> and <b>Token Secret</b> <b>once</b>. Copy them the same way.</p>
+
+<p><b>Step B6 — Find the account details.</b> The SuiteAnalytics Connect page (<b>Settings → Set Up SuiteAnalytics Connect</b> on the home page, 📘) shows the service host, port, account ID and role ID. Note the <b>account ID</b> and the <b>role ID</b>. A sandbox account ID usually ends in something like <code>_SB1</code> 📘. Make sure you are using <b>production</b>.</p>
+
+<p>Where the secrets end up:</p>
+<pre>
+  Consumer key + secret  ─┐
+  Token ID + secret      ─┼──► typed into the Fivetran connector form ──► stored by Fivetran
+  Account ID, role ID    ─┘    (nowhere else: not Git, not chat, not email, not a ticket)
+</pre>
+
+<hr/>
+
+<h3>5. Part C: Create the NetSuite Connector and Choose Tables</h3>
+
+<p><b>Step C1 — Add the connector.</b> In Fivetran: <b>Connectors → Add connector</b>, search "NetSuite", pick the <b>SuiteAnalytics</b> one 📘, and choose your BigQuery destination.</p>
+
+<p><b>Step C2 — Name the destination schema.</b> This becomes the BigQuery dataset name. Type <code>raw_netsuite</code>.</p>
+<ul>
+    <li>📘 For single-schema connectors like NetSuite, the name you type is used as the dataset name. For some database connectors Fivetran asks for a <b>prefix</b> and adds the source schema name after it (for example <code>raw_netsuite_something</code>). Look at the preview under the field before you continue.</li>
+    <li>📘 At the time of writing, the schema name <b>cannot be changed</b> after you create the connector. If it is wrong, you delete the connector and start again (and pay for the time of a new historical sync). Check twice.</li>
+    <li>Because <code>raw_netsuite</code> already exists (Guide 02), Fivetran writes into it. Good: it keeps the region and labels we set.</li>
+</ul>
+
+<p><b>Step C3 — Fill in the login.</b> Account ID, consumer key, consumer secret, token ID, token secret, and role ID if asked (field names 📘). Click <b>Save &amp; Test</b>. Green ticks mean Fivetran can log in through SuiteAnalytics Connect.</p>
+
+<p><b>Step C4 — Choose tables.</b> Fivetran lists what the role can see. 🛠 Our standard is "only what the models need", which also keeps MAR down. Table names below follow NetSuite's analytics source (📘 check the Records Catalog and what your connector actually shows).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Table</th><th>What it holds</th><th>Select?</th></tr>
+<tr><td><code>transaction</code></td><td>One row per invoice, credit memo, bill, journal (the header). Has <code>trandate</code> and <code>postingperiod</code>.</td><td>✅ Yes</td></tr>
+<tr><td><code>transactionline</code></td><td>The lines. Segments like location, department, class usually live here.</td><td>✅ Yes</td></tr>
+<tr><td><code>transactionaccountingline</code></td><td>The GL impact: account, debit, credit, <code>posting</code> flag, accounting book</td><td>✅ Yes (this is the ledger)</td></tr>
+<tr><td><code>account</code></td><td>The chart of accounts: number, name, type</td><td>✅ Yes</td></tr>
+<tr><td><code>accountingperiod</code></td><td>Months, quarters, years; start and end dates; closed or open</td><td>✅ Yes</td></tr>
+<tr><td><code>subsidiary</code>, <code>location</code>, <code>department</code>, <code>classification</code></td><td>The segments. One of them (or a custom segment) is "the site" ❓</td><td>✅ Yes, all four until the client answers</td></tr>
+<tr><td><code>accountingbook</code>, <code>currency</code></td><td>Which book is primary; currencies</td><td>✅ Yes (small)</td></tr>
+<tr><td><code>customer</code>, <code>vendor</code></td><td>Who was invoiced, who sent bills</td><td>✅ Yes, but they hold contact details: keep raw access restricted</td></tr>
+<tr><td>Custom segment tables or columns (names like <code>cseg_…</code> 📘)</td><td>Only if the site is a custom segment</td><td>❓ Ask</td></tr>
+<tr><td><code>employee</code>, payroll items, anything with pay or HR data</td><td>People data</td><td>❌ Never (✅ brief: HR excluded)</td></tr>
+<tr><td>Everything else (items, sales orders, estimates, system notes…)</td><td>Not needed for the P&amp;L</td><td>❌ Not now. Add later when a model needs it.</td></tr>
+</table>
+
+<p>💡 Fivetran also lets you untick single <b>columns</b> or hash them 📘. Use this for things like memo fields if finance tells you staff write personal notes there. Removing data that must never be loaded does not break the "load raw, clean later" rule: that rule is about not <i>changing</i> data, not about loading everything.</p>
+
+<p>Three NetSuite ideas to keep in mind while you choose (see <a href="../season-1-source-systems/chapter-09-netsuite.html">Chapter 09</a>):</p>
+<ul>
+    <li><b>Posting vs non-posting.</b> Only lines with <code>posting = 'T'</code> hit the general ledger. Sales orders and estimates do not. Load both; filter in dbt.</li>
+    <li><b>Period, not date.</b> Finance reports by <code>postingperiod</code>. A transaction dated 30 Sep can post to October.</li>
+    <li><b>Closed periods.</b> When finance closes a month, its numbers should stop changing. A closed period can still be reopened by finance, so never assume old rows are frozen forever.</li>
+</ul>
+
+<p>🛠 The project's P&amp;L categories (<code>revenue</code> / <code>direct_cost</code> / <code>central_cost</code>) are <b>not</b> set here. Fivetran copies the accounts as they are. The mapping from account to category is done later in dbt (Guide 07), in a small mapping table finance signs off.</p>
+
+<hr/>
+
+<h3>6. Schedule, Alerts and Schema-Change Settings</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Setting</th><th>Where (📘)</th><th>🛠 Our standard</th></tr>
+<tr><td>Sync frequency</td><td>Connector → Setup</td><td>Every 6 hours (made up as a starting point). A P&amp;L rarely needs more. Lower it to 12 or 24 hours if MAR or sync time is high.</td></tr>
+<tr><td>Finish time</td><td>Connector → Status / sync history</td><td>A sync must <b>finish before 03:00 Europe/London</b>. At 03:00 the <code>dbt-build</code> job runs <code>dbt source freshness</code> then <code>dbt build</code> (Guide 08). If a sync often runs past 03:00, move its start time or change the frequency.</td></tr>
+<tr><td>Schema changes</td><td>Connector → Schema → schema change handling</td><td>"Allow new columns, block new tables" (the option names change 📘). New tables are reviewed by a person first, so an HR table can never appear on its own.</td></tr>
+<tr><td>Failure emails</td><td>Account or user notification settings</td><td>Send sync failures and "connector broken" emails to the shared data alerts address. One way 📘: invite that address as a Fivetran user with a read-only role and turn on its email alerts. Use whatever the current notifications page offers.</td></tr>
+<tr><td>Pause / delete rights</td><td>Account → users and roles</td><td>Only the data owner and you (during the build) can change connectors</td></tr>
+</table>
+
+<hr/>
+
+<h3>7. The First Sync, History and Re-syncs</h3>
+
+<p><b>Step 7.1 — Start.</b> Click <b>Start initial sync</b>. The first (historical) sync copies all history the role can see.</p>
+<ul>
+    <li>📘 SuiteAnalytics Connect is not fast. A historical sync can take hours, or longer for a big account. Start it early in the day and do not panic.</li>
+    <li>📘 Historical syncs have not counted towards MAR in the past. Check the current pricing page, because the rules change.</li>
+</ul>
+
+<p><b>Step 7.2 — Look at what landed.</b> In BigQuery, open <code>&lt;client&gt;-data-prod.raw_netsuite</code>. You should see one table per selected table, plus a few Fivetran tables (names like <code>fivetran_audit</code> 📘). Every table has <code>_fivetran_synced</code> (when Fivetran last wrote the row) and <code>_fivetran_deleted</code> (TRUE if the row was deleted in NetSuite).</p>
+
+<p><b>Deletes.</b> 📘 NetSuite keeps a list of deleted records, and the connector uses it to mark rows <code>_fivetran_deleted = TRUE</code> instead of removing them. Every staging model must filter them out (Chapter 13). Test it once: ask finance to delete a test journal in a sandbox, or find a real deleted transaction, and check the flag.</p>
+
+<p><b>Re-syncs.</b> Fivetran lets you re-sync one table or the whole connector 📘. Use it when a table looks wrong, a column was missed, or after a role change gave access to new data. A re-sync re-reads everything, so it is slow and may cost MAR: ask the lead first, and write down why in <code>docs/decisions.md</code>.</p>
+
+<p>📘 Some NetSuite tables have no reliable "last modified" column, so the connector may re-read them in full on every sync. If one table makes syncs slow, check its sync mode in the connector's schema tab and in Fivetran's NetSuite docs.</p>
+
+<hr/>
+
+<h3>8. Check It Worked</h3>
+
+<p><b>Check 1 — Row counts and freshness.</b> Run in BigQuery:</p>
+
+<pre>
+-- How many rows landed, how many are deleted, and how fresh is each table?
+SELECT 'transaction' AS tbl, COUNT(*) AS rows_total,
+       COUNTIF(_fivetran_deleted) AS rows_deleted, MAX(_fivetran_synced) AS last_synced
+FROM `&lt;client&gt;-data-prod.raw_netsuite.transaction`
+UNION ALL
+SELECT 'transactionaccountingline', COUNT(*), COUNTIF(_fivetran_deleted), MAX(_fivetran_synced)
+FROM `&lt;client&gt;-data-prod.raw_netsuite.transactionaccountingline`
+UNION ALL
+SELECT 'account', COUNT(*), COUNTIF(_fivetran_deleted), MAX(_fivetran_synced)
+FROM `&lt;client&gt;-data-prod.raw_netsuite.account`
+UNION ALL
+SELECT 'accountingperiod', COUNT(*), COUNTIF(_fivetran_deleted), MAX(_fivetran_synced)
+FROM `&lt;client&gt;-data-prod.raw_netsuite.accountingperiod`;
+</pre>
+
+<p>What you should see: <code>last_synced</code> within the last sync window. Compare the <code>account</code> count with the chart of accounts list in NetSuite (<b>Lists → Accounting → Accounts</b>, 📘, including inactive accounts). Compare transactions for one month with a NetSuite saved search for the same month and types.</p>
+
+<p><b>Check 2 — The trial balance per period.</b> In double-entry bookkeeping every posting has equal debits and credits, so each period should net to zero.</p>
+
+<pre>
+-- Trial-balance style check: debits must equal credits in every posting period.
+-- Column names follow NetSuite2.com; check them in your dataset.
+SELECT
+  ap.periodname,
+  ap.startdate,
+  ap.closed                                   AS period_closed,   -- 'T' or 'F'
+  COUNT(*)                                    AS gl_lines,
+  ROUND(SUM(COALESCE(tal.debit, 0)), 2)       AS total_debit,
+  ROUND(SUM(COALESCE(tal.credit, 0)), 2)      AS total_credit,
+  ROUND(SUM(COALESCE(tal.debit, 0) - COALESCE(tal.credit, 0)), 2) AS difference  -- expect 0
+FROM `&lt;client&gt;-data-prod.raw_netsuite.transactionaccountingline` AS tal
+JOIN `&lt;client&gt;-data-prod.raw_netsuite.transaction`  AS t  ON t.id = tal.transaction
+JOIN `&lt;client&gt;-data-prod.raw_netsuite.accountingperiod` AS ap ON ap.id = t.postingperiod
+JOIN `&lt;client&gt;-data-prod.raw_netsuite.accountingbook` AS ab ON ab.id = tal.accountingbook
+WHERE tal.posting = 'T'
+  AND ab.isprimary = 'T'                                    -- primary book only
+  AND NOT COALESCE(tal._fivetran_deleted, FALSE)
+  AND NOT COALESCE(t._fivetran_deleted, FALSE)
+  AND ap.isquarter = 'F' AND ap.isyear = 'F'                -- months only
+GROUP BY 1, 2, 3
+ORDER BY ap.startdate DESC
+LIMIT 24;
+</pre>
+
+<p>What you should see: <code>difference</code> = 0.00 for every month. If not, you are probably missing deleted-row filters, a second accounting book, or lines from a table that is not fully synced.</p>
+
+<p><b>Check 3 — Match NetSuite's own report.</b> Pick the last <b>closed</b> month. In NetSuite run <b>Reports → Financial → Income Statement</b> (📘) for that period. Then sum income and expenses by account in BigQuery (the query shape is in <a href="../season-1-source-systems/chapter-09-netsuite.html">Chapter 09, section 14</a>; change the date filter to <code>t.postingperiod</code> = that period's ID). Put them side by side, account by account, with a "gap" and an "explained?" column. Every gap must be zero or explained (wrong book, currency, a journal posted after the sync). Keep this sheet: Guide 09 asks finance to sign it off.</p>
+
+<p><b>Check 4 — Open vs closed periods.</b></p>
+<pre>
+SELECT periodname, startdate, enddate, closed, isadjust
+FROM `&lt;client&gt;-data-prod.raw_netsuite.accountingperiod`
+WHERE isquarter = 'F' AND isyear = 'F'
+ORDER BY startdate DESC
+LIMIT 6;
+</pre>
+<p>Ask finance: "Is this the list of closed months you expect?" This table later drives the PROVISIONAL label for open months.</p>
+
+<hr/>
+
+<h3>9. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td>Destination test: "permission denied"</td><td>Narrow roles not enough, or roles given to the wrong service account email</td><td>Check which email Fivetran shows; compare roles with Fivetran's current BigQuery guide</td></tr>
+<tr><td>"Location mismatch" / dataset not found</td><td>Dataset is in a different region from the destination setting</td><td>Both must be <code>europe-west2</code>. Fix the destination; do not move data to another region.</td></tr>
+<tr><td>Dataset is <code>raw_netsuite_netsuite2</code> or similar</td><td>The form used the name as a prefix</td><td>Delete the connector before the first sync finishes, re-create it with the right setting. Check docs first.</td></tr>
+<tr><td>NetSuite login test fails: "invalid login"</td><td>Wrong account ID (sandbox vs production), token made for the wrong role, or a typo in a secret</td><td>Re-check the account ID; make a new token for the right user + role</td></tr>
+<tr><td>Login works but tables are missing or empty</td><td>The role lacks View permission on that record type</td><td>Add View on that record to the role, then re-sync that table</td></tr>
+<tr><td>Trial balance difference is not zero</td><td>Deleted rows not filtered, two accounting books, or a partial sync</td><td>Add the filters in Check 2; wait for the sync to finish; check the book</td></tr>
+<tr><td>Numbers are right for closed months but jump around for this month</td><td>Normal: the month is open</td><td>Nothing to fix. Label open months PROVISIONAL downstream.</td></tr>
+<tr><td>Sync often still running at 03:00</td><td>Big tables re-read in full, or too many tables</td><td>Untick unused tables; change the start time; ask about the table's sync mode</td></tr>
+<tr><td>Connector broke after a password or role change</td><td>Someone edited the integration user or role</td><td>Write in the runbook: "do not edit the Fivetran role or user without telling the data owner"</td></tr>
+<tr><td>A new table appeared that nobody asked for</td><td>Schema setting allows new tables</td><td>Switch to "block new tables"; check the table for HR data; remove it if needed</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. Cost Check</h3>
+
+<p>MAR = rows added, changed or deleted in a month, each counted once per month 📘. Finance data is mostly quiet once a month is closed, so NetSuite is usually cheap after the first load.</p>
+
+<p><b>Estimate before you start</b> (method only, numbers made up):</p>
+<pre>
+  (MADE UP — method only; replace with the client's real numbers)
+  GL lines per month (invoices + credit memos + bills + journals)   ≈ 20,000
+  + lines edited again in later months (corrections)                ≈  1,000
+  + small tables (accounts, periods, segments) changing              ≈    100
+                                                                    ─────────
+  NetSuite MAR per month                                            ≈ 21,100
+</pre>
+
+<p>To get real numbers, ask finance for a count of transaction lines per month, or after the first sync run:</p>
+<pre>
+-- Roughly how many GL lines are created per month? (a good proxy for MAR)
+SELECT FORMAT_DATE('%Y-%m', DATE(t.createddate)) AS month, COUNT(*) AS gl_lines
+FROM `&lt;client&gt;-data-prod.raw_netsuite.transactionaccountingline` AS tal
+JOIN `&lt;client&gt;-data-prod.raw_netsuite.transaction` AS t ON t.id = tal.transaction
+GROUP BY 1 ORDER BY 1 DESC LIMIT 12;
+</pre>
+
+<p><b>Watch it for real.</b> In Fivetran, open the <b>Usage</b> page (📘 under account or billing settings). It shows MAR per connector and per table. Check it after the first week and at each month end. 🛠 If one table is much bigger than you expected, find out why before the bill arrives. Fivetran's pricing rules (free tiers, how MAR is added up across connectors, whether deletes count) have changed more than once: <b>check the current pricing page</b> before you write a number in a cost plan.</p>
+
+<hr/>
+
+<h3>11. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Fivetran account is in the client's name and paid by the client</td></tr>
+<tr><td>☐</td><td>BigQuery destination points at <code>&lt;client&gt;-data-prod</code>, <code>europe-west2</code>, and the identity Fivetran uses is written in the register</td></tr>
+<tr><td>☐</td><td>NetSuite uses a dedicated integration user with a custom read-only role and token-based login; no personal login</td></tr>
+<tr><td>☐</td><td>Consumer and token secrets exist only inside Fivetran (and the client's password manager if they want one)</td></tr>
+<tr><td>☐</td><td>Data lands only in <code>raw_netsuite</code></td></tr>
+<tr><td>☐</td><td>No HR or payroll tables or columns selected; "block new tables" is on</td></tr>
+<tr><td>☐</td><td>Sync runs every 6 hours (or the agreed frequency) and finishes before 03:00 Europe/London</td></tr>
+<tr><td>☐</td><td>You paused or broke the connector once on purpose, and the failure email reached the shared alerts address</td></tr>
+<tr><td>☐</td><td>Trial balance difference is zero for every month; one closed month matches NetSuite's income statement (gaps explained)</td></tr>
+<tr><td>☐</td><td>Deleted rows are flagged by <code>_fivetran_deleted</code> and you know staging must filter them</td></tr>
+<tr><td>☐</td><td>The "site" segment answer and the month-close rule are written in <code>docs/decisions.md</code> (or still marked ❓)</td></tr>
+<tr><td>☐</td><td>MAR estimate written down; Usage page checked after week one</td></tr>
+<tr><td>☐</td><td>Register row and runbook entry written</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Fivetran is ready and finance data is flowing. The next connector reuses the same destination: <a href="integration-04-hubspot.html">Guide 04 — HubSpot to BigQuery</a>. 🚀</p>
+
+<p>Back to the plan: <a href="integration-01-start-here.html">Guide 01 — Start Here</a>. Background reading: <a href="../season-2-pipeline/chapter-13-fivetran.html">Chapter 13 (Fivetran)</a>, <a href="../season-1-source-systems/chapter-09-netsuite.html">Chapter 09 (NetSuite)</a> and <a href="../season-6-understand-it-all/chapter-39-integration-map.html">Chapter 39 (integration I8)</a>.</p>

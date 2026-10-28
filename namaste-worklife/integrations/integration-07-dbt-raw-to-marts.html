@@ -1,0 +1,694 @@
+<h2>Integration Guide 07 — dbt: From Raw Data to Trusted Marts</h2>
+
+<p>Hi! 🙏 Guides 03 to 06 copied each business system into its own <code>raw_*</code> dataset, untouched. In this guide we turn that raw data into clean, tested tables (the <b>marts</b>) that the BI dashboards can trust. The tool is <b>dbt</b> ("data build tool"): you write SQL <code>SELECT</code> files, and dbt builds them as tables and views in BigQuery, in the right order, and tests them.</p>
+
+<p>This is the biggest guide in the set (8–12 days, made up). Take it one layer at a time.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>🛠 our standard setup</b>, built from Chapters 16 and 17. The SQL and YAML below are <b>patterns to adapt, not tested code</b>: the dbt code in this series was checked by reading, never run. dbt changes often (YAML keys, where settings live, new features), so <b>check the current dbt docs</b> for your version. Field names inside the raw tables are examples: always look at your own raw data first.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Before you start</li>
+    <li>The folder layout</li>
+    <li>Install dbt and set up <code>profiles.yml</code> (dev, CI and prod)</li>
+    <li>Sources and freshness</li>
+    <li>Staging rules, with examples</li>
+    <li>Seeds and intermediate models (month spine, crosswalk, <code>member_xref</code>)</li>
+    <li>The marts</li>
+    <li>Tests: generic, golden numbers, reconciliation, unit tests</li>
+    <li>What the BI tool reads: grants, personal data, contracts, exposures</li>
+    <li>Docs, CI with GitHub Actions, and the production job</li>
+    <li>The first full build, step by step</li>
+    <li>Check it worked, common problems, done when</li>
+</ul>
+
+<hr/>
+
+<h3>1. Before You Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>You need</th><th>From</th></tr>
+<tr><td>☐</td><td>The two projects (<code>&lt;client&gt;-data-prod</code>, <code>&lt;client&gt;-data-dev</code>), <code>sa-dbt</code> with its roles (below) and <code>sa-bi-reader</code></td><td>Guide 02</td></tr>
+<tr><td>☐</td><td>At least one day of data in each <code>raw_*</code> dataset</td><td>Guides 03–06</td></tr>
+<tr><td>☐</td><td>Your own Google login in the <code>data-engineers@</code> group (Data Viewer on <code>raw_*</code> in <code>&lt;client&gt;-data-prod</code>, Data Editor in <code>&lt;client&gt;-data-dev</code>)</td><td>Guide 02 / <code>data-admins@</code></td></tr>
+<tr><td>☐</td><td>The client's trusted report for the last closed month (the "golden numbers", Guide 01 question 11)</td><td>Finance / Ops ❓</td></tr>
+<tr><td>☐</td><td>Written definitions: how a site is tagged in finance, which accounts are revenue, direct cost and central cost, how many desks each plan holds</td><td>Finance / Ops ❓</td></tr>
+<tr><td>☐</td><td>Python 3 and the <code>gcloud</code> command line on your laptop</td><td>You</td></tr>
+</table>
+
+<p>🛠 <code>sa-dbt</code> roles (Guide 02): Job User on the data-prod and data-dev projects; Data Viewer on each <code>raw_*</code> (read, never change); Data Editor on <code>staging</code>, <code>intermediate</code> and <code>marts</code> only. The BI tool reads <code>marts</code> as <code>sa-bi-reader</code> (section 9).</p>
+
+<hr/>
+
+<h3>2. The Folder Layout</h3>
+
+<p>The dbt project lives in the <code>dbt/</code> folder of the <code>&lt;client&gt;-data-platform</code> repo (Guide 01, section 6).</p>
+
+<pre>
+dbt/
+├── dbt_project.yml          project settings, folders → datasets
+├── profiles.yml             connection targets (holds NO secrets, see section 3)
+├── packages.yml             extra packages, for example dbt_utils
+├── requirements.txt         dbt-bigquery==&lt;pinned version&gt;
+├── Dockerfile               the production image (section 12)
+├── run.sh                   what the production job runs (section 12)
+├── macros/
+│   ├── generate_schema_name.sql
+│   └── company_match_key.sql
+├── seeds/
+│   ├── site_mapping.csv
+│   └── golden_numbers.csv
+├── models/
+│   ├── staging/
+│   │   ├── nexudus/         _nexudus__sources.yml, _nexudus__models.yml, stg_nexudus__*.sql
+│   │   ├── netsuite/        same pattern
+│   │   ├── hubspot/
+│   │   ├── excel/
+│   │   └── act365/          (or act/, after you know which ACT it is, Guide 06)
+│   ├── intermediate/        int_month_spine.sql, int_contract_months.sql, int_company_matching.sql ...
+│   └── marts/               dim_*, fct_*, member_xref, _marts.yml, _exposures.yml
+└── tests/                   singular tests: golden numbers, reconciliations, grain checks
+</pre>
+
+<p>Naming (Chapter 16): <code>stg_&lt;source&gt;__&lt;table&gt;</code> (two underscores), <code>int_&lt;what it does&gt;</code>, and marts with business names only (<code>fct_contract_month</code>, never <code>fct_nexudus_contracts</code>). Every model states its <b>grain</b> (what one row means) in a comment on line 1.</p>
+
+<hr/>
+
+<h3>3. Install dbt and Set Up the Targets</h3>
+
+<pre>
+cd &lt;client&gt;-data-platform/dbt
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt    # pins dbt-bigquery, check the current version
+dbt --version
+gcloud auth application-default login   # your own Google login, used by the dev target
+</pre>
+
+<p>A <b>target</b> is a named connection: where dbt builds and as whom. We keep three. <b><code>dbt/profiles.yml</code></b>:</p>
+
+<pre>
+&lt;client&gt;_dbt:
+  target: dev
+  outputs:
+    dev:                         # your laptop, your own Google login
+      type: bigquery
+      method: oauth
+      project: &lt;client&gt;-data-dev
+      dataset: "dbt_{{ env_var('DBT_USER') }}"     # for example dbt_priya
+      location: europe-west2
+      threads: 4
+    ci:                          # GitHub Actions, one dataset per pull request
+      type: bigquery
+      method: oauth
+      project: &lt;client&gt;-data-dev
+      dataset: "ci_pr_{{ env_var('PR_NUMBER', '0') }}"
+      location: europe-west2
+      threads: 4
+    prod:                        # the Cloud Run job, running as sa-dbt
+      type: bigquery
+      method: oauth
+      project: &lt;client&gt;-data-prod
+      dataset: staging           # default only; folders set the real datasets
+      location: europe-west2
+      threads: 8
+</pre>
+
+<p>Why no key file? <code>method: oauth</code> uses Google's "application default credentials": on your laptop that is your login; on Cloud Run it is the job's own service account (<code>sa-dbt</code>); in CI it is Workload Identity Federation (section 11). So this file holds <b>no secrets</b> and can live in Git. Run dbt with <code>--profiles-dir .</code> or set <code>DBT_PROFILES_DIR=.</code> 📘 check the dbt-bigquery docs.</p>
+
+<p><b><code>dbt_project.yml</code></b> (the important parts):</p>
+
+<pre>
+name: &lt;client&gt;_dbt
+profile: &lt;client&gt;_dbt
+
+vars:
+  raw_project: &lt;client&gt;-data-prod      # dev and CI READ prod raw data
+  spine_start: "2024-01-01"            # first month we report on (ask the client)
+  spine_end:   "2027-12-01"
+
+models:
+  &lt;client&gt;_dbt:
+    staging:      {+schema: staging,      +materialized: view}
+    intermediate: {+schema: intermediate, +materialized: view}
+    marts:        {+schema: marts,        +materialized: table}   # dashboards query these a lot
+
+seeds:
+  &lt;client&gt;_dbt:
+    +schema: staging
+</pre>
+
+<p><b><code>macros/generate_schema_name.sql</code></b> decides dataset names. In prod we want the plain names (<code>staging</code>, <code>marts</code>, ...). In dev and CI we want your own copies, so you never overwrite production:</p>
+
+<pre>
+{% macro generate_schema_name(custom_schema_name, node) -%}
+    {%- if target.name == 'prod' and custom_schema_name is not none -%}
+        {{ custom_schema_name | trim }}                         {# marts #}
+    {%- elif custom_schema_name is not none -%}
+        {{ target.schema }}_{{ custom_schema_name | trim }}     {# dbt_priya_marts, ci_pr_42_marts #}
+    {%- else -%}
+        {{ target.schema }}
+    {%- endif -%}
+{%- endmacro %}
+</pre>
+
+<pre>
+export DBT_USER=priya        # Windows PowerShell: $env:DBT_USER = "priya"
+dbt debug --profiles-dir .   # should end with "All checks passed!"
+</pre>
+
+<hr/>
+
+<h3>4. Sources and Freshness</h3>
+
+<p>A <b>source</b> tells dbt where a raw table is. Because sources point at <code>&lt;client&gt;-data-prod</code>, your dev build reads real raw data (read-only, through Data Viewer) and writes only into <code>dbt_&lt;yourname&gt;_*</code> in the dev project. <b>Freshness</b> asks "was this loaded recently?" and fails when a loader has quietly stopped.</p>
+
+<p><b><code>models/staging/nexudus/_nexudus__sources.yml</code></b>:</p>
+
+<pre>
+version: 2
+sources:
+  - name: nexudus
+    database: "{{ var('raw_project') }}"
+    schema: raw_nexudus
+    loaded_at_field: _loaded_at              # added by our Python extractor (Guide 05)
+    freshness:
+      warn_after:  {count: 26, period: hour}   # made up: a daily load plus 2 hours
+      error_after: {count: 50, period: hour}   # made up: two missed loads
+    tables:
+      - name: contracts                        # use the table names your Guide 05 job writes
+      - name: members
+      - name: companies
+      - name: resources
+      - name: bookings
+</pre>
+
+<p>For Fivetran sources (NetSuite, HubSpot, Excel) use <code>loaded_at_field: _fivetran_synced</code>. Finance can use a longer error limit (for example 72 hours, made up). A sheet that rarely changes can look "stale" even when the sync is fine: give it a long limit and rely on Fivetran's own sync alerts too. 📘 Newer dbt versions put <code>freshness</code> and <code>loaded_at_field</code> under <code>config:</code>; check the docs.</p>
+
+<pre>
+dbt source freshness --profiles-dir .
+# PASS freshness of nexudus.contracts ... (or WARN / ERROR)
+</pre>
+
+<hr/>
+
+<h3>5. Staging Rules, with Examples</h3>
+
+<p><b>Staging</b> is the first clean copy of each raw table. The rules (🛠 our standard):</p>
+
+<ol>
+    <li>One model per raw table that something uses.</li>
+    <li>Rename to clear <code>snake_case</code> names (<code>contract_id</code>, not <code>Id</code>).</li>
+    <li>Cast every type: raw JSON and sheets are mostly text.</li>
+    <li>Times as UTC <code>TIMESTAMP</code>; work out UK dates on purpose (23:30 in summer is the next day in UTC).</li>
+    <li>De-duplicate: keep the latest version of each record (our Nexudus load only adds rows).</li>
+    <li>Drop rows where <code>_fivetran_deleted</code> is true (Fivetran marks deletes instead of removing rows).</li>
+    <li>Drop personal columns nobody downstream needs (phones, card numbers): the less personal data you carry, the less can leak.</li>
+    <li><b>No joins, no business rules.</b> Those belong in intermediate and marts.</li>
+</ol>
+
+<p><b>Nexudus</b> raw tables hold <code>id</code>, <code>updated_on</code>, <code>payload</code> (the API record as a JSON string) and <code>_loaded_at</code>. <b><code>stg_nexudus__contracts.sql</code></b>:</p>
+
+<pre>
+-- Grain: one row per Nexudus contract (latest version only).
+with latest as (
+    select *
+    from {{ source('nexudus', 'contracts') }}
+    qualify row_number() over (
+        partition by id order by updated_on desc, _loaded_at desc) = 1
+)
+select
+    cast(id as string)                                          as contract_id,
+    json_value(payload, '$.CoworkerId')                         as member_id,     -- example paths:
+    json_value(payload, '$.TeamId')                             as company_id,    -- check YOUR payload
+    json_value(payload, '$.TariffName')                         as plan_name,
+    json_value(payload, '$.ResourceId')                         as resource_id,
+    upper(trim(json_value(payload, '$.LocationName')))          as nexudus_location_name,
+    safe_cast(json_value(payload, '$.StartDate') as date)       as start_date,
+    safe_cast(nullif(json_value(payload, '$.EndDate'), '') as date) as end_date,  -- NULL = rolling
+    safe_cast(json_value(payload, '$.Price') as numeric)        as monthly_price_gbp,
+    updated_on                                                  as source_updated_at_utc
+from latest
+</pre>
+
+<p>Find the real field names first: <code>select payload from `&lt;client&gt;-data-prod.raw_nexudus.contracts` limit 5</code>. JSON paths are case-sensitive.</p>
+
+<p><b>Fivetran</b> tables (NetSuite, HubSpot, Excel) are already one row per record, so no <code>QUALIFY</code>; just filter deletes. 📘 Table and column names come from the Fivetran connector schema; check what landed in your <code>raw_netsuite</code>.</p>
+
+<pre>
+-- stg_netsuite__accounts.sql
+-- Grain: one row per NetSuite account.
+select
+    cast(id as string)            as account_id,
+    acctnumber                    as account_number,
+    accountsearchdisplayname      as account_name,
+    accttype                      as account_type
+from {{ source('netsuite', 'account') }}
+where not coalesce(_fivetran_deleted, false)
+</pre>
+
+<p>💡 Fivetran publishes free dbt packages for some connectors (NetSuite and HubSpot among them) 📘. They can save days, but read what they build before you use them, and keep our layer and naming rules on top.</p>
+
+<p>Add the generic tests for staging keys in <code>_nexudus__models.yml</code> (section 8). Then:</p>
+
+<pre>
+dbt build --select staging --profiles-dir .
+</pre>
+
+<hr/>
+
+<h3>6. Seeds and Intermediate Models</h3>
+
+<p>A <b>seed</b> is a small CSV in Git that dbt loads as a table. Use seeds for small mappings that people keep by hand. <b><code>seeds/site_mapping.csv</code></b> (one row per site; names made up):</p>
+
+<pre>
+site_code,site_name,nexudus_location_name,netsuite_site_value,act_site_name,hubspot_site_value
+SOHO,Soho,SOHO,Soho,Soho,soho
+RDG,Reading,READING,Reading,Reading,reading
+</pre>
+
+<p>Each system names a site its own way; this file joins them. Give it an owner on the client side (Finance or Ops ❓). A new site means a new row, reviewed in a pull request.</p>
+
+<p><b>Intermediate</b> models hold rules several marts reuse. Nobody outside the data team queries them.</p>
+
+<p><b>1. The month spine</b> (a list of months), because leaders ask "per month" but a contract is one row with dates:</p>
+
+<pre>
+-- int_month_spine.sql
+-- Grain: one row per calendar month.
+select month_start, last_day(month_start) as month_end
+from unnest(generate_date_array(
+    date '{{ var("spine_start") }}', date '{{ var("spine_end") }}', interval 1 month)) as month_start
+</pre>
+
+<p><b>2. Contract months</b>: one row per contract per month in which it is <b>active on the last day of the month</b> (the canonical rule, CLAUDE.md §7):</p>
+
+<pre>
+-- int_contract_months.sql
+-- Grain: one row per contract per month, active on the month's last day.
+with contracts as (       -- staging has no joins, so the site code is added here, from the seed
+    select c.*, s.site_code
+    from {{ ref('stg_nexudus__contracts') }} c
+    left join {{ ref('site_mapping') }} s using (nexudus_location_name)
+)
+select m.month_start, m.month_end, c.contract_id, c.member_id, c.company_id, c.site_code,
+       c.plan_name, c.monthly_price_gbp as mrr_gbp,
+       case when c.plan_name = 'Private Office'      then r.capacity_people   -- desk rule and plan
+            when c.plan_name = 'Unlimited Coworking' then 1                   -- names: agree with Ops ❓
+            else 0 end as desks
+from contracts c
+join {{ ref('int_month_spine') }} m
+  on c.start_date &lt;= m.month_end
+ and (c.end_date is null or c.end_date &gt;= m.month_end)
+left join {{ ref('stg_nexudus__resources') }} r using (resource_id)
+</pre>
+
+<p><b>3. The company crosswalk</b> (<code>int_company_matching</code>): one row per real company with its ID in each system. The best match is a <b>shared ID</b>: ask whether HubSpot or NetSuite stores the Nexudus ID in a field ❓. Only when there is none, match on a cleaned name with the <code>company_match_key</code> macro from Chapter 16 (lowercase, "&amp;" → "and", drop "Ltd", drop punctuation).</p>
+
+<pre>
+  Nexudus company ─┐
+  HubSpot company ─┼── shared ID if it exists, else company_match_key(name) ──► int_company_matching
+  NetSuite customer┤                                                           ──► dim_company
+  Act! company  ───┘   (only if "ACT" turns out to be the CRM, Guide 06)
+</pre>
+
+<p><b>4. <code>member_xref</code></b>: one row per member with their ID in each system. Typical matching (🛠 our standard; confirm with the client):</p>
+
+<ul>
+    <li><b>Nexudus:</b> the anchor (member ID). Keep our own key (<code>MB-...</code>) so it survives a source change (for example HubSpot replacing Nexudus as the member source).</li>
+    <li><b>HubSpot:</b> shared ID if stored, else exact email (lowercase, trimmed). Watch for two contacts with one email.</li>
+    <li><b>NetSuite:</b> usually company level only (the customer), not the person.</li>
+    <li><b>ACT365</b> (if "ACT" is door access): exact email on the cardholder. <b>Act!</b> (if it is the CRM): email domain + cleaned name.</li>
+</ul>
+
+<p>Add a <code>match_method</code> column (<code>shared_id</code>, <code>exact_email</code>, <code>domain_and_name</code>) so anyone can see how sure a match is. Count the unmatched rows and show them to the client every week until the number is small and explained.</p>
+
+<hr/>
+
+<h3>7. The Marts</h3>
+
+<p><b>Marts</b> are the business-ready tables. A <b>dimension</b> (<code>dim_</code>) describes a thing; a <b>fact</b> (<code>fct_</code>) records events or measures. These names are canonical (CLAUDE.md §7); every guide and chapter uses them.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Mart</th><th>Grain (one row per...)</th><th>Notes</th></tr>
+<tr><td><code>dim_site</code></td><td>site</td><td>With every system's name for it (from the seed)</td></tr>
+<tr><td><code>dim_company</code></td><td>real company (members and prospects)</td><td>Holds <code>billing_email</code> (personal: keep it away from dashboards that do not need it)</td></tr>
+<tr><td><code>dim_member</code></td><td>person</td><td>Personal data (names, emails). Only for the few reports that truly need people.</td></tr>
+<tr><td><code>member_xref</code></td><td>person</td><td>IDs in each system. For the data team, not for dashboards.</td></tr>
+<tr><td><code>fct_contract_month</code></td><td>contract per month (active on the last day)</td><td>MRR and desks live here</td></tr>
+<tr><td><code>fct_contract_events</code></td><td>contract movement</td><td><code>movement_type</code> = new / upgrade / downgrade / transfer / renewal / churn (Chapter 29)</td></tr>
+<tr><td><code>fct_booking</code></td><td>booking</td><td>Meeting rooms, day passes</td></tr>
+<tr><td><code>fct_gl</code></td><td>GL line</td><td><code>pl_category</code> = revenue / direct_cost / central_cost. Agree the account ranges and sign rule with Finance, in writing.</td></tr>
+<tr><td><code>fct_site_month_kpis</code></td><td>site per month</td><td>The main table behind the leadership dashboards (below)</td></tr>
+</table>
+
+<p>Door data (if "ACT" turns out to be door access): no per-person door events in marts. If the client wants attendance, build a company-level aggregate such as <code>agg_company_week_attendance</code> (company × week, only groups of 5 or more people), and agree it with the client first ❓.</p>
+
+<p><code>fct_site_month_kpis</code> columns include <code>mrr_gbp</code>, <code>revenue_gbp</code>, <code>direct_costs_gbp</code>, <code>contribution_gbp</code>, <code>central_costs_gbp</code>, <code>contribution_after_central_gbp</code>, <code>revenue_vs_budget_gbp</code>, <code>desk_occupancy</code>, <code>sellable_desks</code>, <code>desks_contracted</code> and <code>has_finance_actuals</code>. Build it the Chapter 16 way: sum contracts, GL, bookings and budget to site × month <b>each in its own CTE first</b>, then join them to a site × month frame. Joining before summing multiplies rows (the "£16,200 bug").</p>
+
+<p>Two rules worth repeating:</p>
+<ul>
+    <li><b>No data is not zero.</b> If no GL lines exist for a month, finance columns stay <code>NULL</code> and <code>has_finance_actuals = false</code>.</li>
+    <li><b>Months close.</b> For a real client, use the NetSuite <b>accounting period</b>, not the transaction date, and carry a "period closed" flag, so dashboards can mark an open month as "provisional" (it can still change). (The series' lab used transaction dates and has no such flag yet; it is a known gap.)</li>
+</ul>
+
+<hr/>
+
+<h3>8. Tests</h3>
+
+<p>A dbt <b>test</b> is a query that should return zero rows. If it returns rows, the test fails, and <code>dbt build</code> skips every model downstream of it.</p>
+
+<p><b>1. Generic tests</b> (one line in YAML). In <code>models/marts/_marts.yml</code>:</p>
+
+<pre>
+version: 2
+models:
+  - name: fct_contract_month
+    columns:
+      - name: site_code
+        data_tests:
+          - not_null
+          - relationships: {to: ref('dim_site'), field: site_code}
+  - name: fct_gl
+    columns:
+      - name: site_code
+        description: "NULL means a NetSuite site value is missing from seeds/site_mapping.csv"
+        data_tests: [not_null]
+      - name: pl_category
+        data_tests:
+          - accepted_values: {values: ['revenue', 'direct_cost', 'central_cost']}
+</pre>
+
+<p>📘 Older dbt versions call the key <code>tests:</code>; the newest nest test settings under <code>arguments:</code>. Check your version. Also put <code>accepted_values</code> on any code that drives a rule (for example plan codes): a new plan should fail loudly, not quietly count as 0 desks.</p>
+
+<p><b>2. Golden-number tests</b>: compare the marts with the client's own trusted report. Put the report's figures in <b><code>seeds/golden_numbers.csv</code></b> (made up: these are the Mini Work.Life lab figures from Chapter 16):</p>
+
+<pre>
+site_code,month_start,metric,expected_value,source_report
+SOHO,2026-09-01,mrr_gbp,3040,September board pack p.4
+SOHO,2026-09-01,revenue_gbp,3475,NetSuite P&amp;L by site (closed)
+SOHO,2026-09-01,desks_contracted,6,Ops occupancy sheet
+</pre>
+
+<p><b><code>tests/assert_golden_numbers.sql</code></b>:</p>
+
+<pre>
+-- Returns one row per golden figure that the mart does NOT match.
+with kpis as (            -- UNPIVOT needs one type for all columns
+    select site_code, month_start,
+           cast(mrr_gbp as numeric)          as mrr_gbp,
+           cast(revenue_gbp as numeric)      as revenue_gbp,
+           cast(desks_contracted as numeric) as desks_contracted
+    from {{ ref('fct_site_month_kpis') }}
+),
+actual as (
+    select * from kpis
+    unpivot (value for metric in (mrr_gbp, revenue_gbp, desks_contracted))
+)
+select g.*, a.value as actual_value
+from {{ ref('golden_numbers') }} g
+left join actual a using (site_code, month_start, metric)
+where a.value is distinct from g.expected_value    -- NOT "!=": a NULL must fail too
+</pre>
+
+<p>⚠️ <code>UNPIVOT</code> drops NULL values by default, so a missing value shows up as "no match" and the test fails, which is what we want. Money on closed months has <b>£0 tolerance</b> (🛠 our standard; agree it with Finance). If the report rounds to whole pounds, round the same way in the test and write that in <code>docs/decisions.md</code>.</p>
+
+<p><b>3. Reconciliation test</b>: two systems that should agree. Nexudus invoices versus NetSuite revenue per site per month. Differences can be real (credit notes, timing), so make it a <b>warning</b> above a tolerance agreed with Finance:</p>
+
+<pre>
+-- tests/warn_revenue_nexudus_vs_netsuite.sql
+{{ config(severity = 'warn') }}
+with nexudus as (
+    select site_code, month_start, sum(invoiced_gbp) as nexudus_gbp
+    from {{ ref('int_nexudus_invoice_lines') }} group by 1, 2),
+netsuite as (
+    select site_code, month_start, revenue_gbp as netsuite_gbp
+    from {{ ref('fct_site_month_kpis') }} where has_finance_actuals)
+select *, coalesce(nexudus_gbp, 0) - coalesce(netsuite_gbp, 0) as difference_gbp
+from nexudus full outer join netsuite using (site_code, month_start)
+where abs(coalesce(nexudus_gbp, 0) - coalesce(netsuite_gbp, 0)) &gt; 50   -- tolerance made up
+</pre>
+
+<p>(<code>int_nexudus_invoice_lines</code> is an example name: build it only if you load Nexudus invoices.) Write each known cause of a difference into the test's comment.</p>
+
+<p><b>4. Unit tests</b> (dbt 1.8 and later) check a <b>business rule</b> with made-up input rows, including cases real data does not have yet. Copy the Chapter 17 example for <code>int_contract_months</code>: a Flex contract gives MRR but 0 desks; a contract starting mid-month counts; a contract with no end date carries on.</p>
+
+<pre>
+dbt test --select "test_type:unit" --profiles-dir .
+</pre>
+
+<p>Also add a <b>grain test</b> per fact: group by the grain columns, <code>having count(*) &gt; 1</code> should return nothing.</p>
+
+<hr/>
+
+<h3>9. What the BI Tool Reads: Grants, Personal Data, Contracts, Exposures</h3>
+
+<p>The BI tool (Tableau today; the brief says it is under review, so "do not assume Tableau is fixed" ✅) reads the <b>marts</b> and nothing else. It signs in to BigQuery as <code>sa-bi-reader</code>, with BigQuery Data Viewer on <code>marts</code> and Job User to run queries (Guide 02). It never reads <code>raw_*</code>, <code>staging</code> or <code>intermediate</code>, and it can never write.</p>
+
+<p><b>Personal data.</b> <code>dim_member</code>, <code>member_xref</code> and <code>dim_company.billing_email</code> live in <code>marts</code> because some work needs them, but most dashboards do not. 🛠 Give the BI reader only what the dashboards need:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Mart</th><th>BI reader?</th><th>Why</th></tr>
+<tr><td><code>dim_site</code>, <code>fct_site_month_kpis</code>, <code>fct_contract_month</code>, <code>fct_contract_events</code>, <code>fct_booking</code>, <code>fct_gl</code></td><td>Yes</td><td>Sites, companies, money and counts</td></tr>
+<tr><td><code>dim_company</code></td><td>Yes, ideally without <code>billing_email</code></td><td>Dashboards need company names, not their emails</td></tr>
+<tr><td><code>dim_member</code>, <code>member_xref</code></td><td>Only if a named dashboard needs people ❓</td><td>Names and emails; ask the client which reports truly need them</td></tr>
+<tr><td>Door data</td><td>Company-level aggregate only</td><td>Per-person door events are location tracking</td></tr>
+<tr><td>HR data</td><td>Never (not loaded at all)</td><td>✅ Brief: people/HR data excluded</td></tr>
+</table>
+
+<p>How to do it, two ways:</p>
+<ul>
+    <li><b>Simple (Guide 02 standard):</b> <code>sa-bi-reader</code> has Data Viewer on the whole <code>marts</code> dataset. Fine only if the client agrees dashboard builders may see <code>dim_member</code>. Write that decision down.</li>
+    <li><b>Tighter:</b> grant read on each needed table instead, with dbt's <code>grants</code> config, so the BI reader cannot see <code>dim_member</code> or <code>member_xref</code> at all. It needs <code>sa-dbt</code> to have the right to change table permissions (more than Data Editor), and only in prod. 📘 Check the dbt-bigquery grants docs for the format.</li>
+</ul>
+
+<pre>
+-- example: models/marts/fct_site_month_kpis.sql (tighter option)
+{{ config(grants = {'roles/bigquery.dataViewer':
+           ['serviceAccount:sa-bi-reader@&lt;client&gt;-data-prod.iam.gserviceaccount.com']}
+           if target.name == 'prod' else {}) }}
+</pre>
+
+<p>A <b>model contract</b> fixes a model's column names and types: if a change would add, drop, rename or retype a column, the build fails. Dashboards break when a column they use disappears, so put contracts on the marts the dashboards read. In <code>models/marts/_marts.yml</code>:</p>
+
+<pre>
+  - name: dim_site
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: site_code,         data_type: string}
+      - {name: site_name,         data_type: string}
+      - {name: netsuite_location, data_type: string}
+      # ... every column, each with its type
+</pre>
+
+<p>An <b>exposure</b> records which dashboard uses which models, so dbt's lineage reaches the dashboard. Then <code>dbt ls --select +exposure:leadership_kpi_dashboard</code> lists everything that dashboard depends on.</p>
+
+<pre>
+# models/marts/_exposures.yml
+version: 2
+exposures:
+  - name: leadership_kpi_dashboard
+    type: dashboard
+    url: https://&lt;your BI tool&gt;/&lt;dashboard link&gt;
+    owner: {name: Client reporting owner (role), email: data-analysts@&lt;client domain&gt;}
+    depends_on:
+      - ref('fct_site_month_kpis')
+      - ref('dim_site')
+      - ref('dim_company')
+</pre>
+
+<p>⚠️ One honest limit: dbt tests a model <b>after</b> it builds it. If a test on <code>fct_site_month_kpis</code> fails, the models after it are skipped, but that table already holds the new numbers and the dashboard shows them. Your protection is the alert (Guide 08) and a quick fix. If the client needs more, look at a "build in a separate dataset, test, then swap" pattern (📘 check current dbt docs; more work to run).</p>
+
+<hr/>
+
+<h3>10. Docs</h3>
+
+<pre>
+dbt docs generate --profiles-dir .
+dbt docs serve --profiles-dir .      # opens the docs site in your browser
+</pre>
+
+<p>You get a page per model: description, columns, tests, SQL and the lineage graph. This becomes the <b>data dictionary</b> handed over in Guide 09. Describe every mart column: dashboard builders read these, and they will guess about a column with no description (and two dashboards may then guess differently). Share the docs site only inside the client, never publicly.</p>
+
+<hr/>
+
+<h3>11. CI with GitHub Actions</h3>
+
+<p><b>CI</b> (continuous integration) means every pull request is built and tested automatically before it is merged. Ours runs <code>dbt build</code> into <code>ci_pr_&lt;number&gt;_*</code> datasets in the dev project. It logs in to Google with <b>Workload Identity Federation</b>: GitHub proves who it is and gets a short-lived token, so there is no key file to leak. 📘 Check Google's and GitHub's current docs for the setup steps and action versions.</p>
+
+<pre>
+# .github/workflows/dbt-ci.yml
+name: dbt-ci
+on:
+  pull_request:
+    paths: ["dbt/**"]
+permissions:
+  contents: read
+  id-token: write                      # needed for Workload Identity Federation
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: dbt}}
+    env:
+      DBT_PROFILES_DIR: .
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/&lt;number&gt;/locations/global/workloadIdentityPools/github/providers/github
+          service_account: sa-dbt-ci@&lt;client&gt;-data-dev.iam.gserviceaccount.com
+      - run: pip install -r requirements.txt
+      - run: dbt deps
+      - run: dbt build --target ci
+</pre>
+
+<p>🛠 <b>Our choice: a separate CI account, <code>sa-dbt-ci</code></b>, with Data Viewer on <code>raw_*</code> in data-prod, plus BigQuery Data Editor and Job User at project level on <code>&lt;client&gt;-data-dev</code> <b>only</b> (Data Editor lets it create the <code>ci_pr_&lt;number&gt;_*</code> datasets). Guide 02 did not create this account or these grants, so <b>add them to <code>infra/</code></b> and to the access list. Unmerged code can then never write to production, which is why we do not reuse <code>sa-dbt</code> here. CI datasets hold copies of personal data (for example <code>dim_member</code>): give them a short expiry (3 days, made up) and delete them when the pull request closes. Protect <code>main</code> so the CI check must pass before merging.</p>
+
+<hr/>
+
+<h3>12. The Production Job: Docker, Cloud Run, Scheduler</h3>
+
+<p>🛠 Production runs <b>dbt Core in a container</b> as the Cloud Run job <code>dbt-build</code>, as <code>sa-dbt</code>, every night at 03:00 Europe/London, after the loaders. <b><code>dbt/Dockerfile</code></b>:</p>
+
+<pre>
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+ENV DBT_PROFILES_DIR=/app
+RUN dbt deps                      # packages fetched once, at build time, not every night
+CMD ["sh", "/app/run.sh"]
+</pre>
+
+<p><b><code>dbt/run.sh</code></b>, the entry script (the same name Guide 08 uses):</p>
+
+<pre>
+#!/bin/sh
+set -e                            # stop at the first command that fails
+dbt source freshness
+dbt build --target prod "$@"      # "$@" lets you pass extra options, for example --select
+</pre>
+
+<p><code>set -e</code> means "stop if a step fails". A freshness error stops the run; a failed test makes <code>dbt build</code> skip every model after the failing one, and the job ends with an error that Guide 08's alert picks up.</p>
+
+<pre>
+# 1. The image store is the Artifact Registry repo "data-jobs" (europe-west2, Guide 02)
+
+# 2. Build and push the image (from the dbt/ folder)
+gcloud builds submit --project=&lt;client&gt;-data-prod \
+  --tag europe-west2-docker.pkg.dev/&lt;client&gt;-data-prod/data-jobs/dbt-build:v1
+
+# 3. Create the job, running as sa-dbt
+gcloud run jobs create dbt-build --project=&lt;client&gt;-data-prod --region=europe-west2 \
+  --image=europe-west2-docker.pkg.dev/&lt;client&gt;-data-prod/data-jobs/dbt-build:v1 \
+  --service-account=sa-dbt@&lt;client&gt;-data-prod.iam.gserviceaccount.com \
+  --task-timeout=3600 --max-retries=0
+
+# 4. Run it once by hand and wait
+gcloud run jobs execute dbt-build --region=europe-west2 --project=&lt;client&gt;-data-prod --wait
+
+# 5. Schedule it: 03:00 UK time, every day
+gcloud scheduler jobs create http nightly-dbt-build --project=&lt;client&gt;-data-prod \
+  --location=europe-west2 --schedule="0 3 * * *" --time-zone="Europe/London" \
+  --http-method=POST \
+  --uri="https://run.googleapis.com/v2/projects/&lt;client&gt;-data-prod/locations/europe-west2/jobs/dbt-build:run" \
+  --oauth-service-account-email=sa-dbt@&lt;client&gt;-data-prod.iam.gserviceaccount.com
+# sa-dbt needs Cloud Run Invoker on the dbt-build job (Guide 08, step 3)
+</pre>
+
+<p>📘 Check the current <code>gcloud</code> docs for flags. Guide 08 covers the full nightly order, alerts and the runbook. <b>Alternative:</b> dbt Cloud (the paid hosted version) can run the schedule and CI for you. It is fine if the client prefers it; the models, tests and datasets stay the same.</p>
+
+<hr/>
+
+<h3>13. The First Full Build, Step by Step</h3>
+
+<pre>
+ STEP  COMMAND (with DBT_PROFILES_DIR=.)    WHAT YOU SHOULD SEE
+  1    dbt debug                           "All checks passed!"
+  2    dbt deps  then  dbt seed            seeds in dbt_&lt;yourname&gt;_staging
+  3    dbt source freshness                PASS for every source (fix loaders first if not)
+  4    dbt build --select staging          views built, key tests pass, counts match raw after de-dup
+  5    dbt build --select intermediate     crosswalk built: look at the unmatched count
+  6    dbt build --select marts            golden test passes (or each gap is explained)
+  7    dbt build                           everything, in graph order, all tests green
+  8    open a pull request                 the CI check goes green
+  9    merge, build image, run job --wait  job succeeds; prod marts tables are rebuilt
+                                           and the BI tool shows the new numbers
+ 10    wait for the 03:00 run              it succeeds with nobody touching it
+</pre>
+
+<hr/>
+
+<h3>14. Check It Worked</h3>
+
+<pre>
+-- 1. Did the nightly job build today? (last change time per table)
+select table_id, timestamp_millis(last_modified_time) as last_built
+from `&lt;client&gt;-data-prod.marts.__TABLES__` order by last_built;
+
+-- 2. Does the KPI mart match the client's report for the last closed month?
+select site_code, mrr_gbp, revenue_gbp, desks_contracted, sellable_desks, desk_occupancy
+from `&lt;client&gt;-data-prod.marts.fct_site_month_kpis`
+where month_start = '2026-09-01' order by site_code;
+
+-- 3. Where are the personal-looking columns in marts? Expect ONLY the ones
+--    you agreed (dim_member, member_xref, dim_company.billing_email), and nothing HR.
+select table_name, column_name
+from `&lt;client&gt;-data-prod.marts.INFORMATION_SCHEMA.COLUMNS`
+where regexp_contains(lower(column_name),
+      r'email|phone|first_name|last_name|card|salary|payroll');
+</pre>
+
+<p>Also check: the job's logs show <code>PASS</code> for every test; the dbt docs site opens; the BI tool, signed in as <code>sa-bi-reader</code>, can read the marts it needs and gets "Access Denied" on <code>raw_*</code> and <code>staging</code>; a leadership dashboard shows the same September numbers as query 2.</p>
+
+<hr/>
+
+<h3>15. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Problem</th><th>Likely cause</th><th>Fix</th></tr>
+<tr><td>"Access Denied" reading a source</td><td>No Data Viewer on that <code>raw_*</code>, or the source has no <code>database:</code> so dbt looks in the dev project</td><td>Check the role; set <code>database: "{{ var('raw_project') }}"</code></td></tr>
+<tr><td>"Not found: Dataset ... was not found in location US"</td><td>Region mismatch</td><td><code>location: europe-west2</code> in every target; create datasets in London</td></tr>
+<tr><td>Your dev run wrote into <code>marts</code> (prod names)</td><td><code>generate_schema_name</code> wrong, or <code>--target prod</code> on your laptop</td><td>Fix the macro; your own login should not have write rights in prod at all</td></tr>
+<tr><td>MRR too high, contracts appear twice</td><td>Missing <code>QUALIFY</code> de-dup in staging</td><td>Add it; add a <code>unique</code> test on the ID</td></tr>
+<tr><td>A column is all NULL after staging</td><td>Wrong JSON path (they are case-sensitive)</td><td>Look at a raw <code>payload</code> and fix the path</td></tr>
+<tr><td>Golden test fails, site revenue is NULL</td><td>Finance renamed a site value; seed not updated</td><td>Add the new value to <code>site_mapping.csv</code>; ask Finance to tell you next time</td></tr>
+<tr><td>Contract error: "data type mismatch"</td><td><code>float64</code> where the contract says <code>numeric</code></td><td>Cast in the model; change the contract only on purpose</td></tr>
+<tr><td>Bookings in the wrong month</td><td>UTC date used where a UK date was meant</td><td><code>date(booking_start_utc, 'Europe/London')</code></td></tr>
+<tr><td>CI cannot log in to Google</td><td><code>id-token: write</code> missing, or the pool does not trust this repo</td><td>Check the workflow permissions and the provider's attribute condition</td></tr>
+<tr><td>Freshness fails on Excel every week</td><td>The sheet rarely changes</td><td>Longer threshold for that source; write the reason down</td></tr>
+</table>
+
+<hr/>
+
+<h3>16. Done When</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Every raw table used has a source with freshness, and every source passes</td></tr>
+<tr><td>☐</td><td>One staging model per used raw table: renamed, cast, UTC, de-duplicated, deletes dropped, no joins</td></tr>
+<tr><td>☐</td><td>All canonical marts built, each with its grain in a comment and a grain test</td></tr>
+<tr><td>☐</td><td>Generic tests on every key and relationship; <code>accepted_values</code> on codes that drive rules</td></tr>
+<tr><td>☐</td><td>Golden-number test matches the client's report for the last closed month (or each gap is explained and written down)</td></tr>
+<tr><td>☐</td><td>Reconciliation runs as a warning; unit tests cover the desk rule, rolling contracts, mid-month starts</td></tr>
+<tr><td>☐</td><td><code>sa-bi-reader</code> reads only the marts the dashboards need (read only); the choice about <code>dim_member</code> is written down</td></tr>
+<tr><td>☐</td><td>The personal-column check (section 14) shows only the agreed columns; no HR data; door data company-level only</td></tr>
+<tr><td>☐</td><td>Contracts on the marts dashboards read; an exposure for each main dashboard</td></tr>
+<tr><td>☐</td><td>CI runs on every pull request with no key files; <code>main</code> is protected</td></tr>
+<tr><td>☐</td><td><code>dbt-build</code> ran at 03:00 by itself and succeeded; when you broke a test on purpose, the job failed, later models were skipped and the alert arrived</td></tr>
+<tr><td>☐</td><td>Descriptions on every mart column; <code>dbt docs generate</code> works</td></tr>
+<tr><td>☐</td><td>Definitions (accounts, sign rule, desk rule, site mapping) agreed in writing and logged in <code>docs/decisions.md</code></td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Your models build and test themselves every night. Now make sure everything runs in the right order and that someone hears about it when it does not: <a href="integration-08-scheduling-monitoring.html">Guide 08 — Scheduling and Monitoring</a>. 🚀</p>
+
+<p>Background reading, if a step feels unclear: <a href="../season-2-pipeline/chapter-16-dbt-layers.html">Chapter 16 (dbt layers)</a>, <a href="../season-2-pipeline/chapter-17-dbt-in-depth.html">Chapter 17 (tests, freshness, docs, lineage)</a>, <a href="../season-2-pipeline/chapter-14-python-extractors.html">Chapter 14 (the de-dup pattern)</a> and <a href="../season-2-pipeline/chapter-18-bi-layer.html">Chapter 18 (the BI layer)</a>.</p>

@@ -54,20 +54,23 @@
 
 <h3>3. The Draft Answers</h3>
 
-<p>Here is the response itself. Each question shows <b>what they're really scoring</b> first, then <b>our answer</b> as it would appear in the document. Where a number depends on our own estimate (for example a day rate), it's marked as an assumption. Client facts come only from the brief; lab facts come from the Mini Work.Life files.</p>
+<p>Here is the response itself. Each question shows <b>what they're really checking</b> first, then <b>our answer</b> as it would appear in the document. Where a number depends on our own estimate (for example a day rate), it's marked as an assumption. Client facts come only from the brief; lab facts come from the Mini Work.Life files.</p>
 
 <p><b>Q1 · Feasibility and approach</b></p>
-<p><i>Scoring:</i> can you do it on our BigQuery, and can you explain it without jargon?</p>
+<p><i>What they're checking:</i> can you do it on our BigQuery, and can you explain it without jargon?</p>
 <blockquote>
-<p><b>Yes. We would build Phase 1 directly on your existing BigQuery warehouse and dbt models, without replacing anything you already run.</b></p>
-<p>In plain terms there are four layers:</p>
+<p><b>Yes. We build it on your existing BigQuery warehouse. We don't replace anything you already run.</b></p>
+<p>In simple terms:</p>
 <ol>
-    <li><b>A controlled copy.</b> A separate BigQuery dataset, <code>ai_safe</code>, holds copies of approved, modelled tables only: sites, companies (no billing emails), contracts by month (no member key), bookings, the finance ledger (no memo or counterparty text) and the site KPI table. Member-level tables, the ID crosswalk, door events and CRM contacts stay out. It refreshes from your dbt marts on a schedule. The AI can read this dataset and nothing else.</li>
-    <li><b>One definition per KPI.</b> Each board-pack KPI (revenue, contribution, occupancy, churn and so on) is written down once, in dbt, with the formula Finance and Operations agree. The AI asks for "Soho contribution, September", and the definition does the maths. It never invents its own formula.</li>
-    <li><b>Business context.</b> Your board pack, KPI glossary, targets and "why this KPI matters" notes are loaded as reference material, so answers carry meaning: "Soho is 62% under its revenue budget, and occupancy is the main reason."</li>
-    <li><b>The assistant.</b> A chat interface, behind Work.Life sign-in, where a leader types a question. The assistant chooses the right KPIs, runs the queries on <code>ai_safe</code>, and replies with the number, a short explanation, the definition used and the data's freshness. If it can't answer reliably, it says so.</li>
+    <li><b>BigQuery</b> stores your business data, as it does today.</li>
+    <li><b>A safe copy (<code>ai_safe</code>)</b> holds only approved tables. Personal data (individual members, door events, CRM contacts) is never copied. The AI can read this copy and nothing else.</li>
+    <li><b>dbt</b> holds one agreed formula for each KPI, such as revenue, occupancy and churn. Finance and Operations agree them. The AI never makes up its own.</li>
+    <li><b>Your board pack</b> gives business context: targets, and why each KPI matters.</li>
+    <li><b>The AI assistant</b> lets leaders ask questions in plain English, after signing in with their Work.Life account. Each answer shows the number, the definition used and how fresh the data is. If it can't answer reliably, it says so.</li>
+    <li><b>A weekly digest and alerts</b> tell leaders about important changes without being asked.</li>
 </ol>
-<p>A scheduled weekly digest and a small set of alerts provide the proactive insight. The model is called through your own Google Cloud project on enterprise terms (we'd confirm the provider's data-residency and no-training terms with you), so there's no separate third-party app holding your data.</p>
+<p><b>Example:</b> a leader asks, "What was Soho's revenue in September?" The assistant looks in the safe copy, uses the agreed revenue definition, and replies with the figure and the definition it used.</p>
+<p><b>The key point:</b> we add a safe AI layer on top of your existing data system. We don't replace it.</p>
 </blockquote>
 
 <pre>
@@ -87,132 +90,195 @@
 </pre>
 
 <p><b>Q2 · Timeline</b></p>
-<p><i>Scoring:</i> is it realistic, and do you understand what depends on us? (The full plan is in <a href="chapter-34-three-and-six-month-plan.html">Chapter 34</a>.)</p>
+<p><i>What they're checking:</i> is it realistic, and do you understand what depends on us? (The full plan is in <a href="chapter-34-three-and-six-month-plan.html">Chapter 34</a>.)</p>
 <blockquote>
-<p><b>By the 3-month mark: a live, tested assistant for the leadership team, covering the board-pack KPIs. By the 6-month mark: wider question coverage, proactive alerts, a complete handover, and a Phase 2 design ready to start.</b></p>
+<p><b>By month 3 (end of December 2026): the assistant is live for the leadership team, tested on the board-pack KPIs.</b></p>
+<p><b>By month 6 (end of March 2027): it answers more questions, sends alerts, and your team can run it without us.</b></p>
 <table border="1" cellpadding="10">
 <tr><th>By month 3 (end of December 2026)</th><th>By month 6 (end of March 2027)</th></tr>
 <tr><td>
 <ul>
-<li>Controlled copy and safe-data allow-list signed off</li>
+<li>Safe copy built, and the list of allowed data signed off</li>
 <li>Board-pack KPIs defined once and agreed with Finance</li>
-<li>Assistant live for the leadership team, via Work.Life sign-in</li>
-<li>Accuracy launch gate passed on 50 golden questions</li>
-<li>Weekly leadership digest</li>
-<li>Running documentation in place</li>
+<li>Assistant live for leaders, with Work.Life sign-in</li>
+<li>Accuracy test passed (50 test questions)</li>
+<li>Weekly summary for leaders</li>
+<li>Documents written as we go</li>
 </ul>
 </td><td>
 <ul>
-<li>Coverage extended beyond the board pack (diagnostic "why" questions by site, product, company)</li>
-<li>Alerts on agreed thresholds; trend and early-signal notes ("foresight")</li>
-<li>Monthly accuracy re-test against closed months</li>
-<li>Full handover pack; your team operates it from the docs</li>
-<li>Readiness review for wider team access; Phase 2 design note</li>
+<li>Answers "why" questions too (by site, product, company)</li>
+<li>Alerts when a number crosses an agreed limit; early warning notes</li>
+<li>Accuracy test re-run every month</li>
+<li>Full handover: your team runs it from the documents</li>
+<li>Check if the wider team is ready; a Phase 2 plan</li>
 </ul>
 </td></tr>
 </table>
-<p><b>What must be true on your side:</b> read access to BigQuery and the dbt project in week 1; a recent board pack and KPI definitions in week 2; a named Finance owner who can sign off definitions and check golden answers in November; your identity provider details for sign-in; and 2–3 leaders available for a pilot in early December. If definitions or access slip, launch moves with them; we would rather go live in January on trusted numbers than in December on untested ones.</p>
+<p><b>What we need from you, and when:</b></p>
+<ul>
+    <li><b>Week 1:</b> read access to BigQuery and the dbt project.</li>
+    <li><b>Week 2:</b> a recent board pack and your KPI definitions.</li>
+    <li><b>November:</b> a named Finance person who can agree definitions and check test answers.</li>
+    <li><b>Early on:</b> details of your sign-in system.</li>
+    <li><b>Early December:</b> 2–3 leaders to try it first.</li>
+</ul>
+<p><b>Honest note:</b> if definitions or access are late, the launch moves too. We'd rather go live in January with trusted numbers than in December with untested ones.</p>
 </blockquote>
 
 <p><b>Q3 · What we need from you</b></p>
-<p><i>Scoring:</i> have you thought about this properly? Will you be a burden? (See the full table in section 4 below.)</p>
+<p><i>What they're checking:</i> have you thought about this properly? Will you be a burden? (See the full table in section 4 below.)</p>
 <blockquote>
-<p><b>About half a day a week from your side on average, concentrated in two places: agreeing definitions in month 1–2, and checking golden answers in month 2–3.</b> The detail is in the table that follows. The biggest single dependency is a Finance owner for money definitions.</p>
+<p><b>About half a day a week from your side, on average.</b> Most of it falls in two busy periods:</p>
+<ul>
+    <li><b>Months 1–2:</b> agreeing the KPI definitions.</li>
+    <li><b>Months 2–3:</b> checking the test answers.</li>
+</ul>
+<p>The most important person is a <b>Finance owner</b> who can agree the money definitions. The full list is in the table below.</p>
 </blockquote>
 
 <p><b>Q4 · Cost</b></p>
-<p><i>Scoring:</i> real numbers, side by side, at two levels, with a credible cap. (Built up line by line in <a href="chapter-35-cost-build-and-run.html">Chapter 35</a>.)</p>
+<p><i>What they're checking:</i> real numbers, side by side, at two levels, with a believable limit. (Built up line by line in <a href="chapter-35-cost-build-and-run.html">Chapter 35</a>.)</p>
 <blockquote>
-<p><b>One-off build: about £63,000 (estimate), of which £48,000 delivers the 3-month launch and £15,000 the 6-month hardening and handover. Ongoing running cost: about £22,000 a year for the leadership team, or about £42,500 a year with wider team access (estimates). Both stay well below the "six figure operation" you ruled out.</b></p>
+<p><b>Build (one-off): about £63,000 (estimate).</b> £48,000 for the 3-month launch, and £15,000 for months 4–6 and the handover.</p>
+<p><b>Running cost per year: about £22,000 for the leadership team, or about £42,500 for the wider team (estimates).</b> Both are far below the "six figure operation" you ruled out.</p>
 <table border="1" cellpadding="10">
-<tr><th>Annual running cost (estimate)</th><th>Leadership only (10 users, assumed)</th><th>Wider team (70 users, assumed)</th></tr>
-<tr><td>LLM usage (tokens, including accuracy test runs)</td><td>£2,500</td><td>£3,500</td></tr>
-<tr><td>BigQuery (queries + storage of the copy)</td><td>£500</td><td>£1,000</td></tr>
-<tr><td>Hosting, scheduling, logging</td><td>£1,000</td><td>£2,000</td></tr>
-<tr><td><b>Technology subtotal</b></td><td><b>£4,000</b></td><td><b>£6,500</b></td></tr>
-<tr><td>Support agreement (2 or 4 days a month, made-up day rate)</td><td>£18,000</td><td>£36,000</td></tr>
+<tr><th>Running cost per year (estimate)</th><th>Leadership only (10 users, assumed)</th><th>Wider team (70 users, assumed)</th></tr>
+<tr><td>AI usage (tokens, including test runs)</td><td>£2,500</td><td>£3,500</td></tr>
+<tr><td>BigQuery (queries and storage of the safe copy)</td><td>£500</td><td>£1,000</td></tr>
+<tr><td>Hosting, scheduling, logs</td><td>£1,000</td><td>£2,000</td></tr>
+<tr><td><b>Technology total</b></td><td><b>£4,000</b></td><td><b>£6,500</b></td></tr>
+<tr><td>Support (2 or 4 days a month, made-up day rate)</td><td>£18,000</td><td>£36,000</td></tr>
 <tr><td><b>Total per year</b></td><td><b>~£22,000</b></td><td><b>~£42,500</b></td></tr>
 </table>
-<p>Assumptions (all ours, to be firmed up with you): a <b>made-up</b> day rate of £750; 10 leadership users × 8 questions per working day; wider team 70 users × 3 questions per working day; 21 working days a month; illustrative token prices giving about £0.03 per question (Chapter 27), with accuracy test runs as the largest token line; BigQuery inside its free monthly allowance (<b>check current pricing</b> before relying on any figure). Your existing pipeline and BI licence costs are unchanged and not included. Wider team access also needs the role-based access work from Phase 2, which we haven't priced, as you asked.</p>
-<p><b>How we cap it:</b> a hard monthly budget on LLM spend that stops the service rather than overspending; a daily question limit per user; a limit on how many steps the assistant can take per question; a maximum data scanned per BigQuery query; caching for repeated questions (the same KPI asked twice in a day costs once); and a monthly cost report. Notice that the technology costs are small. The real cost is people time, which is why we keep the support model small and predictable.</p>
+<p><b>Our assumptions</b> (to agree with you):</p>
+<ul>
+    <li>A <b>made-up</b> day rate of £750.</li>
+    <li>Leaders: 10 users × 8 questions a working day. Wider team: 70 users × 3 questions a working day. 21 working days a month.</li>
+    <li>About £0.03 per question, using example AI prices (Chapter 27). Test runs are the biggest AI cost.</li>
+    <li>BigQuery stays inside its free monthly allowance. <b>Check current pricing</b> before relying on any figure.</li>
+    <li>Your current pipeline and BI tool costs don't change, and aren't included.</li>
+    <li>Wider team access also needs the role-based access work from Phase 2, which we haven't priced, as you asked.</li>
+</ul>
+<p><b>How we keep costs under control:</b></p>
+<ul>
+    <li>A hard monthly limit on AI spend. The service pauses instead of overspending.</li>
+    <li>A daily question limit per user.</li>
+    <li>A limit on how many steps the assistant can take per question.</li>
+    <li>A limit on how much data one BigQuery query can read.</li>
+    <li>Saved answers for repeated questions (the same KPI asked twice in a day costs once).</li>
+    <li>A monthly cost report.</li>
+</ul>
+<p><b>The key point:</b> the technology is cheap. The real cost is people's time, so we keep support small and predictable.</p>
 </blockquote>
 
 <p><b>Q5 · Security</b></p>
-<p><i>Scoring:</i> is it safe, and do you understand what must never be connected?</p>
+<p><i>What they're checking:</i> is it safe, and do you understand what must never be connected?</p>
 <blockquote>
-<p><b>Access is through Work.Life accounts only, the AI can read only the controlled copy, and everything runs inside your own Google Cloud project.</b></p>
+<p><b>Only Work.Life accounts can get in. The AI can only read the safe copy. Everything runs inside your own Google Cloud project.</b></p>
 <ul>
-    <li><b>Access control:</b> single sign-on with your existing Work.Life identity provider, limited to a named leadership group. No shared or local logins. Access reviewed monthly by Operations &amp; IT Systems.</li>
-    <li><b>Data isolation:</b> the assistant uses its own service account with read-only access to <code>ai_safe</code>. It has no access to raw tables, staging models, source systems or any other dataset. It can only run read queries.</li>
-    <li><b>Safe data only:</b> a written allow-list of tables and columns, following the same rule as your current reporting extracts and signed off by you. Names, emails, phone numbers and card numbers stay out. Door-access data is not in the Phase 1 copy at all. If it's ever added (for example for churn in Phase 2), it is only as company-level weekly aggregates with a minimum group size, never individual tap events.</li>
-    <li><b>Never connect:</b> the HR system or any people data; raw personal data; live source systems; payment or bank details; email inboxes and shared drives. Staff costs appear only as finance totals.</li>
-    <li><b>The model:</b> served through your Google Cloud project on enterprise terms where your data isn't used for training. Every question, query and answer is logged, so you can audit what was asked and what data was used.</li>
+    <li><b>Who can get in:</b> people sign in with their existing Work.Life account. Only a named leadership group is allowed. No shared logins. Operations &amp; IT Systems checks the list every month.</li>
+    <li><b>What the AI can read:</b> only the safe copy (<code>ai_safe</code>), and only to read. It can't see raw tables, source systems or any other data, and it can't change anything.</li>
+    <li><b>Safe data only:</b> a written list of allowed tables and columns, following the same principle as your current reporting extracts, and signed off by you. No names, emails, phone numbers or card numbers. No door data in Phase 1. If door data is added later (for example to predict churn in Phase 2), it will only be weekly totals per company, for groups of 5 or more people, never single door taps.</li>
+    <li><b>Never connect:</b> the HR system or any staff data; raw personal data; live source systems; payment or bank details; email inboxes and shared drives. Staff costs appear only as finance totals.</li>
+    <li><b>The AI model:</b> runs through your Google Cloud project on business terms, where your data is not used to train the model (we'd confirm these terms with you). Every question, query and answer is logged, so you can check what was asked and what data was used.</li>
 </ul>
-<p><b>For your internal AI usage policy</b>, we'd suggest: use only approved tools for company data; never paste member or staff personal data into public AI tools; treat AI answers as a draft until the sources are shown; name an owner for each approved tool; review the policy every six months.</p>
+<p><b>Ideas for your AI usage policy:</b></p>
+<ul>
+    <li>Use only approved tools for company data.</li>
+    <li>Never paste member or staff personal data into public AI tools.</li>
+    <li>Treat an AI answer as a draft until it shows its sources.</li>
+    <li>Name an owner for each approved tool.</li>
+    <li>Review the policy every six months.</li>
+</ul>
 </blockquote>
 
 <p><b>Q6 · Accuracy</b></p>
-<p><i>Scoring:</i> this is the question they care about most. They wrote <i>"if it confidently returns a wrong figure, trust is lost"</i>.</p>
+<p><i>What they're checking:</i> this is the question they care about most. They wrote <i>"if it confidently returns a wrong figure, trust is lost"</i>.</p>
 <blockquote>
-<p><b>We treat accuracy exactly as you do: as a launch gate. Nobody relies on the assistant until it has passed a test against your actual results, agreed in advance with Finance and Operations.</b></p>
+<p><b>We agree with you: accuracy decides whether it launches. Nobody relies on the assistant until it passes a test against your real results, agreed in advance with Finance and Operations.</b></p>
 <ol>
-    <li><b>Prevent:</b> the AI never does its own arithmetic. Every figure comes from a query against an agreed KPI definition. Answers show the definition, the period and the data's freshness ("September is not yet closed in NetSuite").</li>
-    <li><b>Refuse:</b> if a question can't be answered reliably (missing definition, unclosed period, data not in the copy) the assistant says so instead of guessing. An honest "I can't answer that reliably" is a pass. A confident wrong number is a fail.</li>
-    <li><b>Test:</b> we build a set of <b>50 golden questions</b> with you: 30 board-pack KPI questions (tier 1), 15 "why" questions (tier 2) and 5 questions it must refuse (tier 3). Finance and Operations write down the correct answers from closed months in NetSuite and the board pack.</li>
-    <li><b>Gate:</b> our proposed bar, to agree with your leadership team: tier 1 <b>all 30 correct</b> for the last 3 closed months; tier 2 at least 90% judged correct by your reviewers, with every miss a refusal or a warning note, never a wrong figure; tier 3 refused every time; <b>zero confidently wrong answers</b>; and every question asked three times gives the same figure.</li>
-    <li><b>Keep checking:</b> after go-live, the golden set re-runs automatically after every change and every month after Finance closes the period. A failure stops the release.</li>
+    <li><b>Prevent mistakes:</b> the AI never does its own maths. Every number comes from a query that uses an agreed KPI definition. Each answer shows the definition, the period and how fresh the data is (for example "September is not yet closed in NetSuite").</li>
+    <li><b>Say "I can't answer that":</b> if a question can't be answered reliably (no agreed definition, the month isn't closed, the data isn't in the safe copy), the assistant says so instead of guessing. An honest "I can't answer that reliably" is a pass. A confident wrong number is a fail.</li>
+    <li><b>Test:</b> together we write <b>50 test questions</b> ("golden questions"): 30 board-pack KPI questions (tier 1), 15 "why" questions (tier 2) and 5 questions it must refuse (tier 3). Finance and Operations write down the correct answers from closed months in NetSuite and the board pack.</li>
+    <li><b>Pass mark:</b> our suggestion, to agree with your leaders:
+        <ul>
+            <li>Tier 1: <b>all 30 correct</b> for the last 3 closed months.</li>
+            <li>Tier 2: at least 90% correct (judged by your reviewers). Every miss must be a refusal or a warning note, never a wrong number.</li>
+            <li>Tier 3: refused every time.</li>
+            <li><b>Zero confidently wrong answers.</b></li>
+            <li>The same question asked three times gives the same number.</li>
+        </ul>
+    </li>
+    <li><b>Keep checking:</b> after launch, the test questions run again after every change, and every month after Finance closes the books. If a test fails, the change is not released.</li>
 </ol>
-<p>In practice, the "accuracy against actuals" check is simple: each month, when Finance closes the books, the assistant answers the tier 1 questions for that month and the results are compared with the board pack figures. Any difference is investigated before the board pack goes out.</p>
+<p><b>The monthly check, in practice:</b> when Finance closes the month, the assistant answers the tier 1 questions for that month and we compare them with the board pack. Any difference is checked before the board pack goes out.</p>
 </blockquote>
 
 <p><b>Q7 · Resilience</b></p>
-<p><i>Scoring:</i> will it break when HubSpot takes over member data?</p>
+<p><i>What they're checking:</i> will it break when HubSpot takes over member data?</p>
 <blockquote>
-<p><b>The assistant never sees a source system. It sees business tables (sites, companies, contracts by month, bookings, the ledger) and KPI definitions. If a source changes, only the dbt models that read that source change; the assistant, its definitions and its tests stay the same.</b></p>
-<p>Your own example: as HubSpot becomes the source of truth for members, the dbt staging models switch from Nexudus to HubSpot for member fields, and a crosswalk table in the marts (<code>member_xref</code>) keeps one stable ID per member and company across both. The tables the assistant reads (<code>dim_company</code>, <code>fct_contract_month</code>) keep the same columns and meaning. The golden questions prove nothing changed: if they pass before and after the switch, the swap is safe. No prompt, KPI definition or test mentions "Nexudus" or "HubSpot" by name.</p>
+<p><b>No. The AI never reads a source system directly. It reads business tables (sites, companies, contracts by month, bookings, finance lines) and KPI definitions. If a source system changes, only the dbt models that read that source change. The assistant, its definitions and its tests stay the same.</b></p>
+<p><b>Your example, HubSpot:</b></p>
+<ol>
+    <li>As HubSpot becomes the main member system, the dbt models switch member details from Nexudus to HubSpot.</li>
+    <li>A matching table (<code>member_xref</code>) keeps one fixed ID for each member and company across both systems.</li>
+    <li>The tables the AI reads (<code>dim_company</code>, <code>fct_contract_month</code>) keep the same columns and meaning.</li>
+    <li>The test questions prove it: if they pass before and after the switch, the change is safe.</li>
+</ol>
+<p>No AI instruction, KPI definition or test mentions "Nexudus" or "HubSpot" by name.</p>
 </blockquote>
 
 <p><b>Q8 · Documentation and handover</b></p>
-<p><i>Scoring:</i> will we be stuck with you, or with one person? (Full detail in <a href="chapter-36-documentation-handover.html">Chapter 36</a>.)</p>
+<p><i>What they're checking:</i> will we be stuck with you, or with one person? (Full detail in <a href="chapter-36-documentation-handover.html">Chapter 36</a>.)</p>
 <blockquote>
-<p><b>Everything is documented as we build, kept in your own repository, and the handover is proven, not promised: before month 6 ends, your team runs the service for two weeks from the documents alone, with us only observing.</b></p>
-<p>The pack covers: the architecture and data flows; the safe-data allow-list; every KPI definition and its owner; the golden question set and how to run it; runbooks for common tasks (add a user, add a KPI, a failed refresh, a failed accuracy test, a cost alert); the cost model; and a decision log explaining why things are the way they are.</p>
+<p><b>We write the documents while we build, and keep them in your own repository. The handover is proven, not just promised: before month 6 ends, your team runs the service for two weeks using only the documents, while we just watch.</b></p>
+<p>The documents cover:</p>
+<ul>
+    <li>how it's built, and how the data flows</li>
+    <li>the list of allowed data</li>
+    <li>every KPI definition, and who owns it</li>
+    <li>the test questions, and how to run them</li>
+    <li>step-by-step guides for common tasks: add a user, add a KPI, fix a failed data refresh, fix a failed accuracy test, handle a cost alert</li>
+    <li>the cost model</li>
+    <li>a decision log: why things are built the way they are</li>
+</ul>
 </blockquote>
 
 <p><b>Q9 · Support and resourcing</b></p>
-<p><i>Scoring:</i> what does it cost us in people, and what must we hire? (Answer: nobody.)</p>
+<p><i>What they're checking:</i> what does it cost us in people, and what must we hire? (Answer: nobody.)</p>
 <blockquote>
-<p><b>You don't need to hire anyone. We provide a small monthly support agreement; you keep two light roles you already have.</b></p>
+<p><b>You don't need to hire anyone. We provide a small monthly support agreement, and two people you already have take on light roles.</b></p>
 <table border="1" cellpadding="10">
 <tr><th>Us (support agreement)</th><th>You (in house)</th></tr>
 <tr><td>
 <ul>
-<li>Monitoring, refresh and cost checks</li>
-<li>Monthly accuracy re-run after close</li>
+<li>Monitoring, data refresh and cost checks</li>
+<li>Monthly accuracy test after the month-end close</li>
 <li>Adding or changing KPIs and context</li>
-<li>Model and platform updates</li>
+<li>Updates to the AI model and platform</li>
 <li>2 days a month (leadership) or 4 (wider team)</li>
 </ul>
 </td><td>
 <ul>
-<li><b>KPI owner</b> (whoever owns reporting today; we'd need to know who that is): keeps definitions and golden answers current, ~half a day a week</li>
-<li><b>Service owner</b> (Operations &amp; IT Systems): access reviews, budget, approvals, ~half a day a month</li>
+<li><b>KPI owner</b> (whoever owns reporting today; we'd need to know who that is): keeps definitions and test answers up to date, about half a day a week</li>
+<li><b>Service owner</b> (Operations &amp; IT Systems): access checks, budget, approvals, about half a day a month</li>
 </ul>
 </td></tr>
 </table>
-<p>Your existing data partner continues to run the pipeline into the marts. The boundary is clear: they own sources to marts; the AI layer reads the controlled copy.</p>
+<p>Your current data partner keeps running the pipeline up to the marts. The split is clear: they own everything from the source systems to the marts; the AI layer only reads the safe copy.</p>
 </blockquote>
 
 <p><b>Q10 · Scalability</b></p>
-<p><i>Scoring:</i> did you design for Phase 2 without trying to sell it now?</p>
+<p><i>What they're checking:</i> did you design for Phase 2 without trying to sell it now?</p>
 <blockquote>
-<p><b>Each Phase 2 use case reuses the same copy, the same KPI definitions and the same accuracy testing. Nothing is rebuilt; things are added on top.</b> As you asked, none of this is priced.</p>
+<p><b>Each Phase 2 idea reuses the same safe copy, the same KPI definitions and the same accuracy tests. Nothing is rebuilt; we only add on top.</b> As you asked, none of this is priced.</p>
 <table border="1" cellpadding="10">
-<tr><th>Phase 2 use case</th><th>What Phase 1 already provides</th><th>What gets added later</th></tr>
-<tr><td>Real-time member &amp; retention reporting</td><td>Agreed member and churn definitions; scheduled digests</td><td>More frequent refresh; retention views in the BI tool</td></tr>
-<tr><td>Churn &amp; renewal prediction + context packs</td><td>Contract history by month; agreed churn and transfer definitions; golden tests</td><td>A contract-events model; company-level attendance and renewal-deal tables (no contacts, minimum group size); a score; a "renewal pack" template</td></tr>
-<tr><td>Forecasting (resident revenue, net member movements, seasonality, meeting rooms)</td><td>Clean monthly history by site in <code>fct_site_month_kpis</code></td><td>Forecast models; the assistant explains their output</td></tr>
-<tr><td>Role-based access &amp; agents</td><td>Sign-in, logging, a single controlled copy</td><td>Roles that filter by site or team; approved automations</td></tr>
+<tr><th>Phase 2 use case</th><th>What Phase 1 already gives</th><th>What gets added later</th></tr>
+<tr><td>Real-time member &amp; retention reporting</td><td>Agreed member and churn definitions; scheduled summaries</td><td>More frequent data refresh; retention views in the BI tool</td></tr>
+<tr><td>Churn &amp; renewal prediction + context packs</td><td>Contract history by month; agreed churn and transfer definitions; tests</td><td>A table of contract changes; weekly attendance per company and renewal-deal tables (no individual contacts, groups of 5 or more only); a risk score; a "renewal pack" template</td></tr>
+<tr><td>Forecasting (resident revenue, net member movements, seasonality, meeting rooms)</td><td>Clean monthly history per site in <code>fct_site_month_kpis</code></td><td>Forecast models; the assistant explains their results</td></tr>
+<tr><td>Role-based access &amp; agents</td><td>Sign-in, logs, one safe copy</td><td>Roles that limit what each site or team sees; approved automations</td></tr>
 </table>
 </blockquote>
 

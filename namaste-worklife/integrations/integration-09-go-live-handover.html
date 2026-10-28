@@ -1,0 +1,321 @@
+<h2>Integration Guide 09 — Go-Live and Handover Checklist</h2>
+
+<p>Hi! 🙏 This is the last guide. Everything is built: loaders, dbt models, tests, the nightly schedule and alerts. Now we prove it is right, prove it is safe, and hand it over so the client's own team can run it <b>without us</b>.</p>
+
+<p>Two moments, not one:</p>
+<ul>
+    <li><b>Go-live</b>: the BI dashboards switch to the new marts, and the client starts to trust and use those numbers (week 5–6 in Guide 01's made-up plan).</li>
+    <li><b>Handover</b>: the client owns and runs the whole pipeline, from sources to dashboards, without us.</li>
+</ul>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> This is <b>🛠 our standard</b> checklist. When go-live and handover happen is for you and the client to agree ❓. The brief asks that the setup is "documented so the capability does not depend on any single person, on your side or ours" (✅ brief), and our golden rule 7 says: match the client's own reports before you call a number right (Guide 01). Thresholds such as "two weeks" are <b>made up</b>: agree your own with the client and write them in <code>docs/decisions.md</code>.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Before you start</li>
+    <li>The go-live readiness checklist</li>
+    <li>Reconciliation and sign-off</li>
+    <li>The security review</li>
+    <li>The cost review</li>
+    <li>The documentation set to hand over</li>
+    <li>Access handover and secret rotation</li>
+    <li>The handover sessions: Tell, Show, Do, Prove</li>
+    <li>The support period after handover</li>
+    <li>The final one-page checklist</li>
+</ul>
+
+<hr/>
+
+<h3>1. Before You Start</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>You need</th></tr>
+<tr><td>☐</td><td>Guides 02–08 finished, each with its own "Done when" list ticked</td></tr>
+<tr><td>☐</td><td>A named client owner for the pipeline after handover (Guide 01, question 12) ❓, plus a backup</td></tr>
+<tr><td>☐</td><td>A Finance person to sign off money numbers and an Ops person to sign off member and occupancy numbers ❓</td></tr>
+<tr><td>☐</td><td>The client's trusted reports for the <b>last 3 closed months</b></td></tr>
+<tr><td>☐</td><td>The cost plan you agreed at the start, to compare with real bills</td></tr>
+<tr><td>☐</td><td>Time booked in the client team's calendar for the handover sessions (section 8)</td></tr>
+</table>
+
+<hr/>
+
+<h3>2. The Go-Live Readiness Checklist</h3>
+
+<p>Go-live means people will start to make decisions with these numbers. Do not go live until every line is true.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th><th>How you prove it</th></tr>
+<tr><td>☐</td><td>Every integration is "done" (Guide 01, section 9)</td><td>Each row of the integration register shows ☑ syncing ☑ tested</td></tr>
+<tr><td>☐</td><td><b>Two weeks of clean nightly runs</b> (made up threshold): loaders, freshness and <code>dbt build</code> all green, nobody touching them</td><td>Cloud Run job history for <code>extract-nexudus</code>, <code>dbt-build</code>; Fivetran sync history</td></tr>
+<tr><td>☐</td><td><b>Alerts tested by breaking things on purpose</b></td><td>The table below, each with the time the alert arrived</td></tr>
+<tr><td>☐</td><td>Golden-number test passes for the last 3 closed months</td><td><code>dbt build</code> log; sign-off table (section 3)</td></tr>
+<tr><td>☐</td><td>Every leadership dashboard reads the new marts (not old hand-built extracts) and shows the signed-off numbers</td><td>Open each dashboard next to the sign-off table (section 3)</td></tr>
+<tr><td>☐</td><td>The BI reader (<code>sa-bi-reader</code>) sees only what dashboards need; no personal columns on dashboards that do not need them</td><td>The check in section 4</td></tr>
+<tr><td>☐</td><td>The runbook has an entry for every alert</td><td><code>docs/runbook.md</code> (Guide 08)</td></tr>
+<tr><td>☐</td><td>Open months are marked so dashboards can show them as "provisional" (they can still change)</td><td>A month that is not closed shows the flag in the marts</td></tr>
+</table>
+
+<p><b>Break it on purpose</b> (do this in a quiet hour, tell the client first, and undo each one):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Break</th><th>How</th><th>Expected result</th></tr>
+<tr><td>Nexudus token stops working</td><td>Point the job at a disabled test secret version</td><td>Job fails, alert arrives, freshness errors next morning</td></tr>
+<tr><td>Fivetran connector stops</td><td>Pause the NetSuite connector for longer than the freshness limit</td><td>Fivetran email + dbt freshness error</td></tr>
+<tr><td>A test fails</td><td>Change a site value in <code>site_mapping.csv</code> on a test branch and run the job against it</td><td><code>not_null</code> on <code>fct_gl.site_code</code> fails; the models after it (such as <code>fct_site_month_kpis</code>) are skipped; alert arrives</td></tr>
+<tr><td>Excel column renamed</td><td>Rename a budget column in a copy of the sheet</td><td>Staging test fails with a clear message</td></tr>
+<tr><td>Cost alert</td><td>Set a test budget alert very low</td><td>Budget email arrives to the right group</td></tr>
+</table>
+
+<p>💡 An alert that nobody received is not an alert. Check it reached a <b>client</b> address or channel, not only yours.</p>
+
+<hr/>
+
+<h3>3. Reconciliation and Sign-Off</h3>
+
+<p><b>Reconciliation</b> means comparing our numbers with the client's own trusted report, line by line, and explaining every difference. <b>Sign-off</b> means the right person says in writing "these are correct". The rule (🛠 our standard, the series' canonical sign-off):</p>
+
+<ul>
+    <li><b>Finance signs off money numbers</b>: MRR, revenue, direct costs, contribution, central costs, budget gaps.</li>
+    <li><b>Ops signs off member and occupancy numbers</b>: members, desks contracted, sellable desks, desk occupancy, movements.</li>
+    <li>For the <b>last 3 closed months</b>, per site. Money on closed months has <b>£0 tolerance</b> (rounded the same way the report rounds).</li>
+</ul>
+
+<p>Each difference ends in one of three states: <b>fixed</b> (our bug), <b>explained</b> (a real, known reason, such as a credit note in NetSuite that Nexudus does not know about), or <b>changed definition</b> (the client agrees a new rule; log it in <code>docs/decisions.md</code>). "We are looking into it" is not a state you can sign off.</p>
+
+<p><b>Sign-off table template</b> (one per month; the figures are made up, from the series' Mini Work.Life lab for September 2026):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Site</th><th>Metric</th><th>Client report</th><th>Our mart</th><th>Difference</th><th>State and reason</th><th>Signed by (role)</th><th>Date</th></tr>
+<tr><td>Soho</td><td>MRR</td><td>£3,040</td><td>£3,040</td><td>£0</td><td>Match</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Soho</td><td>Revenue</td><td>£3,475</td><td>£3,475</td><td>£0</td><td>Match (includes −£90 credit memo)</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Soho</td><td>Desk occupancy</td><td>17.6%</td><td>17.6% (6/34)</td><td>0</td><td>Match</td><td>Ops</td><td>☐</td></tr>
+<tr><td>Soho</td><td>Meeting rooms: Nexudus vs NetSuite</td><td>£525 booked</td><td>£435 in ledger</td><td>£90</td><td>Explained: goodwill credit, warning test</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Reading</td><td>MRR</td><td>£2,700</td><td>£2,700</td><td>£0</td><td>Match</td><td>Finance</td><td>☐</td></tr>
+</table>
+
+<p>Store the signed tables in the client's shared drive and link them from <code>docs/decisions.md</code>. Then add each signed figure to <code>seeds/golden_numbers.csv</code> (Guide 07), so the nightly build checks it forever.</p>
+
+<p>Last step: open each leadership dashboard for the same months and check it shows the signed figures. A right mart behind a dashboard with a wrong filter is still a wrong number in front of a leader.</p>
+
+<hr/>
+
+<h3>4. The Security Review</h3>
+
+<p>Run this review with the client's IT or cloud admin. Save the outputs in the access list (section 6).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th><th>How</th></tr>
+<tr><td>☐</td><td>No personal logins in any loader (every source uses an integration user)</td><td>Integration register, "Auth" column</td></tr>
+<tr><td>☐</td><td>No keys or passwords in Git, ever (including old commits)</td><td>Turn on GitHub secret scanning, or run a scanner such as gitleaks over the full history</td></tr>
+<tr><td>☐</td><td>No service account key files exist, except one for <code>sa-bi-reader</code> if the BI tool cannot sign in any other way</td><td>Command 2 below (run it for each account). A BI key lives only in the BI tool's own store, owned by the client</td></tr>
+<tr><td>☐</td><td>Least privilege: each account has only the roles in Guide 02</td><td>Command 1 below, compared line by line</td></tr>
+<tr><td>☐</td><td>Personal columns sit only where agreed (<code>dim_member</code>, <code>member_xref</code>, <code>dim_company.billing_email</code>), and <code>sa-bi-reader</code> reads only what dashboards need</td><td>Query 3 below, plus <code>bq show</code> on the <code>marts</code> dataset to see who can read it</td></tr>
+<tr><td>☐</td><td>Door data, if loaded, appears in marts only as company-level totals</td><td>No per-person door table in <code>marts</code></td></tr>
+<tr><td>☐</td><td>HR and people data are not in the warehouse at all</td><td>Query 4 below returns zero rows</td></tr>
+<tr><td>☐</td><td>Every dataset is in <code>europe-west2</code></td><td>Query 5 below</td></tr>
+<tr><td>☐</td><td>Audit logs are on and kept</td><td>Admin Activity logs are always on 📘; BigQuery data access logs are on by default 📘 (check current docs); agree how long logs are kept</td></tr>
+</table>
+
+<pre>
+# 1. Who has which role on each project (repeat for &lt;client&gt;-data-dev)
+gcloud projects get-iam-policy &lt;client&gt;-data-prod \
+  --flatten="bindings[].members" --format="table(bindings.role, bindings.members)"
+#   Look for: roles/owner or roles/editor on anyone but data-admins@
+#             any user: address from our company (remove it at handover)
+#             service accounts with more than their Guide 02 roles
+
+# 2. Service account keys: expect only Google-managed keys, no user-managed ones
+gcloud iam service-accounts keys list --managed-by=user \
+  --iam-account=sa-dbt@&lt;client&gt;-data-prod.iam.gserviceaccount.com
+</pre>
+
+<pre>
+-- 3. Personal-looking columns in marts. Expect ONLY the agreed ones.
+select table_name, column_name
+from `&lt;client&gt;-data-prod.marts.INFORMATION_SCHEMA.COLUMNS`
+where regexp_contains(lower(column_name),
+      r'email|phone|first_name|last_name|card|address');
+
+-- 4. HR-looking columns anywhere in the data project. Expect ZERO rows.
+select table_schema, table_name, column_name
+from `&lt;client&gt;-data-prod.region-europe-west2.INFORMATION_SCHEMA.COLUMNS`
+where regexp_contains(lower(column_name), r'salary|payroll|sickness|absence|appraisal|ni_number');
+
+-- 5. Every dataset's region. Expect only europe-west2.
+select schema_name, location
+from `&lt;client&gt;-data-prod.region-europe-west2.INFORMATION_SCHEMA.SCHEMATA`;
+-- Also: bq ls --format=prettyjson to catch any dataset created in another region.
+</pre>
+
+<p>⚠️ A name search is a first check, not proof. Also read the column list of each mart the BI tool can see, by eye, with the client's data owner, and write down what was agreed. Note that "Site Staff" cost as one GL total per site is allowed; anything per person is not.</p>
+
+<hr/>
+
+<h3>5. The Cost Review</h3>
+
+<p>The brief says it "cannot become a six figure operation" (✅ brief). Compare the real bills for the last full month with the plan. Example layout (all figures made up):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Item</th><th>Plan / month</th><th>Actual / month</th><th>Where to look</th><th>Note</th></tr>
+<tr><td>BigQuery queries</td><td>£40</td><td>£52</td><td>Query below</td><td>Who scans most?</td></tr>
+<tr><td>BigQuery storage</td><td>£10</td><td>£8</td><td>Billing report</td><td></td></tr>
+<tr><td>Fivetran</td><td>£400</td><td>£480</td><td>Fivetran usage page</td><td>Which connector grew?</td></tr>
+<tr><td>Cloud Run, Scheduler, Secret Manager</td><td>£5</td><td>£3</td><td>Billing report</td><td></td></tr>
+<tr><td>BI tool licences</td><td>Client's existing cost ❓</td><td>?</td><td>Client's BI contract</td><td>The BI tool is under review (✅ brief)</td></tr>
+</table>
+
+<pre>
+-- Who scanned the most data in the last 30 days?
+select user_email,
+       round(sum(total_bytes_billed) / pow(1024, 4), 3) as tib_billed,
+       count(*) as queries
+from `&lt;client&gt;-data-prod.region-europe-west2.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+where creation_time &gt;= timestamp_sub(current_timestamp(), interval 30 day)
+group by user_email order by tib_billed desc;
+-- Multiply TiB by the current on-demand price per TiB (check Google's price page).
+</pre>
+
+<p>Anything more than 25% over plan (made up threshold) needs a reason and a fix, written in <code>docs/decisions.md</code>. Check that budget alerts (Guide 02) go to a <b>client</b> group, not to us.</p>
+
+<hr/>
+
+<h3>6. The Documentation Set to Hand Over</h3>
+
+<p><a href="../season-5-delivery/chapter-36-documentation-handover.html">Chapter 36</a> explains the thinking: docs live in the client's systems, are generated from the real system where possible, and are done only when someone new can use them. For this pipeline, hand over these:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Document</th><th>Where it lives</th><th>Made from</th><th>Done when</th></tr>
+<tr><td>Integration register</td><td><code>docs/integration-register.md</code></td><td>Guide 01 section 8, kept up to date</td><td>Every row ☑ syncing ☑ tested ☑ signed off</td></tr>
+<tr><td>Runbook</td><td><code>docs/runbook.md</code></td><td>Guide 08</td><td>One entry per alert; each tried by a client person</td></tr>
+<tr><td>Decisions log</td><td><code>docs/decisions.md</code></td><td>Written on the day of each decision</td><td>Every definition, threshold and "why" is there, with date and who decided (role)</td></tr>
+<tr><td>Data dictionary</td><td>dbt docs site (private)</td><td><code>dbt docs generate</code> (Guide 07)</td><td>Every mart column has a description; exposures list each dashboard</td></tr>
+<tr><td>Data flow diagram</td><td><code>docs/</code></td><td>Guide 01's big picture + dbt lineage</td><td>Shows every source, loader, dataset and dashboard, with refresh times</td></tr>
+<tr><td>KPI definitions</td><td>dbt column descriptions + <code>docs/decisions.md</code></td><td>Agreed with Finance and Ops</td><td>Every dashboard KPI has a formula, a source mart and an owner (role)</td></tr>
+<tr><td>Access list</td><td>Client shared drive</td><td>IAM export (section 4) + vendor admin lists</td><td>Every human, group and service account, with its roles and owner</td></tr>
+<tr><td>Signed reconciliations</td><td>Client shared drive</td><td>Section 3</td><td>3 closed months, Finance and Ops signed</td></tr>
+<tr><td><code>README.md</code></td><td>Repo root</td><td>Guide 01 layout</td><td>A new engineer can run a dev build from it alone</td></tr>
+</table>
+
+<p>🛠 The test for every document: someone who never met us can <b>run, fix and change</b> the system with it (Chapter 36). Docs say <b>where</b> a secret lives, never the secret itself.</p>
+
+<hr/>
+
+<h3>7. Access Handover and Secret Rotation</h3>
+
+<p>On handover day, nothing may depend on our own accounts. Most things should already be in the client's name from day one (Guide 01); this step removes <b>us</b>.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Thing</th><th>Move to</th><th>Remove</th></tr>
+<tr><td>Cloud projects (<code>&lt;client&gt;-data-prod</code>, <code>&lt;client&gt;-data-dev</code>)</td><td>Owner: <code>data-admins@</code>. Daily work: <code>data-engineers@</code>, <code>data-analysts@</code> (read)</td><td>Our personal users, any role</td></tr>
+<tr><td>Git repository</td><td>Admin: client <code>data-admins@</code> people; code owners: client engineers</td><td>Our users; any deploy keys we added</td></tr>
+<tr><td>Fivetran account</td><td>Account owner and billing: client</td><td>Our Fivetran users</td></tr>
+<tr><td>Secret Manager</td><td>Admin: <code>data-admins@</code>. Read secrets: only the service accounts that need them</td><td>Our access to secret values</td></tr>
+<tr><td>Source integration users (NetSuite, HubSpot, Nexudus, ACT)</td><td>Owned by the client admin of each system</td><td>Any password or token we ever saw (rotate below)</td></tr>
+<tr><td>BI tool: the BigQuery connection and the dashboards</td><td>Connection runs as <code>sa-bi-reader</code>; dashboards owned by client BI users</td><td>Dashboards or data sources published under our names</td></tr>
+<tr><td>Alerts, budgets, scheduler jobs</td><td>Send to client groups and channels</td><td>Our email addresses</td></tr>
+</table>
+
+<p><b>Rotate every secret on handover day.</b> We saw them during the build, so they must change. Do one at a time:</p>
+
+<pre>
+ FOR EACH SECRET (nexudus-api-token, act-api-key, alert-webhook-url, Fivetran logins,
+                  and the BI tool's BigQuery key if it needs one)
+ 1. Client admin makes a new token in the source system
+ 2. Add it as a NEW version in Secret Manager (or re-enter it in Fivetran)
+      gcloud secrets versions add nexudus-api-token --data-file=new_token.txt
+      (then delete new_token.txt)
+ 3. Run the job by hand and check it works
+      gcloud run jobs execute extract-nexudus --region=europe-west2 --wait
+ 4. Disable the old version in Secret Manager
+ 5. Client admin revokes the old token in the source system
+ 6. Next morning: freshness green? Then tick it off
+</pre>
+
+<p>Then remove our accounts, and run the IAM command from section 4 again. Our company's addresses should appear nowhere. If a support agreement continues, the client gives us <b>their</b> accounts with the smallest roles that agreement needs, ideally time-limited (the brief: Work.Life accounts only ✅).</p>
+
+<hr/>
+
+<h3>8. The Handover Sessions: Tell, Show, Do, Prove</h3>
+
+<p>This follows <a href="../season-5-delivery/chapter-36-documentation-handover.html">Chapter 36</a>. Handover is proved by what the client's team <b>does</b>, not by how many slides we show.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>What happens (pipeline examples)</th><th>Done when</th></tr>
+<tr><td><b>1. Tell</b></td><td>Recorded walk-throughs: the big picture, each loader, the dbt layers, tests, the nightly order, how dashboards connect to the marts, costs, security</td><td>Recordings saved in the client's shared drive</td></tr>
+<tr><td><b>2. Show</b></td><td>We run each runbook entry live while they watch: re-run a failed job, add a site to the seed, add a golden number, rotate a secret</td><td>Every runbook entry shown once</td></tr>
+<tr><td><b>3. Do</b></td><td>The client team runs each runbook entry; we only answer questions</td><td>Each entry done by at least 2 client people</td></tr>
+<tr><td><b>4. Prove</b></td><td>The client team runs the live service from the docs alone (two weeks in Chapter 36). We break things in a test setup without warning; they fix them using only the runbook</td><td>Drills passed; every gap found in the docs is fixed</td></tr>
+</table>
+
+<p>Good fire drills for this stack:</p>
+<ul>
+    <li>The Nexudus extractor fails because its token was "revoked" (a disabled test version).</li>
+    <li>The golden test fails because Finance "renamed" a site value.</li>
+    <li>A Fivetran connector is paused and freshness turns red.</li>
+    <li>A dashboard shows last week's numbers: the team must find whether the nightly job, a loader or the BI tool's own refresh is the cause.</li>
+    <li>A new plan code arrives and the <code>accepted_values</code> test fails: the team must ask Ops how many desks it holds.</li>
+</ul>
+
+<p>The key moment: <b>the client team runs a fix from the runbook themselves</b>, start to finish, and the next nightly run is green. If they needed to call us, the runbook gets fixed and the drill is repeated.</p>
+
+<hr/>
+
+<h3>9. The Support Period After Handover</h3>
+
+<p>Agree this in writing before handover. A simple shape (all made up):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Item</th><th>Example</th></tr>
+<tr><td>Length</td><td>4 weeks of close support, then the normal support agreement (if any)</td></tr>
+<tr><td>What is covered</td><td>Questions, bugs in our code, help with runbooks. Not new features.</td></tr>
+<tr><td>Response time</td><td>Next working day; same day if a board number is wrong</td></tr>
+<tr><td>How to ask</td><td>One shared channel or ticket queue, owned by the client</td></tr>
+<tr><td>Weekly check</td><td>15 minutes: failed runs, alerts, cost, open questions</td></tr>
+<tr><td>Ends when</td><td>Four weeks with no help needed for normal runs, and the last fixes are in the runbook</td></tr>
+</table>
+
+<p>During support, every question we answer becomes a runbook line or a doc fix. Every wrong number found becomes a new golden test (Chapter 36).</p>
+
+<hr/>
+
+<h3>10. Common Problems and Fixes</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td>Nobody on the client side will sign off</td><td>Sign-off owners were not named early. Escalate to the client sponsor; do not go live without it.</td></tr>
+<tr><td>A number differs and nobody knows why</td><td>Do not lower the bar to hit a date. Move go-live, or go live with only the signed-off KPIs.</td></tr>
+<tr><td>A dashboard and the sign-off table disagree, but the mart is right</td><td>The dashboard has its own filter, date logic or extract schedule. Fix the dashboard to use the mart's columns as they are.</td></tr>
+<tr><td>A job breaks right after we remove our accounts</td><td>Something still used a personal login. Fix it with a service account, then repeat the IAM check.</td></tr>
+<tr><td>Alerts still go to us</td><td>Change alert channels and budget emails to client groups; test again.</td></tr>
+<tr><td>The client team cannot follow a runbook</td><td>The runbook is wrong, not the team. Rewrite it with them and repeat the drill.</td></tr>
+</table>
+
+<hr/>
+
+<h3>11. The Final One-Page Checklist (Done When)</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>☐</th><th>Check</th></tr>
+<tr><td>☐</td><td>Every integration "done" (Guide 01, section 9); register complete</td></tr>
+<tr><td>☐</td><td>Two weeks of clean nightly runs (made up threshold)</td></tr>
+<tr><td>☐</td><td>Every alert tested by breaking things on purpose, and received by a client group</td></tr>
+<tr><td>☐</td><td>Last 3 closed months reconciled: Finance signed money, Ops signed members and occupancy</td></tr>
+<tr><td>☐</td><td>Signed figures added to the golden-number test; leadership dashboards show the same figures</td></tr>
+<tr><td>☐</td><td>Security review passed: no personal logins, no keys in Git, no stray key files, least privilege, <code>sa-bi-reader</code> read only and limited to what dashboards need, no HR data, door data company-level only, all in <code>europe-west2</code>, audit logs on</td></tr>
+<tr><td>☐</td><td>Cost review done; actuals within plan or explained</td></tr>
+<tr><td>☐</td><td>Documents handed over: register, runbook, decisions log, data dictionary, data flow, KPI definitions, access list, signed reconciliations, README</td></tr>
+<tr><td>☐</td><td>Ownership moved: cloud projects, Git, Fivetran, Secret Manager, BI connection and dashboards, alerts</td></tr>
+<tr><td>☐</td><td>Every secret rotated on handover day; old versions disabled and revoked</td></tr>
+<tr><td>☐</td><td>Our accounts removed (IAM check shows none)</td></tr>
+<tr><td>☐</td><td>Tell, Show, Do, Prove done; the client team fixed a drill from the runbook alone</td></tr>
+<tr><td>☐</td><td>Support period agreed in writing</td></tr>
+</table>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>That is the whole playbook. 🎉 For the next client, go back to <a href="integration-01-start-here.html">Guide 01 — Start Here</a> and begin again with the questions and the access list. Fix anything in these guides that did not match what you found, and write down why.</p>
+
+<p>For the full documentation and handover thinking behind this guide, read <a href="../season-5-delivery/chapter-36-documentation-handover.html">Chapter 36 — Documentation &amp; Handover</a>. For how dashboards sit on top of the marts, see <a href="../season-2-pipeline/chapter-18-bi-layer.html">Chapter 18 (the BI layer)</a>.</p>
