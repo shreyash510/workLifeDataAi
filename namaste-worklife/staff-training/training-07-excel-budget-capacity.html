@@ -1,0 +1,198 @@
+<h2>Staff Training 07 — Excel: The Budget and Capacity Sheets</h2>
+
+<p>Hi again! 🙏 This guide is for <b>finance and operations staff</b>, and for <b>site managers</b> who tell them about changes at their site. Most of the business runs in proper systems, but two important lists still live in Excel: the <b>budget</b> and the <b>capacity</b> list. The dashboards read them every day, so a small slip in Excel can quietly change the numbers leaders see.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Before you start.</b> This guide shows <b>our standard way of working</b> (🛠). Example sites and numbers come from <b>Mini Work.Life</b>, a <b>made-up</b> company; the lab file is <code>excel_capacity_budget_2026.csv</code>. Your company's columns, sites and file location may be different (❓ ask your manager).</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>What the two sheets are, and who owns each</li>
+    <li>Where the file lives</li>
+    <li>The template rules</li>
+    <li>Setting the budget for a new year</li>
+    <li>Changing capacity when a site adds or removes desks</li>
+    <li>Version history</li>
+    <li>What breaks when the rules are broken</li>
+    <li>A checklist, practice tasks and a quick check</li>
+</ul>
+
+<hr/>
+
+<h3>1. What the Two Sheets Are</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Sheet</th><th>What it holds</th><th>Owner (🛠)</th><th>Used for</th></tr>
+<tr><td><b>Budget</b></td><td>For each site and each month: the planned revenue, planned direct costs and planned occupancy</td><td>Finance</td><td>"Revenue vs budget" on the dashboards and in the board pack</td></tr>
+<tr><td><b>Capacity</b></td><td>For each site (and month): how many desks and offices the site can really sell</td><td>Operations</td><td>Desk occupancy: desks taken ÷ sellable desks</td></tr>
+</table>
+
+<p>Why Excel? Nexudus knows which offices exist, but after a refit its numbers are often out of date. And the budget is made once a year by finance. So these two lists are kept in Excel, with strict rules, and loaded into the data warehouse on a schedule.</p>
+
+<p>In the lab file both sheets sit together in one table, one row per site per month:</p>
+
+<table border="1" cellpadding="10">
+<tr><th>site_code</th><th>month</th><th>sellable_desks</th><th>budget_revenue_gbp</th><th>budget_desk_occupancy</th><th>budget_direct_costs_gbp</th><th>notes</th></tr>
+<tr><td>SOHO</td><td>2026-07</td><td>34</td><td>9000</td><td>0.85</td><td>7600</td><td></td></tr>
+<tr><td>SOHO</td><td>2026-08</td><td>34</td><td>9000</td><td>0.85</td><td>7600</td><td>August is quiet - holidays</td></tr>
+<tr><td>SOHO</td><td>2026-09</td><td>34</td><td>9200</td><td>0.85</td><td>7650</td><td></td></tr>
+<tr><td>RDG</td><td>2026-07</td><td>31</td><td>3100</td><td>0.20</td><td>2400</td><td></td></tr>
+<tr><td>RDG</td><td>2026-08</td><td>31</td><td>3100</td><td>0.20</td><td>2400</td><td></td></tr>
+<tr><td>RDG</td><td>2026-09</td><td>31</td><td>3200</td><td>0.20</td><td>2450</td><td>Ortho Robotics could fill O202 from Nov</td></tr>
+</table>
+
+<p>💡 <code>sellable_desks</code> is the capacity part (operations). The <code>budget_...</code> columns are the budget part (finance). ❓ Your company may keep them as two tabs or two files; the rules below are the same either way. If one file has two owners, agree who may edit which columns.</p>
+
+<hr/>
+
+<h3>2. Where the File Lives</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td>🛠 <b>One shared location</b> (for example a named SharePoint, OneDrive or Google Drive folder; ❓ ask your manager which)</td><td>The data load reads the file from that exact place</td></tr>
+<tr><td>🛠 <b>Never rename or move the file</b> without telling the data owner first</td><td>The load cannot find a moved file, so the dashboards keep showing old numbers</td></tr>
+<tr><td>🛠 <b>No copies.</b> No "Budget_FINAL_v2.xlsx" on your desktop or in email.</td><td>With two copies, nobody knows which one is true</td></tr>
+<tr><td>🛠 <b>Edit rights only for owners.</b> Everyone else views.</td><td>Fewer people editing means fewer slips</td></tr>
+</table>
+
+<hr/>
+
+<h3>3. The Template Rules</h3>
+
+<p>A computer reads this file, not a person. Computers are strict. Follow every rule, every time.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Rule</th><th>Wrong</th><th>Right</th></tr>
+<tr><td>1</td><td><b>Do not rename, move, add or delete columns</b></td><td>Renaming <code>sellable_desks</code> to "Desks (sellable)"</td><td>Leave the header row exactly as it is. Need a new column? Ask the data owner.</td></tr>
+<tr><td>2</td><td><b>Site from the drop-down list only</b></td><td>"Soho", "soho ", "Soho site (new)"</td><td>SOHO</td></tr>
+<tr><td>3</td><td><b>One row per site per month</b></td><td>Two rows for SOHO 2026-09, or one row covering "Jul–Sep"</td><td>Exactly one row for each site and month</td></tr>
+<tr><td>4</td><td><b>Month in the agreed format</b></td><td>"Sept 26", "09/2026"</td><td>2026-09 (or whatever the template says; ❓)</td></tr>
+<tr><td>5</td><td><b>Numbers as numbers, not text</b></td><td>"£9,200", "9.2k", "85%" typed as text, "TBC"</td><td>9200 and 0.85. Leave a cell empty if unknown, and say why in <code>notes</code>.</td></tr>
+<tr><td>6</td><td><b>No merged cells</b></td><td>Merging the SOHO cells across three months to look tidy</td><td>Repeat SOHO on every row</td></tr>
+<tr><td>7</td><td><b>No totals, subtotals or blank rows inside the table</b></td><td>A "Total Soho" row under September</td><td>Totals go on a separate tab, or in the dashboard</td></tr>
+<tr><td>8</td><td><b>Do not type over a formula</b> "just this month"</td><td>Typing 9500 over a calculated cell</td><td>Change the inputs, or write a note and tell the owner</td></tr>
+<tr><td>9</td><td><b>Notes go in the notes column</b></td><td>Cell colours or comments to explain a number</td><td>Plain text in <code>notes</code>, like "August is quiet - holidays"</td></tr>
+</table>
+
+<hr/>
+
+<h3>4. Setting the Budget for a New Year</h3>
+
+<p>Finance does this once a year, after the budget is agreed.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>Who</th><th>What</th></tr>
+<tr><td>1</td><td>Finance</td><td>Agree the new year's numbers (outside this file, in any working sheets you like)</td></tr>
+<tr><td>2</td><td>Finance</td><td>Open the <b>shared</b> file. Add rows for every site and every month of the new year, at the bottom of the table. Do not delete last year's rows (❓ unless the data owner says the template keeps one year only).</td></tr>
+<tr><td>3</td><td>Finance</td><td>Paste <b>values only</b> (not formats or formulas) into the budget columns</td></tr>
+<tr><td>4</td><td>Finance</td><td>Check: number of new rows = number of sites × 12. No blank site codes. No text in number columns.</td></tr>
+<tr><td>5</td><td>Operations</td><td>Fill in <code>sellable_desks</code> for the new rows (see section 5)</td></tr>
+<tr><td>6</td><td>Finance</td><td>Tell the data owner the new year is in. Next day, check one site's "budget" figure on the dashboard matches the file.</td></tr>
+</table>
+
+<p>💡 A budget that changes during the year: ❓ ask finance whether you replace the numbers (and keep the old version in version history) or keep the original budget and add a separate forecast. Do not mix the two in the same columns.</p>
+
+<hr/>
+
+<h3>5. Changing Capacity When a Site Adds or Removes Desks</h3>
+
+<p>Capacity changes when a site is refitted, an office is split or joined, or desks are taken out for a meeting room.</p>
+
+<pre>
+   Site manager:  "From 1 March, Office 102 is split into two offices,
+                   and we lose 2 desks."                   (made-up example)
+         │
+         ▼
+   Operations (capacity owner):
+     1. Change sellable_desks for that site, from that month onwards only
+     2. Do NOT change past months (history must stay as it was)
+     3. Write the reason in notes ("Office 102 split, -2 desks")
+         │
+         ▼
+   Tell the data owner     AND     tell the Nexudus admin
+   (dashboards)                    (offices and desks in Nexudus must match)
+</pre>
+
+<p>🛠 Why past months stay: September's desk occupancy at Soho was 6 ÷ 34 = 17.6%. If someone changed September to 30 desks later, September's number would quietly change to 20%, and last month's board pack would no longer match.</p>
+
+<hr/>
+
+<h3>6. Version History</h3>
+
+<p>Files in a shared folder keep earlier versions. 📘 In SharePoint and OneDrive this is usually under the file's "Version history"; check the vendor's help centre for your tool.</p>
+
+<ul>
+    <li>Use it to see <b>who changed what, and when</b>.</li>
+    <li>Use it to <b>go back</b> if someone breaks the template. Tell the data owner when you do.</li>
+    <li>Because version history exists, you never need your own backup copy.</li>
+</ul>
+
+<hr/>
+
+<h3>7. What Breaks When the Rules Are Broken</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Mistake</th><th>What happens</th></tr>
+<tr><td>Column renamed or moved</td><td>The data load stops, or loads the wrong column. Dashboards show yesterday's numbers or blanks.</td></tr>
+<tr><td>"Soho " with a space</td><td>That row matches no site and silently drops out. Soho's budget looks too low.</td></tr>
+<tr><td>Two rows for the same site and month</td><td>The budget is counted twice. Soho's September budget becomes £18,400.</td></tr>
+<tr><td>"£9,200" typed as text</td><td>Read as blank or rejected. "Revenue vs budget" goes missing.</td></tr>
+<tr><td>A totals row inside the table</td><td>Counted as if it were a site. Totals double.</td></tr>
+<tr><td>File moved or copied</td><td>The load reads the old file. Your changes never reach the dashboards.</td></tr>
+</table>
+
+<p>💡 A good data setup has checks that stop a bad file loading and warn the data owner. That protects the dashboards, but it means the numbers stop updating until someone fixes the file. Either way, the fix starts with you.</p>
+
+<hr/>
+
+<h3>8. Checklist Before You Save</h3>
+
+<pre>
+   EXCEL BUDGET / CAPACITY: CHECK BEFORE YOU CLOSE THE FILE
+   [ ] I edited the shared file, not a copy
+   [ ] Header row untouched (no renamed, moved, new or deleted columns)
+   [ ] Every site code picked from the drop-down
+   [ ] Exactly one row per site per month
+   [ ] Every number is a number (no £, no %, no "TBC")
+   [ ] No merged cells, no totals or blank rows inside the table
+   [ ] Past months unchanged (unless finance asked for a correction)
+   [ ] Reason written in notes for any change
+   [ ] Data owner told (and Nexudus admin, for capacity changes)
+</pre>
+
+<hr/>
+
+<h3>9. Practice Tasks</h3>
+
+<p>Use a <b>copy</b> of <code>excel_capacity_budget_2026.csv</code> in a training folder, never the real shared file.</p>
+
+<ol>
+    <li>What is Soho's total budget revenue for July to September? (Answer: 9,000 + 9,000 + 9,200 = £27,200.) And Reading's? (3,100 + 3,100 + 3,200 = £9,400.)</li>
+    <li>Soho's budget occupancy is 0.85 of 34 sellable desks. How many desks is that? (About 29.) Soho's actual September occupancy was 6 of 34. What would you ask finance about this budget?</li>
+    <li>Add the rows for October 2026 for both sites, following every rule. Use made-up numbers. Check you added exactly 2 rows.</li>
+    <li>Made-up change: Reading takes 1 desk out from November. Which rows do you change, and which do you leave alone? Who do you tell?</li>
+    <li>Break it on purpose (in your copy only): type "£9,200" as text in one cell, and add a "Total" row. Write down how each would hurt the dashboards.</li>
+</ol>
+
+<hr/>
+
+<h3>Quick check</h3>
+
+<p><b>1. Who owns the budget numbers, and who owns sellable desks?</b><br/>
+<i>Finance owns the budget. Operations owns capacity (sellable desks).</i></p>
+
+<p><b>2. You want a column for "budget meeting room revenue". Can you just add it?</b><br/>
+<i>No. Ask the data owner first; a new column can break the data load.</i></p>
+
+<p><b>3. A site loses 2 desks from March. Do you change January and February too?</b><br/>
+<i>No. Change March onwards only, write the reason in notes, and tell the data owner and the Nexudus admin.</i></p>
+
+<p><b>4. Why not keep your own copy of the file to work on?</b><br/>
+<i>Because the load reads only the shared file, and two copies means nobody knows which is true. Version history is your backup.</i></p>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Next, the guide everyone must take: <a href="training-08-joiner-mover-leaver.html">Staff Training 08 — Joiner, Mover, Leaver: What to Do in Every System</a>. 🚀</p>
+
+<p>Back to <a href="training-01-start-here.html">Staff Training 01 — Start Here</a>. Want more depth? Read <a href="../season-1-source-systems/chapter-06-excel.html">Chapter 06 — Excel</a>.</p>

@@ -1,0 +1,284 @@
+<h2>Staff Training 05 — NetSuite for Finance: The Accounts and the Month-End Close</h2>
+
+<p>Hi! 🙏 This guide is for the <b>finance team</b>. NetSuite holds the official accounts: every pound of income and cost, for every site. When leadership asks "did Soho make money last month?", the answer comes from NetSuite, after you have closed the month. So the care you take here decides whether the business can trust its own numbers.</p>
+
+<p>Each section is one job, written as steps: "To do X: 1… 2… 3… then check…". You do not need to know how NetSuite works inside.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> Menu paths below are from NetSuite's own help pages and from memory (📘). NetSuite screens differ between companies and change with updates, so if a menu has moved, check the vendor's help centre. Steps marked 🛠 are <b>our standard</b>. This is basic how-to only, not accounting or tax advice: for anything about VAT, leases or how to treat an item, <b>follow your finance lead's policy</b>. Examples come from <b>Mini Work.Life</b>, a <b>made-up</b> company with two sites, Soho and Reading.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>The chart of accounts for a coworking business</li>
+    <li>Tagging every line with the site</li>
+    <li>How member invoices arrive from Nexudus, and checking them</li>
+    <li>Recording supplier bills</li>
+    <li>Credit notes</li>
+    <li>Prepayments and accruals in plain words</li>
+    <li>Bank reconciliation basics</li>
+    <li>The month-end close, day by day</li>
+    <li>Reports to run: site P&amp;L and budget vs actual</li>
+    <li>Reconciling Nexudus with NetSuite</li>
+</ul>
+
+<hr/>
+
+<h3>1. The Chart of Accounts</h3>
+
+<p>The <b>chart of accounts</b> is the list of "buckets" money goes into. Every invoice line and every bill line must land in the right bucket, or the reports mix things up. You can see the list in NetSuite under 📘 Lists → Accounting → Accounts (check the help centre if it moved).</p>
+
+<p>Here is the Mini Work.Life chart for the profit and loss (your company's numbers and names will differ; ❓ ask your finance lead for the real list):</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Account</th><th>Name</th><th>Type</th><th>Used for</th></tr>
+<tr><td>4000</td><td>Office Revenue</td><td>Income</td><td>Private office fees</td></tr>
+<tr><td>4010</td><td>Coworking Revenue</td><td>Income</td><td>Hot desk and coworking plans</td></tr>
+<tr><td>4100</td><td>Meeting Room Revenue</td><td>Income</td><td>Meeting room bookings</td></tr>
+<tr><td>4200</td><td>Event Revenue</td><td>Income</td><td>Event space hire (no rows in September)</td></tr>
+<tr><td>5000</td><td>Rent</td><td>Expense (site)</td><td>Rent for the building</td></tr>
+<tr><td>5010</td><td>Business Rates</td><td>Expense (site)</td><td>Council business rates</td></tr>
+<tr><td>5020</td><td>Service Charge</td><td>Expense (site)</td><td>Landlord's service charge</td></tr>
+<tr><td>5100</td><td>Utilities</td><td>Expense (site)</td><td>Energy</td></tr>
+<tr><td>5200</td><td>Site Staff</td><td>Expense (site)</td><td>Staff working at the site</td></tr>
+<tr><td>5300</td><td>Cleaning</td><td>Expense (site)</td><td>Cleaning contracts</td></tr>
+<tr><td>6000</td><td>Central Overheads</td><td>Expense (central)</td><td>Head office costs shared out to sites</td></tr>
+</table>
+
+<p>💡 <b>Why the right income account matters.</b> Leadership watches office, coworking and meeting room income separately. If a meeting room charge lands in 4000, the office numbers look better than they are and meeting rooms look worse. The pattern is simple: <b>4xxx = income, 5xxx = site costs, 6xxx = central costs</b>.</p>
+
+<p>🛠 Never create a new account yourself. If something does not fit, ask your finance lead. A new account changes every report.</p>
+
+<hr/>
+
+<h3>2. Tag Every Line With the Site</h3>
+
+<p>NetSuite can tag each transaction line with extra labels called <b>segments</b> (📘): <i>subsidiary</i>, <i>location</i>, <i>department</i>, <i>class</i>, and sometimes custom ones. One of these is used for the <b>site</b>. Mini Work.Life uses <b>location</b> (Soho, Reading).</p>
+
+<p>❓ Ask your finance lead <b>which segment your company uses for the site</b>: location, department, class or a separate subsidiary. Then use it on <b>every line</b>, every time.</p>
+
+<p>To check a transaction is tagged:</p>
+<ol>
+    <li>Open the invoice, bill or journal.</li>
+    <li>Look at each line, not just the top of the form. A site can be set on the header and still be different, or empty, on a line.</li>
+    <li>Fix any empty or wrong site before you save. If the transaction is already in a closed month, ask your finance lead first.</li>
+</ol>
+
+<p>⚠️ A cost with no site tag disappears from every site's P&amp;L. A cost with the wrong site makes one site look worse and another better.</p>
+
+<hr/>
+
+<h3>3. Member Invoices From Nexudus</h3>
+
+<p>Member invoices are created in <b>Nexudus</b> by the billing team (<a href="training-03-nexudus-billing.html">Guide 03</a>), not typed by hand in NetSuite. How they get into NetSuite <b>depends on your setup</b> (❓ ask your finance lead): it could be an automatic connector, a file import, or one summary journal per month. Whatever the route, your job is the same: <b>check that what arrived matches what Nexudus sent</b>.</p>
+
+<p>To check the month's member invoices (🛠 our standard, after each billing run):</p>
+<ol>
+    <li>Get the Nexudus invoice total for the month, by site and by income type (ask billing, or run the Nexudus report).</li>
+    <li>In NetSuite, run the income accounts (4000–4200) for the same month, by site (section 9).</li>
+    <li>Compare them line by line. Every difference must have a reason (section 10).</li>
+    <li>Spot-check a few invoices: right customer, right account, right site, net amount (VAT on its own line).</li>
+    <li>Check customer names. In Mini Work.Life, NetSuite says "Green Root Foods Ltd" and "Kite and Key Recruitment Ltd" while Nexudus says "GreenRoot Foods" and "Kite &amp; Key Recruitment". ❓ Ask whether NetSuite customers carry the Nexudus ID, so they can be matched without guessing.</li>
+</ol>
+
+<p>Mini Work.Life, September 2026: the office and coworking invoices are dated 1 Sep (billed in advance); the meeting room invoices are dated 30 Sep (billed after use).</p>
+
+<p>💡 VAT is not income. It is money owed to HMRC and sits in its own account. If a revenue number is exactly 20% too high, someone used the total including VAT. Follow your finance lead's policy for VAT.</p>
+
+<hr/>
+
+<h3>4. Record Supplier Bills</h3>
+
+<p>To enter a supplier bill (📘 usually Transactions → Payables → Enter Bills; check the help centre if it moved):</p>
+<ol>
+    <li><b>Search for the supplier first</b>. Do not create a second copy of a supplier that already exists.</li>
+    <li>Enter the supplier's bill number, the bill date and the due date.</li>
+    <li>On each line: the right <b>expense account</b>, the <b>amount</b> (net, as a positive number), and the <b>site</b>.</li>
+    <li>If one bill covers two sites, split it into two lines, one per site.</li>
+    <li>Attach the PDF of the bill. Save, and send for approval if your company uses approvals (❓).</li>
+    <li>Check: the total matches the supplier's PDF, and every line has a site.</li>
+</ol>
+
+<table border="1" cellpadding="10">
+<tr><th>Bill (Mini Work.Life, Sep 2026)</th><th>Account</th><th>Soho</th><th>Reading</th></tr>
+<tr><td>Rent</td><td>5000</td><td>£4,500</td><td>£1,300</td></tr>
+<tr><td>Business rates</td><td>5010</td><td>£900</td><td>£250</td></tr>
+<tr><td>Service charge</td><td>5020</td><td>£400</td><td>£150</td></tr>
+<tr><td>Utilities (energy)</td><td>5100</td><td>£350</td><td>£200</td></tr>
+<tr><td>Cleaning</td><td>5300</td><td>£300</td><td>£150</td></tr>
+<tr><td>Site staff (payroll journal, not a bill)</td><td>5200</td><td>£1,200</td><td>£400</td></tr>
+<tr><td><b>Site direct costs</b></td><td></td><td><b>£7,650</b></td><td><b>£2,450</b></td></tr>
+</table>
+
+<p>Costs are entered as <b>positive</b> amounts. The report then takes them away from income. Site staff costs come from payroll as a <b>journal</b> (📘 Transactions → Financial → Make Journal Entries), split by site. ❓ Who posts payroll and how it is split is your finance lead's policy.</p>
+
+<hr/>
+
+<h3>5. Credit Notes</h3>
+
+<p>A <b>credit note</b> (NetSuite calls it a <b>credit memo</b>) reduces what a customer owes for something already invoiced. 🛠 Never edit or delete a sent invoice. Always raise a credit note.</p>
+
+<p>To raise a credit memo in NetSuite (📘 usually Transactions → Customers → Issue Credit Memo, or from the invoice; check the help centre):</p>
+<ol>
+    <li>Pick the customer, and link the credit to the original invoice if you can.</li>
+    <li>Use the <b>same income account and site</b> as the original charge.</li>
+    <li>Write a clear memo with the reason and date.</li>
+    <li>Get approval if your policy needs it (❓).</li>
+</ol>
+
+<p>Mini Work.Life example: <b>CN-2609-01</b>, −£90, account 4100 Meeting Room Revenue, Soho, Pixel Chai Studio, "Goodwill credit - AV failure 24 Sep".</p>
+
+<p>⚠️ <b>Raise each credit note in one place only.</b> In Mini Work.Life, this credit was raised in NetSuite only, so Nexudus still shows the full £90 as billed. That is why the two systems differ (section 10). ❓ Ask your finance lead whether credit notes should be raised in Nexudus (and flow to NetSuite) or in NetSuite, and stick to it.</p>
+
+<hr/>
+
+<h3>6. Prepayments and Accruals in Plain Words</h3>
+
+<p>The accounts show income and costs in the month they <b>belong to</b>, not the month the bill or cash arrives. A few adjustments make that happen. Your finance lead decides how each is done; this is just what the words mean.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>Plain meaning</th><th>Coworking example (made up)</th></tr>
+<tr><td>Accrual</td><td>A cost that belongs to this month, but the bill has not arrived yet. You add an estimate now.</td><td>September energy bill arrives 15 Oct. Finance adds £350 to September as an estimate.</td></tr>
+<tr><td>Prepayment</td><td>A cost paid in advance for several months. You spread it over those months.</td><td>Rent billed quarterly at £13,500. It shows as £4,500 a month.</td></tr>
+<tr><td>Deferred income</td><td>A member pays in advance for several months. You count it as income month by month as it is earned.</td><td>A member prepays a year at £32,400. Income is £2,700 a month.</td></tr>
+</table>
+
+<p>🛠 Keep a simple list of every accrual and prepayment, with the amount and the month it should reverse or end. ❓ NetSuite has features that can reverse or spread these for you (📘); ask your finance lead which ones your company uses.</p>
+
+<hr/>
+
+<h3>7. Bank Reconciliation Basics</h3>
+
+<p>A <b>bank reconciliation</b> proves that NetSuite's bank account matches the real bank statement.</p>
+
+<p>To reconcile the bank (📘 NetSuite has a bank reconciliation or "match bank data" screen under the Transactions → Bank menu; the name differs by version, so check the help centre):</p>
+<ol>
+    <li>Get the bank statement (or the bank feed) for the month.</li>
+    <li>Match each bank line to a NetSuite transaction: member payments to invoices, supplier payments to bills.</li>
+    <li>For bank lines with no match (bank fees, a payment with no invoice), find out what they are and record them, or ask.</li>
+    <li>For NetSuite items with no bank line (a payment recorded twice?), investigate.</li>
+    <li>Check: the NetSuite bank balance after matching equals the statement's closing balance. Save the reconciliation.</li>
+</ol>
+
+<p>(Mini Work.Life has no payment data, so there is no lab example here.)</p>
+
+<hr/>
+
+<h3>8. The Month-End Close, Day by Day</h3>
+
+<p>Closing the month means: get everything in, check it, then <b>lock</b> the month so the numbers cannot change. Until it is locked, every number is <b>provisional</b>. 🛠 Here is a made-up timeline (WD = working day after month end). Your finance lead sets the real one.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>When (made up)</th><th>Task</th><th>Mini Work.Life example</th></tr>
+<tr><td>Last days of the month</td><td>Remind site teams to send all bills; billing runs the usage invoices</td><td>Meeting room invoices dated 30 Sep</td></tr>
+<tr><td>WD1</td><td>Cut-off: make sure each bill and invoice is in the right month</td><td>September energy bills dated 30 Sep</td></tr>
+<tr><td>WD2</td><td>Payroll journal, split by site</td><td>£1,200 Soho, £400 Reading</td></tr>
+<tr><td>WD2–3</td><td>Accruals and prepayments (section 6)</td><td>None in the lab</td></tr>
+<tr><td>WD3</td><td>Central cost allocation journal (❓ the key, for example by desks, is your finance lead's decision)</td><td>£1,000 Soho, £500 Reading (account 6000)</td></tr>
+<tr><td>WD3–4</td><td>Reconciliations: bank, money owed to us, money we owe, VAT, Nexudus vs NetSuite</td><td>Soho −£90 explained (section 10)</td></tr>
+<tr><td>WD4–5</td><td>Run reports, compare to budget and last month, chase anything odd, write notes on the reasons</td><td>Soho −62% vs budget</td></tr>
+<tr><td>WD5–7</td><td>Finance lead signs off; the period is locked</td><td>September locked</td></tr>
+</table>
+
+<p>To lock the period (📘 NetSuite has accounting periods with a period close checklist, typically under Setup → Accounting → Manage Accounting Periods; check the help centre). The checklist can lock money owed to us (A/R), money we owe (A/P) and then everything, step by step (📘). 🛠 Only the finance lead locks or reopens a period.</p>
+
+<p>⚠️ If you find a mistake after the lock, do not ask for the period to be reopened straight away. Tell your finance lead. Small items are usually fixed in the current month; reopening changes a number leadership has already seen.</p>
+
+<hr/>
+
+<h3>9. Reports to Run</h3>
+
+<p><b>Site P&amp;L.</b> Run the income statement (📘 Reports → Financial → Income Statement, or a saved report your company built; check the help centre), for the month, split or filtered by the site segment.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Sep 2026 (Mini Work.Life)</th><th>Soho</th><th>Reading</th></tr>
+<tr><td>Office revenue (4000)</td><td>£2,400</td><td>£2,700</td></tr>
+<tr><td>Coworking revenue (4010)</td><td>£640</td><td>£0</td></tr>
+<tr><td>Meeting room revenue (4100, after the credit)</td><td>£435</td><td>£200</td></tr>
+<tr><td><b>Revenue</b></td><td><b>£3,475</b></td><td><b>£2,900</b></td></tr>
+<tr><td>Site direct costs (5000–5300)</td><td>£7,650</td><td>£2,450</td></tr>
+<tr><td><b>Contribution</b> (revenue − direct costs)</td><td><b>−£4,175</b></td><td><b>+£450</b></td></tr>
+<tr><td>Central overheads (6000)</td><td>£1,000</td><td>£500</td></tr>
+<tr><td><b>After central costs</b></td><td><b>−£5,175</b></td><td><b>−£50</b></td></tr>
+</table>
+
+<p><b>Budget vs actual.</b> The budget lives in the <b>Excel budget template</b>, not in NetSuite (<a href="training-07-excel-budget-capacity.html">Guide 07</a>). ❓ Ask whether your company also loads it into NetSuite.</p>
+
+<p>To compare (🛠):</p>
+<ol>
+    <li>Take actual revenue and direct costs per site from the NetSuite report.</li>
+    <li>Take the budget for the same site and month from the Excel template (use the agreed version only).</li>
+    <li>Variance = actual − budget. For revenue, negative is bad. For costs, positive is bad. Mark each one as good or bad so nobody misreads a sign.</li>
+</ol>
+
+<table border="1" cellpadding="10">
+<tr><th>Sep 2026</th><th>Actual</th><th>Budget</th><th>Variance</th></tr>
+<tr><td>Soho revenue</td><td>£3,475</td><td>£9,200</td><td>−£5,725 (−62%) bad</td></tr>
+<tr><td>Soho direct costs</td><td>£7,650</td><td>£7,650</td><td>£0 on budget</td></tr>
+<tr><td>Reading revenue</td><td>£2,900</td><td>£3,200</td><td>−£300 (−9%) bad</td></tr>
+<tr><td>Reading direct costs</td><td>£2,450</td><td>£2,450</td><td>£0 on budget</td></tr>
+</table>
+
+<hr/>
+
+<h3>10. Reconcile Nexudus Invoiced vs NetSuite Recognised</h3>
+
+<p>Nexudus shows what was <b>invoiced</b>. NetSuite shows the official <b>revenue</b>. They often differ, and that is fine, <b>as long as every difference has a reason</b>. 🛠 Do this every month, for every site, before the lock.</p>
+
+<pre>
+   SOHO, SEP 2026              NEXUDUS invoiced   NETSUITE revenue   difference
+   Office 101 (Pixel Chai)           £2,400            £2,400             £0
+   Coworking (2 members)               £640              £640             £0
+   Meeting rooms                       £525              £435           −£90  ← CN-2609-01
+                                     ──────            ──────           ────
+   Total                             £3,565            £3,475           −£90  ✅ explained
+
+   READING, SEP 2026                 £2,900            £2,900             £0  ✅
+</pre>
+
+<p>To reconcile:</p>
+<ol>
+    <li>Put the Nexudus invoiced total (net of VAT) and the NetSuite income total side by side, per site, per income type.</li>
+    <li>For each difference, find the transaction that explains it: a credit note raised in one system only, a journal, a prepaid invoice, an invoice in the wrong month or at the wrong site.</li>
+    <li>Write the reason next to it. A difference you can explain is fine. One you cannot explain is a problem: fix it before the lock.</li>
+    <li>Keep the reconciliation with the month's close papers.</li>
+</ol>
+
+<hr/>
+
+<h3>11. Practice Tasks</h3>
+
+<p>Do these in a <b>training area or sandbox only</b> (❓ ask your manager if your company has a NetSuite sandbox). If there is none, use the lab file <code>netsuite_gl_sep2026.csv</code> in Excel, as in <a href="../season-1-source-systems/chapter-09-netsuite.html">Chapter 09</a>. Never practise on live accounts.</p>
+
+<ol>
+    <li>Enter the Soho rent bill: £4,500, account 5000, site Soho, dated 1 Sep 2026. Check the site is on the line.</li>
+    <li>Enter one bill that covers both sites: energy £350 Soho + £200 Reading on two lines.</li>
+    <li>Raise credit memo CN-2609-01: −£90, account 4100, Soho, Pixel Chai Studio, with a clear memo.</li>
+    <li>Using the lab file, build the Soho and Reading P&amp;L. Check your answers: revenue £3,475 and £2,900; contribution −£4,175 and +£450; after central −£5,175 and −£50.</li>
+    <li>Compare to the Excel budget for September (Soho £9,200, Reading £3,200). Check: −£5,725 and −£300.</li>
+    <li>Reconcile Soho: Nexudus £3,565 vs NetSuite £3,475. Name the transaction that explains the −£90.</li>
+    <li>Write your own close checklist for next month, with a date for each step.</li>
+</ol>
+
+<hr/>
+
+<h3>Quick check</h3>
+
+<p><b>1. A Soho meeting room charge was posted to 4000 Office Revenue. Why does it matter if the total is still right?</b><br/>
+<i>Office income looks too high and meeting room income too low, so leadership gets the wrong picture of what sells.</i></p>
+
+<p><b>2. A bill line has no site. What happens?</b><br/>
+<i>The cost is missing from every site's P&amp;L, so the site looks better than it is. Always tag every line.</i></p>
+
+<p><b>3. Why is Soho's September revenue £3,475 in NetSuite but £3,565 in Nexudus?</b><br/>
+<i>The £90 goodwill credit memo CN-2609-01 was raised in NetSuite only. The difference is fully explained.</i></p>
+
+<p><b>4. Before the month is locked, are the numbers final?</b><br/>
+<i>No, they are provisional. Accruals, credit notes, payroll and allocation journals can still change them.</i></p>
+
+<p><b>5. You find a mistake in a locked month. What do you do?</b><br/>
+<i>Tell your finance lead. Small items are usually fixed in the current month; only the finance lead decides to reopen a period.</i></p>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Next: <a href="training-06-door-access-and-act-crm.html">Staff Training 06 — Door Access and Act! CRM</a>. Back to the start: <a href="training-01-start-here.html">Staff Training 01 — Start Here</a>. Want to go deeper? Read <a href="../season-1-source-systems/chapter-09-netsuite.html">Chapter 09 — NetSuite</a> in the series. 🚀</p>

@@ -1,0 +1,326 @@
+<h2>Staff Training 04 — HubSpot for Sales: Leads, Tours, Deals and Renewals</h2>
+
+<p>Hi! 🙏 This guide is for <b>sales and account managers</b>. HubSpot is where every possible customer lives, from the first website enquiry to the signed deal, and later the renewal. If it is not in HubSpot, nobody else can see it or follow it up.</p>
+
+<p>Each section is one job, written as steps. No technical knowledge needed.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Read this first.</b> Menu paths below are from HubSpot's own help pages and from memory (📘). HubSpot changes its screens often, so if a button has moved, check the vendor's help centre. Pipeline stages, drop-down lists and day counts marked 🛠 are <b>our standard</b> for a new coworking business; your manager may adjust them. Examples come from <b>Mini Work.Life</b>, a <b>made-up</b> company.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>What lives in HubSpot (and what does not)</li>
+    <li>Our sales pipeline stages</li>
+    <li>Logging a new enquiry</li>
+    <li>Booking and recording a tour</li>
+    <li>Sending a proposal: list price and discount</li>
+    <li>Marking a deal won, and the handover to the front desk</li>
+    <li>Marking a deal lost, with a reason</li>
+    <li>Renewals and upgrades</li>
+    <li>Tasks and follow-ups</li>
+    <li>Duplicates and merging</li>
+    <li>Lifecycle stages</li>
+    <li>Your weekly sales checklist</li>
+</ul>
+
+<hr/>
+
+<h3>1. What Lives in HubSpot</h3>
+
+<p>HubSpot has three main kinds of record, and they link to each other (📘 vendor-documented):</p>
+
+<pre>
+   CONTACT (a person) ────── linked ────── COMPANY (an organisation)
+        │                                       │
+        └────────── linked ────── DEAL ─────────┘
+                                   │  sits in a PIPELINE, at a STAGE
+                                   └── calls, emails, meetings, notes, tasks
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Record</th><th>What it is</th><th>Mini Work.Life example</th></tr>
+<tr><td>Contact</td><td>One person. HubSpot treats the email address as unique.</td><td>Ben Carter, Ortho Robotics</td></tr>
+<tr><td>Company</td><td>One organisation. Often matched by its website domain.</td><td>Ortho Robotics (orthorobotics.ai)</td></tr>
+<tr><td>Deal</td><td>One chance to sell something, with an amount, a stage and a close date</td><td>"Ortho Robotics - Office 202", £4,200 a month</td></tr>
+</table>
+
+<p>Remember the rule from <a href="training-01-start-here.html">Guide 01</a>: HubSpot is the truth for <b>enquiries, tours, quotes and deals</b>. Once a customer signs, their <b>contract, plan, price and dates live in Nexudus</b>. Never change a member's price in HubSpot and expect billing to follow.</p>
+
+<p>🛠 <b>Deal amount = the monthly price</b>, not the full contract value. £4,200 means £4,200 a month. Everyone must enter it the same way, or the pipeline report adds monthly and yearly numbers together.</p>
+
+<hr/>
+
+<h3>2. Our Sales Pipeline Stages</h3>
+
+<p>HubSpot comes with a default sales pipeline whose stages are named for general sales (📘, check the help centre for the current list). An admin can rename them (📘 typically under Settings → Objects → Deals → Pipelines; check the help centre if it moved). 🛠 Our standard uses two pipelines with coworking stages:</p>
+
+<pre>
+   NEW BUSINESS pipeline
+   ENQUIRY ──► TOUR BOOKED ──► TOUR DONE ──► PROPOSAL SENT ──► CLOSED WON
+                                                         └──► CLOSED LOST (reason)
+
+   RENEWALS pipeline
+   RENEWAL DUE ──► IN TALKS ──► PROPOSAL SENT ──► CLOSED WON (renewed)
+                                            └──► CLOSED LOST (leaving, reason)
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Stage 🛠</th><th>Move a deal here when…</th><th>Must be filled in first</th></tr>
+<tr><td>Enquiry</td><td>Someone has asked about space</td><td>Contact, company, site wanted, lead source</td></tr>
+<tr><td>Tour booked</td><td>A date and time is agreed</td><td>A meeting logged on the deal, with the date</td></tr>
+<tr><td>Tour done</td><td>They have seen the space</td><td>Tour notes: what they need, how many desks, start date</td></tr>
+<tr><td>Proposal sent</td><td>A price is in writing</td><td>Product, list price, quoted price, term, expected close date</td></tr>
+<tr><td>Closed won</td><td>They have signed</td><td>See section 6</td></tr>
+<tr><td>Closed lost</td><td>They said no, or went silent past our cut-off</td><td>Lost reason from the drop-down (section 7)</td></tr>
+</table>
+
+<p>💡 Why two pipelines? A renewal is money we <b>already have</b>. In Mini Work.Life the open pipeline is £7,000 a month: Ortho Robotics £4,200 (new) + the GreenRoot renewal £2,800. But GreenRoot already pays £2,700, so only £100 of that renewal is new money. Mixing the two makes the sales picture look bigger than it is.</p>
+
+<hr/>
+
+<h3>3. Log a New Enquiry</h3>
+
+<p>To log a new enquiry (website form, phone call, walk-in or broker):</p>
+<ol>
+    <li><b>Search first.</b> Use the search bar at the top for the person's email, name and company name (📘). Try the email domain too (for example "orthorobotics.ai"). If they already exist, use that record.</li>
+    <li>If not found, create the <b>contact</b>: Contacts → Create contact (📘). Enter first name, last name, email, phone.</li>
+    <li>Create or link the <b>company</b>. Add the website domain; HubSpot can link contacts to companies by email domain (📘). Check the contact now shows under the company.</li>
+    <li>Fill in <b>lead source</b> 🛠 with our two fields: <i>lead source type</i> (drop-down: Website, Broker, Referral, Walk-in, Other) and <i>lead source detail</i> (the broker's name, or "referred by another member company"). HubSpot also fills some built-in source fields by itself for website visits (📘); do not overwrite those.</li>
+    <li>Create the <b>deal</b> from the company record (📘 the Deals card on the right side). Name it "Company - Product" (for example "Ortho Robotics - Office 202"). Pipeline: New Business. Stage: Enquiry. Pick the <b>site</b> and <b>product</b> from the drop-downs.</li>
+    <li>Check: the deal is linked to <b>both</b> the contact and the company, and the deal owner is you.</li>
+</ol>
+
+<p>🛠 Lead source is set <b>once</b>, at the first enquiry. If the same company comes back a year later for a renewal or an upgrade, do not change it. It records how they first found us.</p>
+
+<p>❓ If your website form creates contacts by itself, ask your manager whether it also creates the deal, or whether you do that by hand.</p>
+
+<hr/>
+
+<h3>4. Book and Record a Tour</h3>
+
+<p>To book a tour:</p>
+<ol>
+    <li>Open the deal. Log or schedule a <b>meeting</b> on it (📘 the activity buttons near the top of the record), with the date, time and site.</li>
+    <li>Tell the site's front desk who is coming and when (🛠 so they can greet the visitor and have the space ready).</li>
+    <li>Move the deal to <b>Tour booked</b> (drag the card on the board view, or change the Deal stage field).</li>
+</ol>
+
+<p>After the tour, the same day:</p>
+<ol>
+    <li>Add a <b>note</b> on the deal: number of desks, office or coworking, wanted start date, budget, other spaces they are looking at.</li>
+    <li>Move the deal to <b>Tour done</b>.</li>
+    <li>Set the <b>expected close date</b> and a <b>task</b> for your next step (section 9).</li>
+    <li>If they did not turn up, log it as a no-show and set a task to call them. Do not move the stage forward.</li>
+</ol>
+
+<p>Mini Work.Life example: Ortho Robotics came through a broker (OfficeFinder, a made-up name) on 2 Sep 2026, toured Reading Office 202 and wants 10 desks from November. Stage: Tour done. Expected close: 31 Oct.</p>
+
+<hr/>
+
+<h3>5. Send a Proposal: List Price and Discount</h3>
+
+<p>To send a proposal:</p>
+<ol>
+    <li>Get the <b>list price</b> for the office or plan from your price list (❓ ask your manager where the current price list lives).</li>
+    <li>On the deal, fill in 🛠 our fields: <i>product</i>, <i>site</i>, <i>term (months)</i>, <i>list price per month</i>, <i>quoted price per month</i>. Put the quoted monthly price in <b>Amount</b>.</li>
+    <li>If the quote is below list, write the <b>reason</b> in a note (for example "longer term").</li>
+    <li>Send the proposal. ❓ Some companies use HubSpot's own quotes feature (📘 it needs products set up first); others send a separate document. Ask your manager which, and who approves discounts.</li>
+    <li>Move the deal to <b>Proposal sent</b>. Attach or log the email so the proposal is on the record.</li>
+</ol>
+
+<p>Mini Work.Life example: Pixel Chai Studio's Office 101 has a list price of £2,600 a month. They signed at £2,400 for a 12-month term. Discount = (£2,600 − £2,400) ÷ £2,600 = <b>7.7%</b>. Because both prices were on the deal, anyone can see the discount and why.</p>
+
+<p>❓ Never promise a rent-free month or a special deal before asking your manager. Each kind of discount is set up differently in Nexudus and in the accounts.</p>
+
+<hr/>
+
+<h3>6. Mark a Deal Won, and Hand It Over</h3>
+
+<p>To mark a deal won:</p>
+<ol>
+    <li>Make sure the signed agreement is attached or logged on the deal.</li>
+    <li>Fill in every field below, then move the deal to <b>Closed won</b>.</li>
+    <li>Send the handover to the site's front desk (🛠 below) so they can create the contract in Nexudus.</li>
+</ol>
+
+<table border="1" cellpadding="10">
+<tr><th>Field</th><th>Example (Pixel Chai, Office 101)</th><th>Why</th></tr>
+<tr><td>Close date</td><td>14 Mar 2026</td><td>The day it was won, not the day you remembered to update it</td></tr>
+<tr><td>Amount (per month)</td><td>£2,400</td><td>Must match the price on the signed agreement</td></tr>
+<tr><td>List price per month</td><td>£2,600</td><td>Shows the discount</td></tr>
+<tr><td>Site</td><td>Soho (from the drop-down)</td><td>Income lands at the right site</td></tr>
+<tr><td>Product</td><td>Private Office</td><td>Office, coworking, meeting room or event</td></tr>
+<tr><td>Term (months)</td><td>12</td><td>Tells everyone when the renewal comes up</td></tr>
+<tr><td>Start date</td><td>1 Apr 2026</td><td>The front desk needs it for the contract</td></tr>
+<tr><td>Deal type 🛠</td><td>Upgrade (they had a hot desk before)</td><td>New, renewal or upgrade (section 8)</td></tr>
+</table>
+
+<p><b>The handover</b> 🛠. Send the front desk: company name, contact, site, office or plan, monthly price, start date, term, and the deal link. The front desk then creates the customer, team and contract in Nexudus (see <a href="training-02-nexudus-front-desk.html">Guide 02</a>).</p>
+
+<pre>
+   HubSpot: deal CLOSED WON ──► handover to front desk ──► Nexudus: customer + team + contract
+                                                                │
+                                         Nexudus ID copied back ◄┘  (by the sync, or by hand ❓)
+</pre>
+
+<p>💡 <b>The Nexudus ID.</b> 🛠 Our HubSpot has two extra fields: <i>nexudus_customer_id</i> on the contact and <i>nexudus_team_id</i> on the company. They link the HubSpot record to the right Nexudus record, so nobody has to match by name. Nexudus has a HubSpot connection that can keep contacts and companies in step (📘 vendor-documented: contacts ↔ customers, companies ↔ teams, deals → opportunities). ❓ Ask your manager whether your company uses it. If it does, the IDs may fill in by themselves. If not, copy the IDs into HubSpot by hand once the front desk confirms the contract.</p>
+
+<p>✅ Check a week later: the won amount in HubSpot equals the contract price in Nexudus. If they differ, someone changed the price late. Find out which one is right and fix it in the system that owns it.</p>
+
+<hr/>
+
+<h3>7. Mark a Deal Lost, With a Reason</h3>
+
+<p>To mark a deal lost:</p>
+<ol>
+    <li>Move the deal to <b>Closed lost</b>.</li>
+    <li>Pick the <b>lost reason</b> from the drop-down 🛠: price, location, space/size, hybrid/remote, company closed, competitor, other.</li>
+    <li>Add a short note with the details in their own words.</li>
+    <li>If there was a second reason, use the optional second-reason field 🛠.</li>
+    <li>Set the close date to the day they said no.</li>
+</ol>
+
+<table border="1" cellpadding="10">
+<tr><th>Mini Work.Life deal</th><th>What they said</th><th>Lost reason (drop-down)</th></tr>
+<tr><td>Lumen Yoga - Event Space</td><td>"Price too high"</td><td>price</td></tr>
+<tr><td>Brightline - Renewal 2026</td><td>"Moving to hybrid; downsizing to home working"</td><td>hybrid/remote (second reason: space/size)</td></tr>
+</table>
+
+<p>💡 Why a drop-down? Free text cannot be counted. A drop-down answers "what were our top three reasons for losing deals this year?" in seconds.</p>
+
+<hr/>
+
+<h3>8. Renewals and Upgrades</h3>
+
+<p><b>When to open a renewal deal.</b> 🛠 Our standard: open it in the Renewals pipeline <b>120 days before the contract end date</b> (made up; your manager will set the real number). The reason: a member with a notice period can give notice weeks before the end. If the renewal talk has not started by then, it happens on their terms.</p>
+
+<p>To open a renewal deal:</p>
+<ol>
+    <li>Each month, look up the contracts ending in the next 120 days. ❓ Ask your manager whether you get this list from Nexudus or from a HubSpot view.</li>
+    <li>Create a deal on the company: pipeline <b>Renewals</b>, name "Company - Renewal YYYY", stage <b>Renewal due</b>, deal type <b>Renewal</b>.</li>
+    <li>Amount = the <b>proposed new monthly price</b>. Note the current price too.</li>
+    <li>Expected close date = well before the contract end date.</li>
+    <li>Talk to the site manager. They know how the member is getting on day to day.</li>
+</ol>
+
+<p>Mini Work.Life example, GreenRoot Foods (Reading, Office 201, £2,700 a month, ends 31 Dec 2026):</p>
+
+<pre>
+   15 Sep 2026   renewal deal opened (107 days before the end; our standard says 120)
+                 proposal sent at £2,800 a month (+£100)      stage: Proposal sent
+   30 Nov 2026   expected close
+   31 Dec 2026   contract ends
+</pre>
+
+<p>💡 If GreenRoot leaves, the business loses £2,700 a month. If they renew, it gains only £100. So a renewal is mostly <b>protecting</b> money we already have. Treat it as seriously as a new sale.</p>
+
+<p>To set up a useful view 📘: on the Deals list, filter pipeline = Renewals and close date = next 90 days, then save the view. GreenRoot (£2,800, close 30 Nov) should show up.</p>
+
+<p><b>Upgrades.</b> When a member moves to a bigger space (for example a hot desk to an office), 🛠 create a <b>new deal</b> on the same company with deal type <b>Upgrade</b>. Do not create a new company. Pixel Chai's "Office 101" deal was an upgrade from a hot desk: same company, same history. In Nexudus, the front desk follows <a href="training-08-joiner-mover-leaver.html">Guide 08</a> so the move is not counted as a member leaving.</p>
+
+<p>❓ Downgrades and moves to another site: ask your manager whether these get a deal too.</p>
+
+<hr/>
+
+<h3>9. Tasks and Follow-Ups</h3>
+
+<p>To set a follow-up:</p>
+<ol>
+    <li>On the deal, create a <b>task</b> (📘 the Task button in the activity area). Give it a clear title ("Call Ben: answer on Office 202") and a due date.</li>
+    <li>Check your tasks every morning (📘 there is a Tasks list in the CRM menu).</li>
+    <li>When it is done, mark it complete and log what happened as a note or call.</li>
+</ol>
+
+<p>🛠 Our rules: every open deal has <b>one task with a future date</b>. No deal sits in the same stage for more than 30 days (made up) without a note saying why. Log calls and emails on the deal, not only in your inbox.</p>
+
+<hr/>
+
+<h3>10. Duplicates and Merging the Right Way</h3>
+
+<p>HubSpot spots duplicate contacts by email. If the same person was entered as <i>priya@pixelchai.co.uk</i> and <i>Priya.Sharma@pixelchai.co.uk</i>, HubSpot sees two different people. Their history is split in two.</p>
+
+<p>To merge two records of the same person or company:</p>
+<ol>
+    <li>Be sure they really are the same person (same company, same phone, same person on the calls).</li>
+    <li>Decide which record to <b>keep</b>: 🛠 the one with the <b>Nexudus ID</b> filled in. If neither has one, keep the older one.</li>
+    <li>Open the record you want to keep. Use Actions → Merge (📘; check the help centre if it moved) and pick the other record.</li>
+    <li>Read the merge screen carefully; it shows which record is kept. ❓ Which field values win can depend on HubSpot's rules, so check the email, phone and owner afterwards.</li>
+    <li>Check: deals, notes and emails from both records now show on the kept record.</li>
+</ol>
+
+<p>⚠️ A merge cannot be fully undone (📘 check the help centre). If you are unsure, ask your manager first. Never "fix" a duplicate by deleting one record: you lose its history.</p>
+
+<hr/>
+
+<h3>11. Lifecycle Stages</h3>
+
+<p>Every contact has a <b>lifecycle stage</b> (📘 built-in): Subscriber → Lead → Marketing Qualified Lead → Sales Qualified Lead → Opportunity → Customer → Evangelist (plus "Other").</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Stage</th><th>🛠 For us it means</th><th>Example</th></tr>
+<tr><td>Lead</td><td>Has made an enquiry</td><td>Ben Carter on 2 Sep</td></tr>
+<tr><td>Opportunity</td><td>Tour done, proposal coming</td><td>Ben today</td></tr>
+<tr><td>Customer</td><td>Has signed a contract</td><td>Priya, Ravi, Emma</td></tr>
+<tr><td>Evangelist</td><td>Has referred someone to us</td><td>Ravi referred Emma (GreenRoot)</td></tr>
+</table>
+
+<p>⚠️ Lifecycle stage normally only moves forward (📘). A member who leaves still shows "Customer". So <b>never count current members from lifecycle stage</b>. 🛠 We add a <i>member status</i> drop-down on the company (prospect, active, left). Current members are counted from Nexudus contracts.</p>
+
+<hr/>
+
+<h3>12. Your Weekly Sales Checklist</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>#</th><th>Check 🛠</th><th>Done?</th></tr>
+<tr><td>1</td><td>Every new enquiry this week has a contact, company, deal, site and lead source</td><td>☐</td></tr>
+<tr><td>2</td><td>Every tour this week is logged, with notes, and the stage moved</td><td>☐</td></tr>
+<tr><td>3</td><td>Every open deal has a task with a future date</td><td>☐</td></tr>
+<tr><td>4</td><td>Close dates in the past on open deals are fixed (won, lost or a new date)</td><td>☐</td></tr>
+<tr><td>5</td><td>Every won deal has close date, amount, list price, site, product, term, start date, deal type, and the front desk has the handover</td><td>☐</td></tr>
+<tr><td>6</td><td>Every lost deal has a lost reason from the drop-down</td><td>☐</td></tr>
+<tr><td>7</td><td>Contracts ending in the next 120 days (made up) have a renewal deal</td><td>☐</td></tr>
+<tr><td>8</td><td>Nexudus IDs filled in for last week's new customers (if not synced ❓)</td><td>☐</td></tr>
+<tr><td>9</td><td>Duplicates you spotted are merged or reported</td><td>☐</td></tr>
+</table>
+
+<p>A quick health check from Mini Work.Life: 5 deals closed, 3 won, so the win rate is <b>3/5 = 60%</b>. But one of the two losses was a renewal, so always report new-business and renewal win rates separately.</p>
+
+<hr/>
+
+<h3>13. Practice Tasks</h3>
+
+<p>Do these in a <b>training area or sandbox only</b> (❓ ask your manager if one exists; a free HubSpot account also works, as in <a href="../season-1-source-systems/chapter-10-hubspot.html">Chapter 10</a>). Never practise on real customers.</p>
+
+<ol>
+    <li>Create Ortho Robotics (company, domain orthorobotics.ai), Ben Carter (contact) and the deal "Ortho Robotics - Office 202", Reading, £4,200 a month, lead source type Broker, detail OfficeFinder. Move it to Tour done.</li>
+    <li>Move Ortho to Proposal sent and add a task to call Ben in 3 days.</li>
+    <li>Create the Pixel Chai Office 101 deal as Closed won: £2,400 a month, list £2,600, 12 months, Soho, deal type Upgrade, close date 14 Mar 2026. Work out the discount (answer: 7.7%).</li>
+    <li>Create the Lumen Yoga event deal and mark it Closed lost with reason "price".</li>
+    <li>Open a renewal deal for GreenRoot: Renewals pipeline, £2,800, expected close 30 Nov 2026. Save a view of renewals closing in the next 90 days and check it appears.</li>
+    <li>Create Priya twice with two emails (priya@pixelchai.co.uk and Priya.Sharma@pixelchai.co.uk). Give one a Nexudus ID (M001). Merge them, keeping the one with the ID.</li>
+    <li>Add up your open pipeline. Answer: £7,000 a month, of which £4,200 is new business and £2,800 is a renewal.</li>
+</ol>
+
+<hr/>
+
+<h3>Quick check</h3>
+
+<p><b>1. A customer signs. Which system holds their price from now on?</b><br/>
+<i>Nexudus. HubSpot keeps the deal history, but the contract, price and dates live in Nexudus.</i></p>
+
+<p><b>2. What must be filled in before you mark a deal won?</b><br/>
+<i>Close date, monthly amount, list price, site, product, term, start date and deal type, plus the signed agreement. Then send the handover to the front desk.</i></p>
+
+<p><b>3. Why is the GreenRoot renewal not £2,800 of new money?</b><br/>
+<i>GreenRoot already pays £2,700 a month. Only the £100 increase is new; the rest is money we would lose if they left.</i></p>
+
+<p><b>4. You find two records for the same person. Which do you keep?</b><br/>
+<i>The one with the Nexudus ID (or the older one if neither has it). Merge, never delete.</i></p>
+
+<p><b>5. Can you count current members from lifecycle stage "Customer"?</b><br/>
+<i>No. It only moves forward, so people who left still show as customers. Count members from Nexudus contracts.</i></p>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Next: <a href="training-05-netsuite-finance.html">Staff Training 05 — NetSuite for Finance</a>, to see what happens to the money after a deal becomes a contract. Back to the start: <a href="training-01-start-here.html">Staff Training 01 — Start Here</a>. Want to go deeper? Read <a href="../season-1-source-systems/chapter-10-hubspot.html">Chapter 10 — HubSpot</a> in the series. 🚀</p>

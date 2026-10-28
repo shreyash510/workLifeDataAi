@@ -1,0 +1,232 @@
+<h2>Staff Training 06 — Door Access (ACT365) and the Act! CRM</h2>
+
+<p>Hi again! 🙏 This guide is for <b>site managers, front desk and IT staff</b> who look after the doors, and for <b>sales staff</b> who may find old records in an older CRM. It has two parts. <b>Part A</b> covers <b>ACT365</b>, the door access system: who can open which door, and how to give and take away access. <b>Part B</b> covers the <b>Act! CRM</b>, which you only need if your company has old sales records in it.</p>
+
+<p style="padding:12px 16px; border-left:4px solid #f1a33a; background:rgba(241,163,58,0.08); border-radius:4px;">⚠️ <b>Before you start.</b> ACT365 is usually set up and sold by a <b>security installer</b>, so every building is set up a little differently. This guide explains the ideas and our standard way of working (🛠). It does not give exact button names, because we cannot promise them. For those, check the ACT365 help centre or ask your installer (📘 / ❓). Example people, cards and doors come from <b>Mini Work.Life</b>, a <b>made-up</b> company. A note on the name: at Work.Life itself, the brief only says "ACT", and it is not clear whether that means ACT365 or Act!. That is why this guide covers both.</p>
+
+<p>What we will cover in this guide:</p>
+<ul>
+    <li>Part A: how door access works, in plain words</li>
+    <li>Nexudus connected or not connected: what changes for you</li>
+    <li>Giving access to a new member</li>
+    <li>Changing access when a member upgrades or moves site</li>
+    <li>Removing access on the last day, and lost cards</li>
+    <li>Staff, contractors and visitors</li>
+    <li>Door event reports: personal data, who may look and why</li>
+    <li>The weekly access check</li>
+    <li>Part B: the Act! CRM (only if you have old records)</li>
+    <li>Practice tasks and a quick check</li>
+</ul>
+
+<hr/>
+
+<h3>1. How Door Access Works, in Plain Words</h3>
+
+<p>Every controlled door has a small <b>reader</b> next to it. A person shows a <b>card</b>, a <b>fob</b> or (if your setup allows it) their <b>phone</b>. The reader asks the system: "Is this person allowed through this door, right now?" The door opens or stays shut, and the system writes down what happened.</p>
+
+<pre>
+   Priya taps card ──► READER on the door ──► ACT365 (in the cloud)
+                                                 │
+                       "Is this card in a group  │
+                        that may open this door  │
+                        at this time?"           │
+                                                 ▼
+                           ✅ Access Granted   or   ❌ Access Denied
+                                                 │
+                                   EVENT written down (time, door, card)
+</pre>
+
+<table border="1" cellpadding="10">
+<tr><th>Word</th><th>What it means</th><th>Mini Work.Life example (made up)</th></tr>
+<tr><td><b>Cardholder</b></td><td>A person who has been given access</td><td>CH-1001 Priya Sharma</td></tr>
+<tr><td><b>Credential</b></td><td>The thing they show the reader: card, fob, PIN, or phone (❓ ask your installer which ones your building supports)</td><td>Card 04A1B2C301</td></tr>
+<tr><td><b>Door</b></td><td>A door with a reader on it</td><td>Soho Main Entrance, Soho Office 101 Door</td></tr>
+<tr><td><b>Access group</b></td><td>A named set of doors a person may open. You put people into groups; you do not give doors one by one.</td><td>"Soho Office 101" = main entrance + office 101. "Soho Coworking" = main entrance only.</td></tr>
+<tr><td><b>Schedule</b></td><td>The days and times a group works (for example weekdays only, or all hours). 📘 How schedules are set up depends on your installer's setup.</td><td>Not in the lab files</td></tr>
+<tr><td><b>Event</b></td><td>One tap at one door, granted or denied</td><td>EV00005: Leah Brooks, Soho Main Entrance, 1 Sep, Access Granted</td></tr>
+</table>
+
+<p>🛠 The golden rule: <b>access follows the contract</b>. A person may open a door only while they have an active contract (or booking) that includes it. The contract lives in Nexudus, so Nexudus decides, and ACT365 does what it is told.</p>
+
+<hr/>
+
+<h3>2. Nexudus Connected or Not Connected</h3>
+
+<p>Nexudus can be connected to ACT365. Your company either uses that link or does not. ❓ Ask your manager which one you have, because it changes almost every task below.</p>
+
+<table border="1" cellpadding="10">
+<tr><th></th><th>Connected (📘 Nexudus documents this integration)</th><th>Not connected</th></tr>
+<tr><td>How groups are set up</td><td>One ACT365 group for each Nexudus pass, plan, desk and office. Set up once by IT or the installer.</td><td>Groups set up by hand, usually one per office and one per coworking floor</td></tr>
+<tr><td>New member gets access</td><td>Nexudus adds them to the right group when their contract or booking starts</td><td>A site manager adds them by hand in ACT365</td></tr>
+<tr><td>Member leaves</td><td>Nexudus removes them when the contract ends or is cancelled</td><td>A site manager removes them by hand, on the last day</td></tr>
+<tr><td>Check-ins</td><td>Door taps can be sent back to Nexudus as check-ins (optional)</td><td>None, unless something else records them</td></tr>
+<tr><td>Your main job</td><td>Keep the <b>contract right</b> in Nexudus, and check the result</td><td>Do every access change yourself, the same day, and never forget one</td></tr>
+</table>
+
+<p>💡 Even when connected, things can go wrong: a card number typed wrongly, a contract left open, a group not mapped to a new office. That is why section 7 has a weekly check.</p>
+
+<hr/>
+
+<h3>3. Giving Access to a New Member</h3>
+
+<p>Do this only after the contract exists in Nexudus (see <a href="training-08-joiner-mover-leaver.html">Guide 08</a> for the full joiner flow).</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Step</th><th>Connected</th><th>Not connected</th></tr>
+<tr><td>1</td><td>Check the member's contract in Nexudus: right site, right office or plan, right start date</td><td>Same</td></tr>
+<tr><td>2</td><td>Give the member their card or fob, or send the phone invite (❓ how your setup issues these)</td><td>Same</td></tr>
+<tr><td>3</td><td>Record the card number on the member's Nexudus record, exactly as printed (📘 check the Nexudus and ACT365 help centres for which field)</td><td>Create the cardholder in ACT365 with the member's name and <b>the same email as in Nexudus</b>, and the card number</td></tr>
+<tr><td>4</td><td>Wait for the sync, then check the cardholder appears in the right group in ACT365</td><td>Put the cardholder in the right group (for example "Soho Office 101")</td></tr>
+<tr><td>5</td><td>Ask the member to test the main door and their office door while you are there</td><td>Same</td></tr>
+</table>
+
+<p>🛠 Always store the <b>Nexudus email</b> on the ACT365 cardholder. It is the only way to match a card to a member later. In the lab file every member card has one; the cleaner's card (CH-9001) has none, because the cleaner is not a member.</p>
+
+<hr/>
+
+<h3>4. Changing Access on an Upgrade or a Move</h3>
+
+<p>When a member's contract changes, their access must change on the same day the new contract starts.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Change</th><th>Lab example (made up)</th><th>Access change</th></tr>
+<tr><td>Upgrade to an office</td><td>Priya: hot desk (K001) ended 31 Mar 2026, Office 101 (K002) from 1 Apr 2026</td><td>From "Soho Coworking" to "Soho Office 101" on 1 Apr</td></tr>
+<tr><td>Downgrade to coworking</td><td>None in the lab</td><td>From the office group to the coworking group on the new start date</td></tr>
+<tr><td>Transfer between sites</td><td>Fatima (Kite &amp; Key): Reading Flex 10 (K006) ended 31 Jul, Soho hot desk (K007) from 1 Aug 2026</td><td>Reading access removed, "Soho Coworking" added, on 1 Aug. The lab card now shows "Soho Coworking".</td></tr>
+</table>
+
+<p><b>Connected:</b> end the old contract and start the new one correctly in Nexudus, and the groups follow. Then check ACT365 on the start day. <b>Not connected:</b> move the cardholder between groups yourself on the start day. Keep the <b>same card and the same cardholder</b>. Do not create a second cardholder for the same person.</p>
+
+<hr/>
+
+<h3>5. Removing Access on the Last Day, and Lost Cards</h3>
+
+<p>🛠 Rule 7 from Guide 01: <b>remove door access on the last day</b>. A leaver should not be able to walk in.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Situation</th><th>What to do</th></tr>
+<tr><td>A company leaves</td><td>Connected: check the contract end date in Nexudus is right, and on the day after the last day check every person in that company is out of the group. Not connected: remove each person from the group at the end of the last day. Collect cards and fobs if your company asks for them back (❓).</td></tr>
+<tr><td>One person leaves a company that stays</td><td>Remove that one person only. The company's other people keep access.</td></tr>
+<tr><td>A lost or stolen card</td><td>Turn off that card straight away (📘 check the ACT365 help centre for how to block or remove a card). Issue a new card to the same cardholder. Update the card number in Nexudus if you store it there. ❓ Ask whether your company charges for a new card.</td></tr>
+<tr><td>A member with an unpaid bill</td><td>Do not remove access on your own. ❓ Ask your manager; this is a business decision.</td></tr>
+</table>
+
+<p>💡 <b>A real example from the lab.</b> Brightline left on 30 Jun 2026, and both their cards show "removed". On 2 Sep, Daniel Hughes tried their old card at Soho Main Entrance. The event says <i>Access Denied - Card Not In Group</i>. The removal worked. 🙂</p>
+
+<p>🛠 <b>Do not delete</b> a leaver's cardholder record unless your company's rules say so (❓). Remove them from all groups instead, so their past events still make sense.</p>
+
+<hr/>
+
+<h3>6. Staff, Contractors and Visitors</h3>
+
+<table border="1" cellpadding="10">
+<tr><th>Who</th><th>🛠 Our standard</th></tr>
+<tr><td>Our own staff</td><td>A cardholder in a staff group for the sites they work at. Created by IT or the site manager when they start, removed on their last day. Staff are not in Nexudus as members.</td></tr>
+<tr><td>Contractors (cleaners, repair people)</td><td>A cardholder in a contractor group, with a schedule if possible. No Nexudus email. Lab example: CH-9001, group "All Doors (Contractor)". Check these cards every month; contractors change often.</td></tr>
+<tr><td>Visitors and day guests</td><td>Signed in by front desk and let in by a member or staff, or given a short-term pass if your setup allows it (❓ ask your manager or installer). Never lend a member's or staff card.</td></tr>
+</table>
+
+<hr/>
+
+<h3>7. Door Event Reports: Personal Data</h3>
+
+<p>A door log shows <b>when a named person came in, every day</b>. Under UK GDPR that is <b>personal data</b>. Members trust us not to watch them.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Reason to look</th><th>Allowed?</th><th>How</th></tr>
+<tr><td>A security incident (a break-in, a theft, a door forced open)</td><td>Yes, by the site manager or IT, for that incident only</td><td>Look at the doors and times of the incident. Write down why you looked.</td></tr>
+<tr><td>Checking that a removed card is really blocked</td><td>Yes</td><td>Look for "Access Denied" on that card, like the Daniel example above</td></tr>
+<tr><td>Business use: is a company still using its office?</td><td>Yes, but <b>company level only</b></td><td>Totals per company per week, never one named person. For example, "GreenRoot's weekly badge-in rate fell from 73% to 23% in September".</td></tr>
+<tr><td>"When did this person come in last week?" out of interest</td><td><b>No</b></td><td>Do not look</td></tr>
+<tr><td>Checking when our own staff arrive</td><td><b>No</b>, not through this system</td><td>Staff data is HR data. Ask HR.</td></tr>
+</table>
+
+<p>💡 How to count visits fairly: people tap more than one door (Priya taps the main entrance, then the office door). So count <b>people per day at the main entrance</b>, not taps. The lab has 276 events in September, but far fewer visits. Times in exports may be in UTC (one hour behind London in summer), so check before you report by hour.</p>
+
+<hr/>
+
+<h3>8. The Weekly Access Check</h3>
+
+<p>🛠 Once a week, the site manager compares <b>active cards</b> with <b>active contracts</b>. It takes ten minutes and catches most mistakes.</p>
+
+<pre>
+   1. Export active cardholders for your site from ACT365   (📘 check help centre)
+   2. Export active members for your site from Nexudus
+   3. Match them on email
+   4. Look at what does NOT match:
+
+      Card active, no active contract    → a leaver kept access. Remove it.
+      Active contract, no card           → a member cannot get in. Fix it.
+      Card in the wrong group            → wrong office or site. Fix the group.
+      Card with no email                 → staff or contractor? Check it is meant to be there.
+</pre>
+
+<p>Lab example on 30 Sep 2026 (made up): 15 cardholders. 2 are "removed" (Brightline). 1 is the contractor. The other 12 are active and match the 12 active members (4 Pixel Chai, Ravi, Fatima, 6 GreenRoot). All clean. ✅</p>
+
+<hr/>
+
+<h3>9. Part B — The Act! CRM (Only If You Have Old Records)</h3>
+
+<p><b>Act!</b> is an older sales CRM: contacts, companies, opportunities (deals), activities and notes. 🛠 For a new business our standard is <b>HubSpot for all sales</b> (see <a href="training-04-hubspot-sales.html">Guide 04</a>). You only need Act! if your company has old sales records in it.</p>
+
+<table border="1" cellpadding="10">
+<tr><th>Do</th><th>Do not</th></tr>
+<tr><td>Use Act! <b>read only</b>, to look up history: who a company is, past quotes, why a deal was lost</td><td>Add new contacts, deals or notes in Act!</td></tr>
+<tr><td>Copy anything useful into HubSpot (as a note on the HubSpot record)</td><td>Keep using Act! alongside HubSpot. Two sales systems means two different pipelines and nobody knows which is true.</td></tr>
+<tr><td>Ask the CRM admin if you cannot find something</td><td>Export contacts to your own computer</td></tr>
+</table>
+
+<p><b>Moving old records to HubSpot, once.</b> ❓ This is a job for IT and the data team, not for each sales person. The usual shape is:</p>
+
+<pre>
+   1. Export contacts, companies and opportunities from Act!   (📘 check Act! help centre)
+   2. Clean them: one spelling per company, emails in lower case,
+      free-text reasons turned into drop-down values
+   3. Match each record to HubSpot and Nexudus (search before you create!)
+   4. Import into HubSpot once, keep a frozen copy for the data team
+   5. Turn Act! to read only, then switch it off on an agreed date
+</pre>
+
+<p>💡 Why cleaning matters, from the lab: in Act! Priya's email is <i>Priya.Sharma@pixelchai.co.uk</i> and the company is "Pixel Chai Studio Ltd". In Nexudus it is <i>priya@pixelchai.co.uk</i> and "Pixel Chai Studio". Without matching, one member becomes two. And Brightline's lost reason in Act! is free text ("Moving to hybrid; downsizing to home working"); in HubSpot it should become a drop-down value such as hybrid/remote.</p>
+
+<hr/>
+
+<h3>10. Practice Tasks</h3>
+
+<p>Do these in a training area only (❓ ask your manager), never on a real member's card. You can also use the lab files <code>act365_cardholders.csv</code> and <code>act365_door_events_sep2026.csv</code>.</p>
+
+<ol>
+    <li>In the cardholders file, find which group Priya is in, and which group Ravi is in. Why are they different?</li>
+    <li>Find the two "removed" cards. Which company were they, and when did that company leave?</li>
+    <li>Find the one "Access Denied" event. Which card, which door, which day? What does it prove?</li>
+    <li>Do the weekly access check from section 8 with the lab files and <code>members.csv</code>. Do you get 12 matches?</li>
+    <li>Write down, without looking anything up, what you would do in the first five minutes if a member says their card was stolen.</li>
+    <li>A colleague asks "what time did Hannah from GreenRoot get in on Monday?" just out of interest. Write your reply.</li>
+</ol>
+
+<hr/>
+
+<h3>Quick check</h3>
+
+<p><b>1. Where does the decision "may this person open this door" really come from?</b><br/>
+<i>From the contract in Nexudus. ACT365 holds the access, but access follows the contract.</i></p>
+
+<p><b>2. A member upgrades from a hot desk to an office. Do you make a new cardholder?</b><br/>
+<i>No. Keep the same cardholder and card, and move them to the office group on the day the new contract starts.</i></p>
+
+<p><b>3. When must a leaver's access be removed?</b><br/>
+<i>On the last day. Remove them from all groups; do not delete the record unless your rules say so.</i></p>
+
+<p><b>4. Can you use door events to see how often a company uses its office?</b><br/>
+<i>Yes, but only as company-level totals per week, never one named person's arrivals.</i></p>
+
+<p><b>5. Your company has old records in Act!. Can sales keep logging calls there?</b><br/>
+<i>No. Use Act! read only for history. All new sales work goes in HubSpot.</i></p>
+
+<hr/>
+
+<h3>What's Next?</h3>
+
+<p>Next: <a href="training-07-excel-budget-capacity.html">Staff Training 07 — Excel: The Budget and Capacity Sheets</a>. Then the most important one for everyone, <a href="training-08-joiner-mover-leaver.html">Guide 08 — Joiner, Mover, Leaver</a>, which shows where door access fits in each flow. 🚀</p>
+
+<p>Back to <a href="training-01-start-here.html">Staff Training 01 — Start Here</a>. Want more depth? Read <a href="../season-1-source-systems/chapter-08-act.html">Chapter 08 — ACT</a>.</p>
