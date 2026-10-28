@@ -332,7 +332,7 @@ gcloud artifacts repositories create data-jobs --project=$PROD \
 <pre>
 gcloud billing budgets create --billing-account=$BILLING \
   --display-name="$CLIENT data platform" \
-  --budget-amount=300GBP \
+  --budget-amount=375USD \
   --filter-projects=projects/$PROD,projects/$DEV \
   --threshold-rule=percent=0.5 \
   --threshold-rule=percent=0.9 \
@@ -340,7 +340,7 @@ gcloud billing budgets create --billing-account=$BILLING \
   --threshold-rule=percent=1.0,basis=forecasted-spend
 </pre>
 
-<p>The £300/month is <b>made up</b>; use the number the client agreed. The currency must match the billing account's currency. By default the alert emails go to the billing account admins; to send them to the data team too, add a Cloud Monitoring notification channel with <code>--notifications-rule-monitoring-notification-channels</code> (check the current docs; Guide 08 creates the channels).</p>
+<p>The $375/month is <b>made up</b>; use the number the client agreed. The currency must match the billing account's currency. By default the alert emails go to the billing account admins; to send them to the data team too, add a Cloud Monitoring notification channel with <code>--notifications-rule-monitoring-notification-channels</code> (check the current docs; Guide 08 creates the channels).</p>
 
 <p>⚠️ 📘 A budget only <b>warns</b>. It does not stop spending. That is why we also set limits.</p>
 

@@ -211,10 +211,10 @@ bq update --description "Act! export taken 2026-10-28, one-off, file in gs://acm
   acme-data-prod:raw_act.contacts
 </pre>
 
-<p>Do the same for opportunities (one STRING column per header, in order). If £ signs look broken, the file is probably not UTF-8: add <code>--encoding=ISO-8859-1</code> and load again.</p>
+<p>Do the same for opportunities (one STRING column per header, in order). If $ signs look broken, the file is probably not UTF-8: add <code>--encoding=ISO-8859-1</code> and load again.</p>
 
 <ol start="5">
-    <li><b>Check the counts</b>: rows in BigQuery = lines in the file minus the header. With the lab files: 7 contacts and 7 opportunities; open pipeline £7,000 a month and win rate 3 of 5 (Chapter 08).</li>
+    <li><b>Check the counts</b>: rows in BigQuery = lines in the file minus the header. With the lab files: 7 contacts and 7 opportunities; open pipeline $8,750 a month and win rate 3 of 5 (Chapter 08).</li>
     <li><b>Map it later, not now.</b> Act! has no shared ID with Nexudus or HubSpot, and emails and company names are spelled differently (Chapter 11). The matching belongs in dbt (<code>member_xref</code>, Guide 07). <code>raw_act</code> holds contacts (personal data), so contact-level rows never reach marts or the BI tool; only company-level facts like churn reasons move on into marts.</li>
 </ol>
 
@@ -231,7 +231,7 @@ bq update --description "Act! export taken 2026-10-28, one-off, file in gs://acm
 <table border="1" cellpadding="10">
 <tr><th>Rule</th><th>How, in Excel or Google Sheets</th></tr>
 <tr><td>One named table</td><td>Excel: Insert → Table, name it <code>tbl_capacity_budget</code>. Sheets: Data → Named ranges, name it <code>capacity_budget_2026</code>.</td></tr>
-<tr><td>Fixed column names, lowercase, no spaces</td><td><code>site_code, month, sellable_desks, budget_revenue_gbp, budget_desk_occupancy, budget_direct_costs_gbp, notes</code>. Protect the header row.</td></tr>
+<tr><td>Fixed column names, lowercase, no spaces</td><td><code>site_code, month, sellable_desks, budget_revenue_usd, budget_desk_occupancy, budget_direct_costs_usd, notes</code>. Protect the header row.</td></tr>
 <tr><td>One row per site per month</td><td>Months go down the rows, not across the columns. A new month = a new row, not a new column.</td></tr>
 <tr><td>Codes, not free text</td><td>Data validation on <code>site_code</code>: a drop-down list from a "lists" tab (SOHO, RDG, …). No "Soho site (new)".</td></tr>
 <tr><td>Clean values</td><td><code>month</code> as text <code>YYYY-MM</code>; numbers only in number columns; no merged cells, no totals rows, no notes outside the table</td></tr>
@@ -256,7 +256,7 @@ bq update --description "Act! export taken 2026-10-28, one-off, file in gs://acm
 <pre>
 bq load --location=europe-west2 --source_format=CSV --skip_leading_rows=1 --replace \
   acme-data-prod:raw_excel.capacity_budget_2026 capacity_budget_2026.csv \
-  site_code:STRING,month:STRING,sellable_desks:STRING,budget_revenue_gbp:STRING,budget_desk_occupancy:STRING,budget_direct_costs_gbp:STRING,notes:STRING
+  site_code:STRING,month:STRING,sellable_desks:STRING,budget_revenue_usd:STRING,budget_desk_occupancy:STRING,budget_direct_costs_usd:STRING,notes:STRING
 </pre>
 
 <p>For a repeating load without Fivetran, a small script on a Cloud Run job does the same thing (Chapter 06, section 9). Fivetran may pick its own column types (numbers as FLOAT, for example); staging uses <code>SAFE_CAST</code> either way.</p>
@@ -265,7 +265,7 @@ bq load --location=europe-west2 --source_format=CSV --skip_leading_rows=1 --repl
 
 <h3>7. When Someone Renames a Column</h3>
 
-<p>Picture it: the budget owner renames <code>budget_revenue_gbp</code> to <code>Budget Revenue</code> to make it "look nicer". Fivetran does <b>not</b> fail. It adds a new column, and the old column stops getting values (Chapter 13, Lab 13.1). Your model now reads blanks, and "revenue vs budget" quietly breaks. A test must catch it.</p>
+<p>Picture it: the budget owner renames <code>budget_revenue_usd</code> to <code>Budget Revenue</code> to make it "look nicer". Fivetran does <b>not</b> fail. It adds a new column, and the old column stops getting values (Chapter 13, Lab 13.1). Your model now reads blanks, and "revenue vs budget" quietly breaks. A test must catch it.</p>
 
 <p>In the dbt sources file (Guide 07 owns the full file):</p>
 
@@ -283,7 +283,7 @@ sources:
             tests: [not_null, {accepted_values: {values: ['SOHO', 'RDG']}}]   # lab sites
           - name: month
             tests: [not_null]
-          - name: budget_revenue_gbp
+          - name: budget_revenue_usd
             tests: [not_null]       # a renamed column turns into NULLs: this fails
           - name: sellable_desks
             tests: [not_null]
@@ -293,8 +293,8 @@ sources:
 
 <pre>
 WITH expected AS (
-  SELECT col FROM UNNEST(['site_code', 'month', 'sellable_desks', 'budget_revenue_gbp',
-                          'budget_desk_occupancy', 'budget_direct_costs_gbp']) AS col
+  SELECT col FROM UNNEST(['site_code', 'month', 'sellable_desks', 'budget_revenue_usd',
+                          'budget_desk_occupancy', 'budget_direct_costs_usd']) AS col
 )
 SELECT e.col AS missing_column
 FROM expected AS e
@@ -313,11 +313,11 @@ WHERE c.column_name IS NULL
 -- Excel: compare with the sheet's own totals (lab numbers shown)
 SELECT site_code,
        COUNT(*)                                          AS months,
-       SUM(SAFE_CAST(budget_revenue_gbp AS NUMERIC))     AS budget_revenue,
+       SUM(SAFE_CAST(budget_revenue_usd AS NUMERIC))     AS budget_revenue,
        MAX(SAFE_CAST(sellable_desks AS INT64))           AS sellable_desks
 FROM raw_excel.capacity_budget_2026
 GROUP BY site_code;
--- Lab: SOHO 3 months, £27,400, 34 desks; RDG 3 months, £9,400, 31 desks
+-- Lab: SOHO 3 months, $34,250, 34 desks; RDG 3 months, $11,750, 31 desks
 
 -- ACT365: nothing personal leaked, and no staff
 SELECT column_name FROM raw_act365.INFORMATION_SCHEMA.COLUMNS
@@ -337,7 +337,7 @@ WHERE table_name = 'door_events';            -- expect no name or card number co
 <tr><td>Cleaners or staff in "member attendance"</td><td>Contractor or staff cards</td><td>Staff dropped in the loader; contractors dropped by the Nexudus match</td></tr>
 <tr><td>A visit lands on the wrong day</td><td>Grouping by UTC date</td><td>Convert to Europe/London before taking the date</td></tr>
 <tr><td>An analyst can still read <code>raw_act365</code></td><td>A project-wide BigQuery role</td><td>Remove it; give dataset-level access only</td></tr>
-<tr><td>Act! CSV loads with broken £ signs or split rows</td><td>Not UTF-8; line breaks inside notes</td><td><code>--encoding=ISO-8859-1</code>; <code>--allow_quoted_newlines</code></td></tr>
+<tr><td>Act! CSV loads with broken $ signs or split rows</td><td>Not UTF-8; line breaks inside notes</td><td><code>--encoding=ISO-8859-1</code>; <code>--allow_quoted_newlines</code></td></tr>
 <tr><td>Budget numbers suddenly blank</td><td>Column renamed in the sheet</td><td>The <code>not_null</code> test fails; ask the owner to rename it back</td></tr>
 <tr><td>New month missing</td><td>Row added outside the named range</td><td>Extend the range; leave spare rows inside it</td></tr>
 <tr><td>Fivetran says it cannot read the sheet</td><td>Not shared with Fivetran's address, or named range deleted</td><td>Share view-only again; recreate the named range with the same name</td></tr>

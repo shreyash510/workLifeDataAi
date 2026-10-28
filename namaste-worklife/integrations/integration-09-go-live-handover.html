@@ -78,7 +78,7 @@
 <ul>
     <li><b>Finance signs off money numbers</b>: MRR, revenue, direct costs, contribution, central costs, budget gaps.</li>
     <li><b>Ops signs off member and occupancy numbers</b>: members, desks contracted, sellable desks, desk occupancy, movements.</li>
-    <li>For the <b>last 3 closed months</b>, per site. Money on closed months has <b>£0 tolerance</b> (rounded the same way the report rounds).</li>
+    <li>For the <b>last 3 closed months</b>, per site. Money on closed months has <b>$0 tolerance</b> (rounded the same way the report rounds).</li>
 </ul>
 
 <p>Each difference ends in one of three states: <b>fixed</b> (our bug), <b>explained</b> (a real, known reason, such as a credit note in NetSuite that Nexudus does not know about), or <b>changed definition</b> (the client agrees a new rule; log it in <code>docs/decisions.md</code>). "We are looking into it" is not a state you can sign off.</p>
@@ -87,11 +87,11 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Site</th><th>Metric</th><th>Client report</th><th>Our mart</th><th>Difference</th><th>State and reason</th><th>Signed by (role)</th><th>Date</th></tr>
-<tr><td>Soho</td><td>MRR</td><td>£3,040</td><td>£3,040</td><td>£0</td><td>Match</td><td>Finance</td><td>☐</td></tr>
-<tr><td>Soho</td><td>Revenue</td><td>£3,475</td><td>£3,475</td><td>£0</td><td>Match (includes −£90 credit memo)</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Soho</td><td>MRR</td><td>$3,800</td><td>$3,800</td><td>$0</td><td>Match</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Soho</td><td>Revenue</td><td>$4,343.75</td><td>$4,343.75</td><td>$0</td><td>Match (includes −$112.50 credit memo)</td><td>Finance</td><td>☐</td></tr>
 <tr><td>Soho</td><td>Desk occupancy</td><td>17.6%</td><td>17.6% (6/34)</td><td>0</td><td>Match</td><td>Ops</td><td>☐</td></tr>
-<tr><td>Soho</td><td>Meeting rooms: Nexudus vs NetSuite</td><td>£525 booked</td><td>£435 in ledger</td><td>£90</td><td>Explained: goodwill credit, warning test</td><td>Finance</td><td>☐</td></tr>
-<tr><td>Reading</td><td>MRR</td><td>£2,700</td><td>£2,700</td><td>£0</td><td>Match</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Soho</td><td>Meeting rooms: Nexudus vs NetSuite</td><td>$656.25 booked</td><td>$543.75 in ledger</td><td>$112.50</td><td>Explained: goodwill credit, warning test</td><td>Finance</td><td>☐</td></tr>
+<tr><td>Reading</td><td>MRR</td><td>$3,375</td><td>$3,375</td><td>$0</td><td>Match</td><td>Finance</td><td>☐</td></tr>
 </table>
 
 <p>Store the signed tables in the client's shared drive and link them from <code>docs/decisions.md</code>. Then add each signed figure to <code>seeds/golden_numbers.csv</code> (Guide 07), so the nightly build checks it forever.</p>
@@ -158,10 +158,10 @@ from `&lt;client&gt;-data-prod.region-europe-west2.INFORMATION_SCHEMA.SCHEMATA`;
 
 <table border="1" cellpadding="10">
 <tr><th>Item</th><th>Plan / month</th><th>Actual / month</th><th>Where to look</th><th>Note</th></tr>
-<tr><td>BigQuery queries</td><td>£40</td><td>£52</td><td>Query below</td><td>Who scans most?</td></tr>
-<tr><td>BigQuery storage</td><td>£10</td><td>£8</td><td>Billing report</td><td></td></tr>
-<tr><td>Fivetran</td><td>£400</td><td>£480</td><td>Fivetran usage page</td><td>Which connector grew?</td></tr>
-<tr><td>Cloud Run, Scheduler, Secret Manager</td><td>£5</td><td>£3</td><td>Billing report</td><td></td></tr>
+<tr><td>BigQuery queries</td><td>$50</td><td>$65</td><td>Query below</td><td>Who scans most?</td></tr>
+<tr><td>BigQuery storage</td><td>$12.50</td><td>$10</td><td>Billing report</td><td></td></tr>
+<tr><td>Fivetran</td><td>$500</td><td>$600</td><td>Fivetran usage page</td><td>Which connector grew?</td></tr>
+<tr><td>Cloud Run, Scheduler, Secret Manager</td><td>$6.25</td><td>$3.75</td><td>Billing report</td><td></td></tr>
 <tr><td>BI tool licences</td><td>Client's existing cost ❓</td><td>?</td><td>Client's BI contract</td><td>The BI tool is under review (✅ brief)</td></tr>
 </table>
 

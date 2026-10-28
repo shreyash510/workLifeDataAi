@@ -1,24 +1,24 @@
-tran_id,tran_date,tran_type,account,account_name,account_type,location,entity,memo,amount_gbp
-INV-2609-01,2026-09-01,Invoice,4000,Office Revenue,Income,Soho,Pixel Chai Studio Ltd,Office 101 September,2400
-INV-2609-02,2026-09-01,Invoice,4010,Coworking Revenue,Income,Soho,Nomad Analytics,Unlimited Coworking September,320
-INV-2609-03,2026-09-01,Invoice,4010,Coworking Revenue,Income,Soho,Kite and Key Recruitment Ltd,Unlimited Coworking September,320
-INV-2609-04,2026-09-01,Invoice,4000,Office Revenue,Income,Reading,Green Root Foods Ltd,Office 201 September,2700
-INV-2609-05,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Soho,Pixel Chai Studio Ltd,Meeting rooms September,405
-INV-2609-06,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Soho,Nomad Analytics,Meeting rooms September,60
-INV-2609-07,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Soho,Kite and Key Recruitment Ltd,Meeting rooms September,60
-INV-2609-08,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Reading,Green Root Foods Ltd,Meeting rooms September,200
-CN-2609-01,2026-09-30,Credit Memo,4100,Meeting Room Revenue,Income,Soho,Pixel Chai Studio Ltd,Goodwill credit - AV failure 24 Sep,-90
-BILL-2609-01,2026-09-01,Vendor Bill,5000,Rent,Expense,Soho,Soho Estates Ltd,September rent,4500
-BILL-2609-02,2026-09-01,Vendor Bill,5010,Business Rates,Expense,Soho,Westminster City Council,September rates,900
-BILL-2609-03,2026-09-01,Vendor Bill,5020,Service Charge,Expense,Soho,Soho Estates Ltd,September service charge,400
-BILL-2609-04,2026-09-30,Vendor Bill,5100,Utilities,Expense,Soho,British Gas Business,September energy,350
-BILL-2609-05,2026-09-30,Vendor Bill,5300,Cleaning,Expense,Soho,SparkleClean Ltd,September cleaning,300
-JE-2609-01,2026-09-30,Journal,5200,Site Staff,Expense,Soho,Payroll,September site staff allocation,1200
-BILL-2609-06,2026-09-01,Vendor Bill,5000,Rent,Expense,Reading,Thames Valley Properties,September rent,1300
-BILL-2609-07,2026-09-01,Vendor Bill,5010,Business Rates,Expense,Reading,Reading Borough Council,September rates,250
-BILL-2609-08,2026-09-01,Vendor Bill,5020,Service Charge,Expense,Reading,Thames Valley Properties,September service charge,150
-BILL-2609-09,2026-09-30,Vendor Bill,5100,Utilities,Expense,Reading,British Gas Business,September energy,200
-BILL-2609-10,2026-09-30,Vendor Bill,5300,Cleaning,Expense,Reading,SparkleClean Ltd,September cleaning,150
-JE-2609-02,2026-09-30,Journal,5200,Site Staff,Expense,Reading,Payroll,September site staff allocation,400
-JE-2609-03,2026-09-30,Journal,6000,Central Overheads,Expense,Soho,Allocation,September central cost allocation,1000
-JE-2609-04,2026-09-30,Journal,6000,Central Overheads,Expense,Reading,Allocation,September central cost allocation,500
+tran_id,tran_date,tran_type,account,account_name,account_type,location,entity,memo,amount_usd
+INV-2609-01,2026-09-01,Invoice,4000,Office Revenue,Income,Soho,Pixel Chai Studio Ltd,Office 101 September,3000
+INV-2609-02,2026-09-01,Invoice,4010,Coworking Revenue,Income,Soho,Nomad Analytics,Unlimited Coworking September,400
+INV-2609-03,2026-09-01,Invoice,4010,Coworking Revenue,Income,Soho,Kite and Key Recruitment Ltd,Unlimited Coworking September,400
+INV-2609-04,2026-09-01,Invoice,4000,Office Revenue,Income,Reading,Green Root Foods Ltd,Office 201 September,3375
+INV-2609-05,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Soho,Pixel Chai Studio Ltd,Meeting rooms September,506.25
+INV-2609-06,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Soho,Nomad Analytics,Meeting rooms September,75
+INV-2609-07,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Soho,Kite and Key Recruitment Ltd,Meeting rooms September,75
+INV-2609-08,2026-09-30,Invoice,4100,Meeting Room Revenue,Income,Reading,Green Root Foods Ltd,Meeting rooms September,250
+CN-2609-01,2026-09-30,Credit Memo,4100,Meeting Room Revenue,Income,Soho,Pixel Chai Studio Ltd,Goodwill credit - AV failure 24 Sep,-112.5
+BILL-2609-01,2026-09-01,Vendor Bill,5000,Rent,Expense,Soho,Soho Estates Ltd,September rent,5625
+BILL-2609-02,2026-09-01,Vendor Bill,5010,Business Rates,Expense,Soho,Westminster City Council,September rates,1125
+BILL-2609-03,2026-09-01,Vendor Bill,5020,Service Charge,Expense,Soho,Soho Estates Ltd,September service charge,500
+BILL-2609-04,2026-09-30,Vendor Bill,5100,Utilities,Expense,Soho,British Gas Business,September energy,437.5
+BILL-2609-05,2026-09-30,Vendor Bill,5300,Cleaning,Expense,Soho,SparkleClean Ltd,September cleaning,375
+JE-2609-01,2026-09-30,Journal,5200,Site Staff,Expense,Soho,Payroll,September site staff allocation,1500
+BILL-2609-06,2026-09-01,Vendor Bill,5000,Rent,Expense,Reading,Thames Valley Properties,September rent,1625
+BILL-2609-07,2026-09-01,Vendor Bill,5010,Business Rates,Expense,Reading,Reading Borough Council,September rates,312.5
+BILL-2609-08,2026-09-01,Vendor Bill,5020,Service Charge,Expense,Reading,Thames Valley Properties,September service charge,187.5
+BILL-2609-09,2026-09-30,Vendor Bill,5100,Utilities,Expense,Reading,British Gas Business,September energy,250
+BILL-2609-10,2026-09-30,Vendor Bill,5300,Cleaning,Expense,Reading,SparkleClean Ltd,September cleaning,187.5
+JE-2609-02,2026-09-30,Journal,5200,Site Staff,Expense,Reading,Payroll,September site staff allocation,500
+JE-2609-03,2026-09-30,Journal,6000,Central Overheads,Expense,Soho,Allocation,September central cost allocation,1250
+JE-2609-04,2026-09-30,Journal,6000,Central Overheads,Expense,Reading,Allocation,September central cost allocation,625

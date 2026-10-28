@@ -29,7 +29,7 @@
 <ul>
     <li><b>Community manager:</b> "Priya's team was in every day, GreenRoot went quiet, the AV broke in Brick Lane."</li>
     <li><b>Sales:</b> "Ortho Robotics toured Reading; GreenRoot's renewal proposal went out."</li>
-    <li><b>Finance:</b> "Soho lost £4,175 at contribution level, but September isn't closed yet."</li>
+    <li><b>Finance:</b> "Soho lost $5,218.75 at contribution level, but September isn't closed yet."</li>
     <li><b>Ops:</b> "A leaver tried an old key card and was denied."</li>
     <li><b>Leadership:</b> "Are we OK?"</li>
 </ul>
@@ -55,11 +55,11 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Who</th><th>Site</th><th>Situation in September</th></tr>
-<tr><td><b>Pixel Chai Studio</b> (Priya)</td><td>Soho</td><td>Office 101, £2,400/month (list £2,600) since the upgrade in April. Books Brick Lane on Thursdays.</td></tr>
-<tr><td><b>Ravi, Fatima</b></td><td>Soho</td><td>Unlimited Coworking, £320/month each</td></tr>
-<tr><td><b>GreenRoot Foods</b> (Emma)</td><td>Reading</td><td>Office 201, £2,700/month, ends 31 Dec 2026. Renewal proposal at £2,800 open.</td></tr>
+<tr><td><b>Pixel Chai Studio</b> (Priya)</td><td>Soho</td><td>Office 101, $3,000/month (list $3,250) since the upgrade in April. Books Brick Lane on Thursdays.</td></tr>
+<tr><td><b>Ravi, Fatima</b></td><td>Soho</td><td>Unlimited Coworking, $400/month each</td></tr>
+<tr><td><b>GreenRoot Foods</b> (Emma)</td><td>Reading</td><td>Office 201, $3,375/month, ends 31 Dec 2026. Renewal proposal at $3,500 open.</td></tr>
 <tr><td><b>Brightline Legal</b> (Daniel)</td><td>was Soho</td><td>Left in June ("moving to hybrid"). Office 103 empty since.</td></tr>
-<tr><td><b>Ortho Robotics</b> (Ben)</td><td>Reading</td><td>Prospect, £4,200/month deal for Office 202, tour done</td></tr>
+<tr><td><b>Ortho Robotics</b> (Ben)</td><td>Reading</td><td>Prospect, $5,250/month deal for Office 202, tour done</td></tr>
 <tr><td><b>Soho site</b></td><td></td><td>34 sellable desks, Offices 101/102/103, Brick Lane &amp; Carnaby rooms</td></tr>
 </table>
 
@@ -81,9 +81,9 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Event</th><th>Recorded in</th><th>Flows to</th><th>KPI it moves</th></tr>
-<tr><td>Pixel Chai invoiced £2,400 for Office 101</td><td>Nexudus invoice</td><td>NetSuite 4000 Office Revenue (I6), BigQuery (I7)</td><td>MRR, invoiced revenue</td></tr>
-<tr><td>Ravi (Nomad Analytics) and Fatima (Kite &amp; Key) invoiced £320 each</td><td>Nexudus</td><td>NetSuite 4010 Coworking</td><td>MRR</td></tr>
-<tr><td>GreenRoot invoiced £2,700</td><td>Nexudus</td><td>NetSuite (Reading)</td><td>Reading MRR</td></tr>
+<tr><td>Pixel Chai invoiced $3,000 for Office 101</td><td>Nexudus invoice</td><td>NetSuite 4000 Office Revenue (I6), BigQuery (I7)</td><td>MRR, invoiced revenue</td></tr>
+<tr><td>Ravi (Nomad Analytics) and Fatima (Kite &amp; Key) invoiced $400 each</td><td>Nexudus</td><td>NetSuite 4010 Coworking</td><td>MRR</td></tr>
+<tr><td>GreenRoot invoiced $3,375</td><td>Nexudus</td><td>NetSuite (Reading)</td><td>Reading MRR</td></tr>
 </table>
 
 <p><b>Why this day matters:</b> it's when <b>MRR becomes real money</b>. Contracts (who should pay) turn into invoices (who was billed). If a contract was entered wrong in Nexudus, the invoice is wrong, NetSuite is wrong, and every report downstream is wrong. Upstream errors flow downstream. 🌊</p>
@@ -128,31 +128,31 @@
 <h4>Meeting room bookings</h4>
 <table border="1" cellpadding="10">
 <tr><th>Event</th><th>Recorded in</th><th>Flows to</th><th>KPI</th></tr>
-<tr><td>Priya books Brick Lane, 3 Sep, 10:00–12:00, £90</td><td>Nexudus booking (member app, I3)</td><td>Month-end meeting room invoice (lab: 30 Sep, INV-2609-05) → NetSuite 4100; BigQuery</td><td>Room utilisation, ancillary revenue</td></tr>
+<tr><td>Priya books Brick Lane, 3 Sep, 10:00–12:00, $112.50</td><td>Nexudus booking (member app, I3)</td><td>Month-end meeting room invoice (lab: 30 Sep, INV-2609-05) → NetSuite 4100; BigQuery</td><td>Room utilisation, ancillary revenue</td></tr>
 <tr><td>A booking is cancelled</td><td>Nexudus <b>CancelledBookings</b></td><td>Must be loaded separately (I7)</td><td>Otherwise vanishes or is miscounted</td></tr>
-<tr><td>Booking paid with plan credits</td><td>Nexudus (£0 charge)</td><td>Usage yes, revenue no</td><td>Utilisation ≠ revenue</td></tr>
+<tr><td>Booking paid with plan credits</td><td>Nexudus ($0 charge)</td><td>Usage yes, revenue no</td><td>Utilisation ≠ revenue</td></tr>
 </table>
 <p>September result: Brick Lane had 5 bookings, 9 hours out of 220 available = <b>4.1% utilisation</b>.</p>
 
 <h4>A problem, and a credit note</h4>
-<p>24 September: the AV fails during a booking. Goodwill: a <b>£90 credit memo</b> (CN-2609-01). In the lab it's raised in NetSuite. Nexudus never sees it. Result: Soho's invoiced revenue (£3,565) and recognised revenue (£3,475) now differ by £90. A difference you can fully explain is fine; one you can't is a bug.</p>
+<p>24 September: the AV fails during a booking. Goodwill: a <b>$112.50 credit memo</b> (CN-2609-01). In the lab it's raised in NetSuite. Nexudus never sees it. Result: Soho's invoiced revenue ($4,456.25) and recognised revenue ($4,343.75) now differ by $112.50. A difference you can fully explain is fine; one you can't is a bug.</p>
 
 <h4>Sales: a new prospect</h4>
 <table border="1" cellpadding="10">
 <tr><th>Event</th><th>Recorded in</th><th>Flows to</th><th>KPI</th></tr>
 <tr><td>Ben (Ortho Robotics) books a tour via the website</td><td>CRM: contact + deal (I1)</td><td>BigQuery (I9)</td><td>Leads, tours</td></tr>
 <tr><td>Tour of Reading 202, 2 Sep</td><td>CRM activity</td><td></td><td>Tours done, conversion</td></tr>
-<tr><td>Deal at "Tour Done", £4,200/month</td><td>CRM deal stage</td><td></td><td>Pipeline value</td></tr>
+<tr><td>Deal at "Tour Done", $5,250/month</td><td>CRM deal stage</td><td></td><td>Pipeline value</td></tr>
 </table>
 <p>Nexudus knows nothing about Ben yet. He only appears there when the deal is won and synced (I2) and staff create a contract. <b>Pipeline lives in the CRM; members live in Nexudus.</b></p>
 
 <h4>Renewals: the one that matters</h4>
-<p>GreenRoot's contract ends 31 Dec. Sales sends a renewal proposal at £2,800 (CRM). Every system says "fine":</p>
+<p>GreenRoot's contract ends 31 Dec. Sales sends a renewal proposal at $3,500 (CRM). Every system says "fine":</p>
 <pre>
    Nexudus  active, no notice          😊      CRM      proposal sent, open     😊
    NetSuite paid every invoice         😊      ACT365   attendance → ~0          🚨
 </pre>
-<p>Only the joined view says: <i>"Reading's only office tenant may be leaving. Revenue at risk: £2,700/month. Call GreenRoot this week."</i> That sentence is the whole project in miniature.</p>
+<p>Only the joined view says: <i>"Reading's only office tenant may be leaving. Revenue at risk: $3,375/month. Call GreenRoot this week."</i> That sentence is the whole project in miniature.</p>
 
 <h4>Notice given (a different month, same mechanics)</h4>
 <p>When Brightline gave notice on 30 Apr, Nexudus recorded the notice date; the CRM recorded <i>why</i> ("moving to hybrid"). When their contract ended in June: Nexudus removed them from ACT365 groups (I4), billing stopped, Office 103 became empty, and Soho's occupancy and MRR fell. One business event, five systems.</p>
@@ -165,12 +165,12 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Bill (lab, Soho)</th><th>Account</th><th>Fixed?</th></tr>
-<tr><td>Rent £4,500</td><td>5000 Rent</td><td>Fixed</td></tr>
-<tr><td>Business rates £900 · service charge £400</td><td>5010 · 5020</td><td>Fixed</td></tr>
-<tr><td>Utilities £350 · cleaning £300</td><td>5100 · 5300</td><td>Semi-variable</td></tr>
-<tr><td>Site staff £1,200 (journal JE-2609-01, as a total)</td><td>5200</td><td>Mostly fixed</td></tr>
+<tr><td>Rent $5,625</td><td>5000 Rent</td><td>Fixed</td></tr>
+<tr><td>Business rates $1,125 · service charge $500</td><td>5010 · 5020</td><td>Fixed</td></tr>
+<tr><td>Utilities $437.50 · cleaning $375</td><td>5100 · 5300</td><td>Semi-variable</td></tr>
+<tr><td>Site staff $1,500 (journal JE-2609-01, as a total)</td><td>5200</td><td>Mostly fixed</td></tr>
 </table>
-<p>Soho's direct costs for September total <b>£7,650</b>, whether 1 or 34 desks are sold. That's the core truth of coworking: <b>costs are fixed, revenue depends on occupancy</b>.</p>
+<p>Soho's direct costs for September total <b>$9,562.50</b>, whether 1 or 34 desks are sold. That's the core truth of coworking: <b>costs are fixed, revenue depends on occupancy</b>.</p>
 
 <hr/>
 
@@ -189,8 +189,8 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Close step</th><th>Lab example</th><th>Effect</th></tr>
-<tr><td>Central cost allocation (journal)</td><td>£1,000 to Soho (JE-2609-03)</td><td>Soho after central: −£5,175</td></tr>
-<tr><td>Credit notes and corrections</td><td>CN-2609-01 −£90</td><td>Recognised revenue £3,475</td></tr>
+<tr><td>Central cost allocation (journal)</td><td>$1,250 to Soho (JE-2609-03)</td><td>Soho after central: −$6,468.75</td></tr>
+<tr><td>Credit notes and corrections</td><td>CN-2609-01 −$112.50</td><td>Recognised revenue $4,343.75</td></tr>
 <tr><td>Deferrals</td><td>(none in Sep lab; for example a prepaid year)</td><td>Invoiced ≠ recognised by month</td></tr>
 <tr><td>Period locked</td><td>Close date: ask the client</td><td>Numbers stop changing</td></tr>
 </table>
@@ -218,12 +218,12 @@
 
 <table border="1" cellpadding="10">
 <tr><th>KPI</th><th>Soho, Sep 2026</th><th>Source</th></tr>
-<tr><td>MRR</td><td>£3,040</td><td>Nexudus contracts</td></tr>
-<tr><td>Recognised revenue</td><td>£3,475</td><td>NetSuite</td></tr>
-<tr><td>vs budget</td><td>−£5,725 (−62%)</td><td>NetSuite + Excel budget</td></tr>
-<tr><td>Direct costs</td><td>£7,650 (on budget)</td><td>NetSuite</td></tr>
-<tr><td>Contribution</td><td>−£4,175</td><td>NetSuite</td></tr>
-<tr><td>After central costs</td><td>−£5,175</td><td>NetSuite journals</td></tr>
+<tr><td>MRR</td><td>$3,800</td><td>Nexudus contracts</td></tr>
+<tr><td>Recognised revenue</td><td>$4,343.75</td><td>NetSuite</td></tr>
+<tr><td>vs budget</td><td>−$7,156.25 (−62%)</td><td>NetSuite + Excel budget</td></tr>
+<tr><td>Direct costs</td><td>$9,562.50 (on budget)</td><td>NetSuite</td></tr>
+<tr><td>Contribution</td><td>−$5,218.75</td><td>NetSuite</td></tr>
+<tr><td>After central costs</td><td>−$6,468.75</td><td>NetSuite journals</td></tr>
 <tr><td>Desk occupancy</td><td>6 / 34 = 17.6%</td><td>Nexudus + Excel capacity</td></tr>
 <tr><td>Office occupancy</td><td>1 / 3 = 33%</td><td>Nexudus</td></tr>
 <tr><td>Brick Lane utilisation</td><td>4.1%</td><td>Nexudus bookings</td></tr>

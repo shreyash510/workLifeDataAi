@@ -226,7 +226,7 @@ select
     upper(trim(json_value(payload, '$.LocationName')))          as nexudus_location_name,
     safe_cast(json_value(payload, '$.StartDate') as date)       as start_date,
     safe_cast(nullif(json_value(payload, '$.EndDate'), '') as date) as end_date,  -- NULL = rolling
-    safe_cast(json_value(payload, '$.Price') as numeric)        as monthly_price_gbp,
+    safe_cast(json_value(payload, '$.Price') as numeric)        as monthly_price_usd,
     updated_on                                                  as source_updated_at_utc
 from latest
 </pre>
@@ -292,7 +292,7 @@ with contracts as (       -- staging has no joins, so the site code is added her
     left join {{ ref('site_mapping') }} s using (nexudus_location_name)
 )
 select m.month_start, m.month_end, c.contract_id, c.member_id, c.company_id, c.site_code,
-       c.plan_name, c.monthly_price_gbp as mrr_gbp,
+       c.plan_name, c.monthly_price_usd as mrr_usd,
        case when c.plan_name = 'Private Office'      then r.capacity_people   -- desk rule and plan
             when c.plan_name = 'Unlimited Coworking' then 1                   -- names: agree with Ops ❓
             else 0 end as desks
@@ -344,7 +344,7 @@ left join {{ ref('stg_nexudus__resources') }} r using (resource_id)
 
 <p>Door data (if "ACT" turns out to be door access): no per-person door events in marts. If the client wants attendance, build a company-level aggregate such as <code>agg_company_week_attendance</code> (company × week, only groups of 5 or more people), and agree it with the client first ❓.</p>
 
-<p><code>fct_site_month_kpis</code> columns include <code>mrr_gbp</code>, <code>revenue_gbp</code>, <code>direct_costs_gbp</code>, <code>contribution_gbp</code>, <code>central_costs_gbp</code>, <code>contribution_after_central_gbp</code>, <code>revenue_vs_budget_gbp</code>, <code>desk_occupancy</code>, <code>sellable_desks</code>, <code>desks_contracted</code> and <code>has_finance_actuals</code>. Build it the Chapter 16 way: sum contracts, GL, bookings and budget to site × month <b>each in its own CTE first</b>, then join them to a site × month frame. Joining before summing multiplies rows (the "£16,200 bug").</p>
+<p><code>fct_site_month_kpis</code> columns include <code>mrr_usd</code>, <code>revenue_usd</code>, <code>direct_costs_usd</code>, <code>contribution_usd</code>, <code>central_costs_usd</code>, <code>contribution_after_central_usd</code>, <code>revenue_vs_budget_usd</code>, <code>desk_occupancy</code>, <code>sellable_desks</code>, <code>desks_contracted</code> and <code>has_finance_actuals</code>. Build it the Chapter 16 way: sum contracts, GL, bookings and budget to site × month <b>each in its own CTE first</b>, then join them to a site × month frame. Joining before summing multiplies rows (the "$20,250 bug").</p>
 
 <p>Two rules worth repeating:</p>
 <ul>
@@ -385,8 +385,8 @@ models:
 
 <pre>
 site_code,month_start,metric,expected_value,source_report
-SOHO,2026-09-01,mrr_gbp,3040,September board pack p.4
-SOHO,2026-09-01,revenue_gbp,3475,NetSuite P&amp;L by site (closed)
+SOHO,2026-09-01,mrr_usd,3040,September board pack p.4
+SOHO,2026-09-01,revenue_usd,3475,NetSuite P&amp;L by site (closed)
 SOHO,2026-09-01,desks_contracted,6,Ops occupancy sheet
 </pre>
 
@@ -396,14 +396,14 @@ SOHO,2026-09-01,desks_contracted,6,Ops occupancy sheet
 -- Returns one row per golden figure that the mart does NOT match.
 with kpis as (            -- UNPIVOT needs one type for all columns
     select site_code, month_start,
-           cast(mrr_gbp as numeric)          as mrr_gbp,
-           cast(revenue_gbp as numeric)      as revenue_gbp,
+           cast(mrr_usd as numeric)          as mrr_usd,
+           cast(revenue_usd as numeric)      as revenue_usd,
            cast(desks_contracted as numeric) as desks_contracted
     from {{ ref('fct_site_month_kpis') }}
 ),
 actual as (
     select * from kpis
-    unpivot (value for metric in (mrr_gbp, revenue_gbp, desks_contracted))
+    unpivot (value for metric in (mrr_usd, revenue_usd, desks_contracted))
 )
 select g.*, a.value as actual_value
 from {{ ref('golden_numbers') }} g
@@ -411,7 +411,7 @@ left join actual a using (site_code, month_start, metric)
 where a.value is distinct from g.expected_value    -- NOT "!=": a NULL must fail too
 </pre>
 
-<p>⚠️ <code>UNPIVOT</code> drops NULL values by default, so a missing value shows up as "no match" and the test fails, which is what we want. Money on closed months has <b>£0 tolerance</b> (🛠 our standard; agree it with Finance). If the report rounds to whole pounds, round the same way in the test and write that in <code>docs/decisions.md</code>.</p>
+<p>⚠️ <code>UNPIVOT</code> drops NULL values by default, so a missing value shows up as "no match" and the test fails, which is what we want. Money on closed months has <b>$0 tolerance</b> (🛠 our standard; agree it with Finance). If the report rounds to whole dollars, round the same way in the test and write that in <code>docs/decisions.md</code>.</p>
 
 <p><b>3. Reconciliation test</b>: two systems that should agree. Nexudus invoices versus NetSuite revenue per site per month. Differences can be real (credit notes, timing), so make it a <b>warning</b> above a tolerance agreed with Finance:</p>
 
@@ -419,14 +419,14 @@ where a.value is distinct from g.expected_value    -- NOT "!=": a NULL must fail
 -- tests/warn_revenue_nexudus_vs_netsuite.sql
 {{ config(severity = 'warn') }}
 with nexudus as (
-    select site_code, month_start, sum(invoiced_gbp) as nexudus_gbp
+    select site_code, month_start, sum(invoiced_usd) as nexudus_usd
     from {{ ref('int_nexudus_invoice_lines') }} group by 1, 2),
 netsuite as (
-    select site_code, month_start, revenue_gbp as netsuite_gbp
+    select site_code, month_start, revenue_usd as netsuite_usd
     from {{ ref('fct_site_month_kpis') }} where has_finance_actuals)
-select *, coalesce(nexudus_gbp, 0) - coalesce(netsuite_gbp, 0) as difference_gbp
+select *, coalesce(nexudus_usd, 0) - coalesce(netsuite_usd, 0) as difference_usd
 from nexudus full outer join netsuite using (site_code, month_start)
-where abs(coalesce(nexudus_gbp, 0) - coalesce(netsuite_gbp, 0)) &gt; 50   -- tolerance made up
+where abs(coalesce(nexudus_usd, 0) - coalesce(netsuite_usd, 0)) &gt; 50   -- tolerance made up
 </pre>
 
 <p>(<code>int_nexudus_invoice_lines</code> is an example name: build it only if you load Nexudus invoices.) Write each known cause of a difference into the test's comment.</p>
@@ -632,7 +632,7 @@ select table_id, timestamp_millis(last_modified_time) as last_built
 from `&lt;client&gt;-data-prod.marts.__TABLES__` order by last_built;
 
 -- 2. Does the KPI mart match the client's report for the last closed month?
-select site_code, mrr_gbp, revenue_gbp, desks_contracted, sellable_desks, desk_occupancy
+select site_code, mrr_usd, revenue_usd, desks_contracted, sellable_desks, desk_occupancy
 from `&lt;client&gt;-data-prod.marts.fct_site_month_kpis`
 where month_start = '2026-09-01' order by site_code;
 

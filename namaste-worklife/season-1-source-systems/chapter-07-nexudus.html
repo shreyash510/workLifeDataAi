@@ -124,7 +124,7 @@
 
 <ol>
     <li>Go to nexudus.com and start the free trial (21 days, no card, one location, at the time of writing).</li>
-    <li>Configure your location: name it <b>Work.Life Soho (lab)</b>, currency <b>GBP</b>, time zone <b>Europe/London</b>, address anywhere in Soho.</li>
+    <li>Configure your location: name it <b>Work.Life Soho (lab)</b>, currency <b>USD</b>, time zone <b>Europe/London</b>, address anywhere in Soho.</li>
     <li>Set <b>opening hours</b>: Mon–Fri 08:00–18:00. (Meeting room availability comes from this.)</li>
     <li>Open the <b>member portal</b> in another browser (or incognito). That's what members see. Keep both windows open throughout the lab.</li>
 </ol>
@@ -141,14 +141,14 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Plan</th><th>Price</th><th>Billing</th><th>Notice</th></tr>
-<tr><td>Unlimited Coworking</td><td>£320</td><td>Monthly, in advance</td><td>1 month</td></tr>
-<tr><td>Flex 10 Days</td><td>£180</td><td>Monthly</td><td>1 month</td></tr>
-<tr><td>Private Office</td><td>£0 base (price set per contract)</td><td>Monthly, in advance</td><td>3 months min term</td></tr>
+<tr><td>Unlimited Coworking</td><td>$400</td><td>Monthly, in advance</td><td>1 month</td></tr>
+<tr><td>Flex 10 Days</td><td>$225</td><td>Monthly</td><td>1 month</td></tr>
+<tr><td>Private Office</td><td>$0 base (price set per contract)</td><td>Monthly, in advance</td><td>3 months min term</td></tr>
 </table>
 
 <p>Look at all the options on the plan form: <b>booking credits</b>, <b>time passes</b>, <b>access rules</b>, <b>sign-up fee</b>, <b>deposit</b>, <b>which locations</b>. Every option is a column (or a whole table) in the data.</p>
 
-<p><b>Exercise:</b> give Private Office <b>4 free meeting room hours per month</b> (booking credits). Later, in Lab 7.6, watch how a booking's price drops to £0 when credits are used. Then ask yourself: if the AI reports "meeting room revenue", should free hours count? (Answer: no, but "meeting room <i>usage</i>" should. Two different KPIs!)</p>
+<p><b>Exercise:</b> give Private Office <b>4 free meeting room hours per month</b> (booking credits). Later, in Lab 7.6, watch how a booking's price drops to $0 when credits are used. Then ask yourself: if the AI reports "meeting room revenue", should free hours count? (Answer: no, but "meeting room <i>usage</i>" should. Two different KPIs!)</p>
 
 <hr/>
 
@@ -156,7 +156,7 @@
 
 <p>From <code>resources.csv</code> (Soho rows):</p>
 <ul>
-    <li><b>Meeting rooms:</b> Brick Lane (8 people, £45/hour), Carnaby (4 people, £30/hour). Set them bookable by members.</li>
+    <li><b>Meeting rooms:</b> Brick Lane (8 people, $56.25/hour), Carnaby (4 people, $37.50/hour). Set them bookable by members.</li>
     <li><b>Private offices:</b> Office 101 (4 desks), 102 (8 desks), 103 (2 desks). In Nexudus, offices are usually set up as resources/floor plan units and then <b>assigned to a contract</b> as a dedicated resource.</li>
     <li><b>Hot desk area:</b> a desk resource type for the coworking floor.</li>
 </ul>
@@ -184,10 +184,10 @@
 <table border="1" cellpadding="10">
 <tr><th>Do this</th><th>Lab contract</th><th>What to observe</th></tr>
 <tr><td>Ravi on Unlimited Coworking from 15 Jan 2025, no end date</td><td>K004</td><td>Rolling contract: end date is empty</td></tr>
-<tr><td>Brightline on Private Office, Office 103, £1,400, 1 Jul 2025 – 30 Jun 2026</td><td>K003</td><td>Fixed term, dedicated resource</td></tr>
+<tr><td>Brightline on Private Office, Office 103, $1,750, 1 Jul 2025 – 30 Jun 2026</td><td>K003</td><td>Fixed term, dedicated resource</td></tr>
 <tr><td>Brightline <b>gives notice</b> on 30 Apr 2026</td><td>K003</td><td>Where is the notice date stored? Is there a "reason" field?</td></tr>
 <tr><td>Priya on Unlimited Coworking from 1 Oct 2025</td><td>K001</td><td></td></tr>
-<tr><td>Priya <b>upgrades</b>: end K001 on 31 Mar 2026, new Private Office contract Office 101 from 1 Apr 2026 at <b>£2,400</b> (list £2,600)</td><td>K001 → K002</td><td>How is the discount stored? As a lower price, or list price + discount? Does plan history update?</td></tr>
+<tr><td>Priya <b>upgrades</b>: end K001 on 31 Mar 2026, new Private Office contract Office 101 from 1 Apr 2026 at <b>$3,000</b> (list $3,250)</td><td>K001 → K002</td><td>How is the discount stored? As a lower price, or list price + discount? Does plan history update?</td></tr>
 <tr><td>GreenRoot on Private Office (Reading 201) 1 Jan – 31 Dec 2026</td><td>K005</td><td>(note only, if you have one location)</td></tr>
 </table>
 
@@ -202,7 +202,7 @@
        NO                            →  CHURN  (go find the reason in the CRM)
 </pre>
 
-<p>This one rule fixes the Chapter 05 exam question "how many members churned in 2026?" Three contracts ended (K001, K003, K006), but only <b>one company churned</b> (Brightline, 2 people, £1,400 MRR).</p>
+<p>This one rule fixes the Chapter 05 exam question "how many members churned in 2026?" Three contracts ended (K001, K003, K006), but only <b>one company churned</b> (Brightline, 2 people, $1,750 MRR).</p>
 
 <hr/>
 
@@ -224,7 +224,7 @@
 <ol>
     <li>Run (or preview) the <b>billing</b> for September. Find Pixel Chai's invoice.</li>
     <li>Open the invoice: see the <b>lines</b>, one for the office fee and one per booking (or grouped), with VAT.</li>
-    <li>Issue a <b>£90 credit note</b> to Pixel Chai for "AV failure 24 Sep". (Practice only: in the lab files this credit, CN-2609-01, exists <b>only in NetSuite</b>, which is why Nexudus shows £3,565 and NetSuite £3,475 in Chapter 09. Which system Work.Life raises credits in is unknown, so ask the client.)</li>
+    <li>Issue a <b>$112.50 credit note</b> to Pixel Chai for "AV failure 24 Sep". (Practice only: in the lab files this credit, CN-2609-01, exists <b>only in NetSuite</b>, which is why Nexudus shows $4,456.25 and NetSuite $4,343.75 in Chapter 09. Which system Work.Life raises credits in is unknown, so ask the client.)</li>
     <li>Find <b>Financial accounts</b> in settings. This is where each plan/product/booking is mapped to an <b>accounting code</b>, like 4000 Office Revenue, 4010 Coworking, 4100 Meeting Rooms.</li>
 </ol>
 
@@ -272,13 +272,13 @@
 <tr><th>Way</th><th>How</th><th>Good for</th><th>Watch out</th></tr>
 <tr><td><b>1. Manual export</b></td><td>CSV/Excel from admin screens</td><td>One-offs, this lab</td><td>Manual, not repeatable. That's the "rebuilt by hand" problem.</td></tr>
 <tr><td><b>2. REST API</b></td><td><code>GET https://spaces.nexudus.com/api/{module}/{entities}</code> with a bearer token</td><td>Scheduled extract by a Python job</td><td>Pagination, rate limits, summary vs full records</td></tr>
-<tr><td><b>3. Native BigQuery integration</b></td><td>Settings → Integrations → Google BigQuery. Sends customers, teams, invoices &amp; credit notes, ledgers, bookings, contracts, check-ins. Changes sent as they happen.</td><td>Near real-time warehouse with no code</td><td>Listed at <b>£100 per location per month</b> on Nexudus's pricing page at the time of writing (check current price). For 14 sites that's ~£16,800/year. Is it worth it vs a Python job?</td></tr>
+<tr><td><b>3. Native BigQuery integration</b></td><td>Settings → Integrations → Google BigQuery. Sends customers, teams, invoices &amp; credit notes, ledgers, bookings, contracts, check-ins. Changes sent as they happen.</td><td>Near real-time warehouse with no code</td><td>Listed at <b>$125 per location per month</b> on Nexudus's pricing page at the time of writing (check current price). For 14 sites that's ~$21,000/year. Is it worth it vs a Python job?</td></tr>
 <tr><td><b>4. Webhooks / Zapier</b></td><td>Nexudus calls your URL when something happens</td><td>Real-time alerts ("new member signed")</td><td>Not a full history. Missed events = gaps.</td></tr>
 </table>
 
 <p>Work.Life's brief says their extract layer is <b>"Fivetran, Python"</b>. A sensible guess: Fivetran handles systems with standard connectors (NetSuite, HubSpot), and <b>Python handles Nexudus via the API</b>. Confirm it with the client and the data partner before designing anything. Never assume.</p>
 
-<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~£16.8k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (today, presumably the external data partner's job). That choice belongs in the supplier response.</p>
+<p>💰 <b>A real architecture decision:</b> the brief says <i>"cost conscious"</i>. Native BigQuery sync = no code to maintain but ~$21k/year. A Python extractor = cheap to run but someone must maintain it when the API changes (today, presumably the external data partner's job). That choice belongs in the supplier response.</p>
 
 <hr/>
 
@@ -345,14 +345,14 @@ with open("coworkers.jsonl", "w") as f:
 <tr><td>Team vs CompanyName</td><td>Two ways to say "company"</td><td>Pick team as truth; document it</td></tr>
 <tr><td>Time zones</td><td>API times may be UTC; the site is Europe/London</td><td>Convert once in staging</td></tr>
 <tr><td>Invoiced ≠ recognised revenue</td><td>Credit notes, deferrals, finance adjustments</td><td>Use NetSuite for P&amp;L, Nexudus for operations</td></tr>
-<tr><td>Price stored per contract, discount hidden</td><td>Staff type £2,400 instead of £2,600</td><td>Compare to list price from resource/plan to compute discount</td></tr>
+<tr><td>Price stored per contract, discount hidden</td><td>Staff type $3,000 instead of $3,250</td><td>Compare to list price from resource/plan to compute discount</td></tr>
 </table>
 
 <hr/>
 
 <h3>17. One More Thing: Nexudus ↔ HubSpot</h3>
 
-<p>Nexudus has a native HubSpot integration (listed at £50 per location per month at the time of writing; vendor fact). It maps HubSpot <b>contacts → customers</b>, <b>companies → teams</b> and <b>deals → opportunities</b>, with two-way sync for customers and teams. This matters because the brief says <i>"HubSpot is being integrated and is expected to become the source of truth for member data."</i> We'll dig into what "source of truth" means when two systems sync both ways in Chapters 10 and 11.</p>
+<p>Nexudus has a native HubSpot integration (listed at $62.50 per location per month at the time of writing; vendor fact). It maps HubSpot <b>contacts → customers</b>, <b>companies → teams</b> and <b>deals → opportunities</b>, with two-way sync for customers and teams. This matters because the brief says <i>"HubSpot is being integrated and is expected to become the source of truth for member data."</i> We'll dig into what "source of truth" means when two systems sync both ways in Chapters 10 and 11.</p>
 
 <hr/>
 
@@ -381,7 +381,7 @@ with open("coworkers.jsonl", "w") as f:
 <tr><td><b>Contracts</b></td><td>The most important table. Classify ends: upgrade, transfer, churn.</td></tr>
 <tr><td><b>Financial accounts</b></td><td>The bridge from Nexudus lines to NetSuite GL codes.</td></tr>
 <tr><td><b>Check-ins</b></td><td>Physical usage, the best early churn signal.</td></tr>
-<tr><td><b>Getting data out</b></td><td>Export, REST API, native BigQuery (£/location), webhooks.</td></tr>
+<tr><td><b>Getting data out</b></td><td>Export, REST API, native BigQuery ($/location), webhooks.</td></tr>
 <tr><td><b>Ask, don't assume</b></td><td>How does Nexudus feed NetSuite today? How is the extract built?</td></tr>
 </table>
 

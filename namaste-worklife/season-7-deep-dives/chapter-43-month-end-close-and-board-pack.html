@@ -27,9 +27,9 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>Picture 2 October (illustrative). A site manager asks the AI "what did Soho make in September?" and gets <b>£3,565</b>, because the Nexudus invoices are all there. A week later the finance lead presents Soho's September revenue to leadership as <b>£3,475</b>. Same month, same site, two numbers.</p>
+<p>Picture 2 October (illustrative). A site manager asks the AI "what did Soho make in September?" and gets <b>$4,456.25</b>, because the Nexudus invoices are all there. A week later the finance lead presents Soho's September revenue to leadership as <b>$4,343.75</b>. Same month, same site, two numbers.</p>
 
-<p>Nobody made a mistake. Between those two dates, finance did the close: they posted the £90 goodwill credit memo CN-2609-01, the site-staff journals, the central cost allocations, and they reconciled what Nexudus invoiced against what NetSuite recognised. The first number was a <b>work in progress</b>. The second is <b>official</b>. The AI's job is to know the difference and to say which one it is giving.</p>
+<p>Nobody made a mistake. Between those two dates, finance did the close: they posted the $112.50 goodwill credit memo CN-2609-01, the site-staff journals, the central cost allocations, and they reconciled what Nexudus invoiced against what NetSuite recognised. The first number was a <b>work in progress</b>. The second is <b>official</b>. The AI's job is to know the difference and to say which one it is giving.</p>
 
 <pre>
    1 Sep ─────────── 30 Sep ───── close (WD1 … WD~7) ───── 🔒 period locked ───── board meeting
@@ -50,12 +50,12 @@
 <tr><th>When</th><th>Step</th><th>What it means</th><th>Lab example</th></tr>
 <tr><td>Last days of month</td><td><b>Pre-close</b></td><td>Remind site teams to submit invoices and approvals; run the final usage billing</td><td>Meeting-room invoices INV-2609-05 to 08, dated 30 Sep</td></tr>
 <tr><td>WD1</td><td><b>Cut-off</b></td><td>Decide which month each item belongs to. A bill received on 3 Oct for September energy is a September cost</td><td>Utilities BILL-2609-04 and 09 dated 30 Sep</td></tr>
-<tr><td>WD2</td><td><b>Payroll journal</b></td><td>Staff costs from the payroll system, split by site</td><td>JE-2609-01 £1,200 Soho, JE-2609-02 £400 Reading</td></tr>
+<tr><td>WD2</td><td><b>Payroll journal</b></td><td>Staff costs from the payroll system, split by site</td><td>JE-2609-01 $1,500 Soho, JE-2609-02 $500 Reading</td></tr>
 <tr><td>WD2–3</td><td><b>Accruals, prepayments, deferrals</b></td><td>See section 3</td><td>(none in the lab GL)</td></tr>
 <tr><td>WD3</td><td><b>Depreciation</b></td><td>Monthly charge for fit-outs, furniture, IT</td><td>(not in lab)</td></tr>
-<tr><td>WD3</td><td><b>Central cost allocation</b></td><td>Share HQ costs out to sites by an agreed key</td><td>JE-2609-03 £1,000 Soho, JE-2609-04 £500 Reading</td></tr>
+<tr><td>WD3</td><td><b>Central cost allocation</b></td><td>Share HQ costs out to sites by an agreed key</td><td>JE-2609-03 $1,250 Soho, JE-2609-04 $625 Reading</td></tr>
 <tr><td>WD3</td><td><b>Intercompany</b> (only if several legal entities)</td><td>Match and eliminate recharges between group companies</td><td>Lab has one entity</td></tr>
-<tr><td>WD3–4</td><td><b>Reconciliations</b></td><td>Bank, AR, AP, VAT, deposits, Nexudus ↔ NetSuite revenue (section 4)</td><td>Soho −£90 explained</td></tr>
+<tr><td>WD3–4</td><td><b>Reconciliations</b></td><td>Bank, AR, AP, VAT, deposits, Nexudus ↔ NetSuite revenue (section 4)</td><td>Soho −$112.50 explained</td></tr>
 <tr><td>WD4–5</td><td><b>Review</b></td><td>Compare to budget and last month, chase anything odd, write commentary</td><td>Soho −62% vs budget</td></tr>
 <tr><td>WD5–7</td><td><b>Sign-off and lock</b></td><td>Finance lead approves; the period is closed in NetSuite (AR and AP can be locked earlier, separately)</td><td>(lab has no period table)</td></tr>
 </table>
@@ -70,14 +70,14 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Adjustment</th><th>Plain meaning</th><th>Coworking example</th><th>Effect on the month</th></tr>
-<tr><td><b>Accrual</b></td><td>Cost used this month, invoice not yet received</td><td>September energy bill arrives on 15 Oct. Finance estimates £350 (made up as an accrual; in the lab the bill is posted on 30 Sep)</td><td>Cost goes in September, not October</td></tr>
-<tr><td><b>Prepayment</b></td><td>Cost paid in advance, spread over the months it covers</td><td>UK commercial rent is often billed quarterly in advance. A £13,500 quarter (made up) is spread as £4,500 per month</td><td>Rent is smooth month to month</td></tr>
+<tr><td><b>Accrual</b></td><td>Cost used this month, invoice not yet received</td><td>September energy bill arrives on 15 Oct. Finance estimates $437.50 (made up as an accrual; in the lab the bill is posted on 30 Sep)</td><td>Cost goes in September, not October</td></tr>
+<tr><td><b>Prepayment</b></td><td>Cost paid in advance, spread over the months it covers</td><td>UK commercial rent is often billed quarterly in advance. A $16,875 quarter (made up) is spread as $5,625 per month</td><td>Rent is smooth month to month</td></tr>
 <tr><td><b>Deferred revenue</b></td><td>Customer paid in advance; revenue released as earned</td><td>A member prepays a year (Chapter 09's GreenRoot example, made up)</td><td>Invoiced ≠ recognised</td></tr>
-<tr><td><b>Depreciation</b></td><td>Cost of long-life assets spread over their life</td><td>A £120,000 office fit-out over 10 years = £1,000/month (made up)</td><td>Hits EBITDA? No. Hits profit? Yes</td></tr>
-<tr><td><b>Central allocation</b></td><td>HQ costs shared to sites</td><td>£1,000 Soho, £500 Reading (lab). The key (by desks, revenue, sq ft?) is unknown</td><td>Turns contribution into "after central"</td></tr>
+<tr><td><b>Depreciation</b></td><td>Cost of long-life assets spread over their life</td><td>A $150,000 office fit-out over 10 years = $1,250/month (made up)</td><td>Hits EBITDA? No. Hits profit? Yes</td></tr>
+<tr><td><b>Central allocation</b></td><td>HQ costs shared to sites</td><td>$1,250 Soho, $625 Reading (lab). The key (by desks, revenue, sq ft?) is unknown</td><td>Turns contribution into "after central"</td></tr>
 </table>
 
-<p>Why it matters for us: the allocation key decides whether a site "makes money after central costs". Reading's contribution is <b>+£450</b> but after its £500 share it's <b>−£50</b>. Change the key and Reading flips. The AI must quote the key, not just the result. New question for the client: <i>"How are central costs allocated to sites, and how often does the key change?"</i></p>
+<p>Why it matters for us: the allocation key decides whether a site "makes money after central costs". Reading's contribution is <b>+$562.50</b> but after its $625 share it's <b>−$62.50</b>. Change the key and Reading flips. The AI must quote the key, not just the result. New question for the client: <i>"How are central costs allocated to sites, and how often does the key change?"</i></p>
 
 <hr/>
 
@@ -87,13 +87,13 @@
 
 <pre>
    SOHO, SEP 2026 (lab)            NEXUDUS invoiced   NETSUITE recognised   diff
-   Office 101 (Pixel Chai)                2,400              2,400            0
-   Coworking (2 hot-desk members)           640                640            0
-   Meeting rooms                            525                435          −90   ← CN-2609-01
+   Office 101 (Pixel Chai)                3,000              3,000            0
+   Coworking (2 hot-desk members)           800                800            0
+   Meeting rooms                            656.25                543.75          −112.50   ← CN-2609-01
                                           ─────              ─────          ───
-   Total                                  3,565              3,475          −90   ✅ fully explained
+   Total                                  4,456.25              4,343.75          −112.50   ✅ fully explained
 
-   READING, SEP 2026 (lab)                2,900              2,900            0   ✅
+   READING, SEP 2026 (lab)                3,625              3,625            0   ✅
 </pre>
 
 <p>It proves the warehouse joins the two systems correctly. In dbt it becomes a model plus a test: "unexplained difference per site per month = 0".</p>
@@ -124,7 +124,7 @@
 <tr><td><b>Actual</b></td><td>What happened, from the closed ledger</td><td>At the close</td><td>Only via a restatement</td><td>NetSuite GL + Nexudus</td></tr>
 </table>
 
-<p>The lab budget for September: Soho <b>£9,200</b> revenue, £7,650 direct costs, 85% desk occupancy, 34 sellable desks. Reading <b>£3,200</b> revenue, £2,450 direct costs, 20% occupancy, 31 desks. Note the budget lives in <b>Excel</b>, not in NetSuite. That's common (Chapter 06) and it means a third system sits inside every "vs budget" answer.</p>
+<p>The lab budget for September: Soho <b>$11,500</b> revenue, $9,562.50 direct costs, 85% desk occupancy, 34 sellable desks. Reading <b>$4,000</b> revenue, $3,062.50 direct costs, 20% occupancy, 31 desks. Note the budget lives in <b>Excel</b>, not in NetSuite. That's common (Chapter 06) and it means a third system sits inside every "vs budget" answer.</p>
 
 <p>💡 "Are we on plan?" needs to know <b>which</b> plan: a site can be far below budget but on forecast. New question for the client: <i>"Does the board pack compare to budget, the latest forecast, or both?"</i></p>
 
@@ -136,36 +136,36 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Sep 2026 (lab)</th><th>Actual</th><th>Budget</th><th>Variance</th><th>%</th></tr>
-<tr><td>Soho revenue</td><td>£3,475</td><td>£9,200</td><td>−£5,725 (A)</td><td>−62%</td></tr>
-<tr><td>Soho direct costs</td><td>£7,650</td><td>£7,650</td><td>£0</td><td>0%</td></tr>
-<tr><td>Soho contribution</td><td>−£4,175</td><td>+£1,550</td><td>−£5,725 (A)</td><td></td></tr>
-<tr><td>Reading revenue</td><td>£2,900</td><td>£3,200</td><td>−£300 (A)</td><td>−9%</td></tr>
-<tr><td>Reading direct costs</td><td>£2,450</td><td>£2,450</td><td>£0</td><td>0%</td></tr>
-<tr><td>Reading contribution</td><td>+£450</td><td>+£750</td><td>−£300 (A)</td><td>−40%</td></tr>
+<tr><td>Soho revenue</td><td>$4,343.75</td><td>$11,500</td><td>−$7,156.25 (A)</td><td>−62%</td></tr>
+<tr><td>Soho direct costs</td><td>$9,562.50</td><td>$9,562.50</td><td>$0</td><td>0%</td></tr>
+<tr><td>Soho contribution</td><td>−$5,218.75</td><td>+$1,937.50</td><td>−$7,156.25 (A)</td><td></td></tr>
+<tr><td>Reading revenue</td><td>$3,625</td><td>$4,000</td><td>−$375 (A)</td><td>−9%</td></tr>
+<tr><td>Reading direct costs</td><td>$3,062.50</td><td>$3,062.50</td><td>$0</td><td>0%</td></tr>
+<tr><td>Reading contribution</td><td>+$562.50</td><td>+$937.50</td><td>−$375 (A)</td><td>−40%</td></tr>
 </table>
 
 <p>The numbers say <i>what</i>. Commentary says <b>why</b>, and that's the part that today "takes someone a day to write" (Chapter 40). Good commentary names drivers you can check in the data:</p>
 
 <pre>
-SOHO — revenue £5,725 (62%) below budget; costs on budget
+SOHO — revenue $7,156.25 (62%) below budget; costs on budget
   Volume:  desk occupancy 17.6% (6 of 34) vs 85% budget
-           • Office 102 (8 desks, list £5,000/month) empty
-           • Office 103 (list £1,400/month) empty since Brightline left on 30 Jun (K003)
+           • Office 102 (8 desks, list $6,250/month) empty
+           • Office 103 (list $1,750/month) empty since Brightline left on 30 Jun (K003)
            • 18 of 20 hot desks unsold
-  Price:   Pixel Chai pays £2,400 vs £2,600 list for Office 101 (7.7% discount, 12-month term)
-  One-off: £90 goodwill credit to Pixel Chai, AV failure on 24 Sep (CN-2609-01)
-  So what: costs are fixed (£7,650 whether 1 or 34 desks are sold), so every
+  Price:   Pixel Chai pays $3,000 vs $3,250 list for Office 101 (7.7% discount, 12-month term)
+  One-off: $112.50 goodwill credit to Pixel Chai, AV failure on 24 Sep (CN-2609-01)
+  So what: costs are fixed ($9,562.50 whether 1 or 34 desks are sold), so every
            desk sold goes almost straight to contribution. No open Soho deals.
 
-READING — revenue £300 (9%) below budget; contribution still positive (+£450)
+READING — revenue $375 (9%) below budget; contribution still positive (+$562.50)
   Volume:  occupancy 19% vs 20% budget; no coworking members in September
            (Kite &amp; Key's Flex 10 moved to Soho on 1 Aug: K006 → K007, a transfer, not churn)
-  Watch:   upside: Ortho Robotics, Office 202, £4,200/month quoted, tour done, wants Nov
-           risk:   GreenRoot (Office 201, £2,700) renews 31 Dec; weekly attendance fell
+  Watch:   upside: Ortho Robotics, Office 202, $5,250/month quoted, tour done, wants Nov
+           risk:   GreenRoot (Office 201, $3,375) renews 31 Dec; weekly attendance fell
                    73% → 23% → ~0 over September
 </pre>
 
-<p>Two rules for AI-written commentary: (1) every driver points to a row in the data (contract, GL line, booking); (2) never invent a split the data doesn't have. The lab budget is one number per site, so we can't say "the budget expected Office 102 at £5,000". We can only say the empty offices' list value (£6,400/month) is bigger than the gap.</p>
+<p>Two rules for AI-written commentary: (1) every driver points to a row in the data (contract, GL line, booking); (2) never invent a split the data doesn't have. The lab budget is one number per site, so we can't say "the budget expected Office 102 at $6,250". We can only say the empty offices' list value ($8,000/month) is bigger than the gap.</p>
 
 <hr/>
 
@@ -209,17 +209,17 @@ READING — revenue £300 (9%) below budget; contribution still positive (+£450
 <table border="1" cellpadding="10">
 <tr><th>KPI</th><th>Soho</th><th>Reading</th><th>Source</th></tr>
 <tr><td>Period status</td><td colspan="2">Lab: treated as closed (no period table in lab). Built on 1 Oct, every row would be PROVISIONAL</td><td>NetSuite periods</td></tr>
-<tr><td>Recognised revenue</td><td>£3,475</td><td>£2,900</td><td>NetSuite GL</td></tr>
-<tr><td>Revenue vs budget</td><td>🔴 −£5,725 (−62%)</td><td>🟠 −£300 (−9%)</td><td>GL + Excel budget</td></tr>
-<tr><td>MRR (contracted)</td><td>£3,040</td><td>£2,700</td><td>Nexudus contracts</td></tr>
-<tr><td>Direct costs</td><td>£7,650 (on budget)</td><td>£2,450 (on budget)</td><td>NetSuite GL</td></tr>
-<tr><td>Contribution</td><td>🔴 −£4,175</td><td>🟠 +£450</td><td>NetSuite GL</td></tr>
-<tr><td>After central costs</td><td>−£5,175</td><td>−£50</td><td>GL allocation journals</td></tr>
+<tr><td>Recognised revenue</td><td>$4,343.75</td><td>$3,625</td><td>NetSuite GL</td></tr>
+<tr><td>Revenue vs budget</td><td>🔴 −$7,156.25 (−62%)</td><td>🟠 −$375 (−9%)</td><td>GL + Excel budget</td></tr>
+<tr><td>MRR (contracted)</td><td>$3,800</td><td>$3,375</td><td>Nexudus contracts</td></tr>
+<tr><td>Direct costs</td><td>$9,562.50 (on budget)</td><td>$3,062.50 (on budget)</td><td>NetSuite GL</td></tr>
+<tr><td>Contribution</td><td>🔴 −$5,218.75</td><td>🟠 +$562.50</td><td>NetSuite GL</td></tr>
+<tr><td>After central costs</td><td>−$6,468.75</td><td>−$62.50</td><td>GL allocation journals</td></tr>
 <tr><td>Desk occupancy</td><td>🔴 17.6% (6/34) vs 85%</td><td>🟢 19% (6/31) vs 20%</td><td>Nexudus + capacity sheet</td></tr>
 <tr><td>Office occupancy</td><td>1 of 3</td><td>1 of 2</td><td>Nexudus</td></tr>
 <tr><td>Members (by contract site)</td><td>6</td><td>6</td><td>Nexudus</td></tr>
-<tr><td>Churn</td><td colspan="2">None in September. 2026 to date: 1 company (Brightline, Soho, 2 people, £1,400 MRR)</td><td>Nexudus contracts</td></tr>
-<tr><td>Open pipeline</td><td>£0</td><td>£7,000/month (Ortho £4,200 new + GreenRoot renewal £2,800)</td><td>CRM</td></tr>
+<tr><td>Churn</td><td colspan="2">None in September. 2026 to date: 1 company (Brightline, Soho, 2 people, $1,750 MRR)</td><td>Nexudus contracts</td></tr>
+<tr><td>Open pipeline</td><td>$0</td><td>$8,750/month (Ortho $5,250 new + GreenRoot renewal $3,500)</td><td>CRM</td></tr>
 <tr><td>Renewal risk</td><td>None due</td><td>GreenRoot, 31 Dec, attendance falling</td><td>Contracts + door access</td></tr>
 <tr><td>Cash</td><td colspan="2">Not in lab (needs balance-sheet data)</td><td>NetSuite</td></tr>
 <tr><td>One-line commentary</td><td>Empty offices, fixed costs: fill Office 102/103</td><td>Near plan; win Ortho, save GreenRoot</td><td>Section 7</td></tr>
@@ -229,18 +229,18 @@ READING — revenue £300 (9%) below budget; contribution still positive (+£450
 
 <h3>11. Restatements: When a Closed Month Changes</h3>
 
-<p>Sometimes a closed month turns out to be wrong. Say (made up) that in mid-October finance finds a £300 September cleaning invoice for Soho that was never posted. There are two ways to fix it:</p>
+<p>Sometimes a closed month turns out to be wrong. Say (made up) that in mid-October finance finds a $375 September cleaning invoice for Soho that was never posted. There are two ways to fix it:</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Approach</th><th>What happens</th><th>Effect on September</th></tr>
-<tr><td><b>Post in the current month</b> (most common for small items)</td><td>The £300 goes into October</td><td>September stays −£4,175; October looks £300 worse</td></tr>
-<tr><td><b>Reopen and restate</b> (for material errors)</td><td>Finance reopens September, posts it, locks again</td><td>September becomes −£4,475 (made up); the board already saw −£4,175</td></tr>
+<tr><td><b>Post in the current month</b> (most common for small items)</td><td>The $375 goes into October</td><td>September stays −$5,218.75; October looks $375 worse</td></tr>
+<tr><td><b>Reopen and restate</b> (for material errors)</td><td>Finance reopens September, posts it, locks again</td><td>September becomes −$5,593.75 (made up); the board already saw −$5,218.75</td></tr>
 </table>
 
 <p>The second is dangerous for data: a number leadership already saw quietly changes. Two protections:</p>
 <ul>
     <li><b>Snapshot what was reported.</b> Keep an "as reported" copy of each month's KPIs at board-pack time (a dbt snapshot), so "what did we tell the board?" and "what's true now?" are both answerable.</li>
-    <li><b>Alert on closed-period changes.</b> A test that fails if any closed month's revenue or costs move. The AI should then say: "September was restated on [date]: contribution changed from −£4,175 to −£4,475 (made up)."</li>
+    <li><b>Alert on closed-period changes.</b> A test that fails if any closed month's revenue or costs move. The AI should then say: "September was restated on [date]: contribution changed from −$5,218.75 to −$5,593.75 (made up)."</li>
 </ul>
 
 <hr/>
@@ -253,8 +253,8 @@ READING — revenue £300 (9%) below budget; contribution still positive (+£450
     AR/AP/all-locked flags)    │    names in the Records Catalog)
                                ▼
    EXCEL budget ──► raw_excel ──► staging ──► fct_site_month_kpis  ◄── fct_gl, fct_contract_month
-                                              │  revenue_gbp, revenue_vs_budget_gbp,
-                                              │  contribution_gbp, desk_occupancy …
+                                              │  revenue_usd, revenue_vs_budget_usd,
+                                              │  contribution_usd, desk_occupancy …
                                               │  + is_period_closed  (proposed column)
                                               ▼
                                          ai_safe ──► AI answers with PROVISIONAL / FINAL
@@ -264,7 +264,7 @@ READING — revenue £300 (9%) below budget; contribution still positive (+£450
 <tr><th>Piece</th><th>Where</th><th>Why</th></tr>
 <tr><td>Accounting periods</td><td><code>raw_netsuite</code> (via Fivetran) → staging</td><td>Source of the closed flag; report by period, not transaction date (Chapter 09)</td></tr>
 <tr><td><code>is_period_closed</code></td><td>Proposed column on <code>fct_site_month_kpis</code> (already in <code>ai_safe</code>)</td><td>The AI needs it on every row it reads; no new table in <code>ai_safe</code></td></tr>
-<tr><td>Budget</td><td><code>raw_excel</code> → <code>revenue_vs_budget_gbp</code> etc.</td><td>One agreed budget version, tested (Chapter 06)</td></tr>
+<tr><td>Budget</td><td><code>raw_excel</code> → <code>revenue_vs_budget_usd</code> etc.</td><td>One agreed budget version, tested (Chapter 06)</td></tr>
 <tr><td>As-reported snapshot</td><td>dbt snapshot in <code>marts</code> (proposed)</td><td>Restatement detection and "what did the board see?"</td></tr>
 </table>
 
@@ -278,8 +278,8 @@ READING — revenue £300 (9%) below budget; contribution still positive (+£450
 <pre>
    "How is Soho doing this month?"   (asked 3 Oct, September still open, illustrative)
 
-   PROVISIONAL (September not yet closed): Soho revenue so far £3,475, £5,725 below
-   the £9,200 budget. Direct costs £7,650, contribution −£4,175. These may still
+   PROVISIONAL (September not yet closed): Soho revenue so far $4,343.75, $7,156.25 below
+   the $11,500 budget. Direct costs $9,562.50, contribution −$5,218.75. These may still
    change: accruals, credit memos and allocation journals are added at the close.
    Last closed month: August.
 </pre>
@@ -310,12 +310,12 @@ READING — revenue £300 (9%) below budget; contribution still positive (+£450
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Close</b></td><td>Cut-off, adjustments, reconciliations, review, lock. Typically 5–10 working days; Work.Life's timetable is unknown (#11).</td></tr>
 <tr><td><b>Adjustments</b></td><td>Accruals, prepayments, deferrals, depreciation, allocations: why ledger ≠ invoices ≠ cash.</td></tr>
-<tr><td><b>Nexudus ↔ NetSuite rec</b></td><td>Soho £3,565 vs £3,475, −£90 fully explained. Build it as a model and a test.</td></tr>
+<tr><td><b>Nexudus ↔ NetSuite rec</b></td><td>Soho $4,456.25 vs $4,343.75, −$112.50 fully explained. Build it as a model and a test.</td></tr>
 <tr><td><b>Management vs statutory</b></td><td>The AI lives in management accounts. Check how leases are shown.</td></tr>
 <tr><td><b>Budget / forecast / actual</b></td><td>Fixed plan / moving estimate / closed truth. Budget lives in Excel.</td></tr>
-<tr><td><b>Variance</b></td><td>Soho −£5,725 (−62%), Reading −£300 (−9%). Commentary names provable drivers.</td></tr>
+<tr><td><b>Variance</b></td><td>Soho −$7,156.25 (−62%), Reading −$375 (−9%). Commentary names provable drivers.</td></tr>
 <tr><td><b>Board pack</b></td><td>KPIs, league table, site P&amp;L, occupancy, pipeline, churn, cash. Typical only; ask for theirs (#14).</td></tr>
-<tr><td><b>RAG</b></td><td>Thresholds are a business decision; always show the £ too.</td></tr>
+<tr><td><b>RAG</b></td><td>Thresholds are a business decision; always show the $ too.</td></tr>
 <tr><td><b>Restatement</b></td><td>Snapshot what was reported; alert when a closed month moves.</td></tr>
 <tr><td><b>PROVISIONAL</b></td><td>Open month = labelled answer. No month named = last closed month.</td></tr>
 </table>

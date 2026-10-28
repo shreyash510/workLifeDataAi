@@ -2,7 +2,7 @@
 
 <p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
 
-<p>In Chapter 16 our dbt project produced the right numbers: Soho's September MRR of £3,040, revenue of £3,475, contribution of −£4,175. Today's question is harder: <b>how do we know they'll still be right next month?</b> Sources change, sheets get renamed, loaders stop silently.</p>
+<p>In Chapter 16 our dbt project produced the right numbers: Soho's September MRR of $3,800, revenue of $4,343.75, contribution of −$5,218.75. Today's question is harder: <b>how do we know they'll still be right next month?</b> Sources change, sheets get renamed, loaders stop silently.</p>
 
 <p>The brief's principle: <i>"Accuracy is a launch gate. If it confidently returns a wrong figure, trust is lost."</i> Season 3 builds the AI's launch gate on what we build today: <b>tests</b> that fail loudly, <b>freshness</b> checks, <b>documentation</b>, <b>lineage</b>, and the <code>ai_safe</code> layer the AI reads.</p>
 
@@ -81,7 +81,7 @@ models:
           - relationships: {to: ref('dim_site'), field: site_code}
       - name: company_key
         tests: [not_null]
-      - name: mrr_gbp
+      - name: mrr_usd
         tests: [not_null]
   - name: fct_booking
     columns:
@@ -115,7 +115,7 @@ models:
         tests: [not_null]
   - name: stg_excel__capacity_budget
     columns:
-      - name: budget_revenue_gbp
+      - name: budget_revenue_usd
         tests: [not_null]                # catches the renamed column from Lab 13.1
       - name: site_code
         tests:
@@ -143,55 +143,55 @@ having count(*) &gt; 1
 -- Golden numbers for September 2026, verified by hand in Ch 06, 09 and 11.
 -- Returns a row for every site where the mart disagrees with the verified value.
 with expected as (
-    select 'SOHO' as site_code, 3040 as mrr_gbp, 6 as desks_contracted, 3475 as revenue_gbp,
-           7650 as direct_costs_gbp, -4175 as contribution_gbp, -5725 as revenue_vs_budget_gbp
+    select 'SOHO' as site_code, 3800 as mrr_usd, 6 as desks_contracted, 4343.75 as revenue_usd,
+           9562.50 as direct_costs_usd, -5218.75 as contribution_usd, -7156.25 as revenue_vs_budget_usd
     union all
-    select 'RDG', 2700, 6, 2900, 2450, 450, -300
+    select 'RDG', 3375, 6, 3625, 3062.50, 562.50, -375
 ),
 actual as (
     select * from {{ ref('fct_site_month_kpis') }} where month_start = date '2026-09-01'
 )
-select e.site_code, e.mrr_gbp, a.mrr_gbp as actual_mrr_gbp,
-       e.revenue_gbp, a.revenue_gbp as actual_revenue_gbp
+select e.site_code, e.mrr_usd, a.mrr_usd as actual_mrr_usd,
+       e.revenue_usd, a.revenue_usd as actual_revenue_usd
 from expected as e
 left join actual as a using (site_code)
 where a.site_code is null
-   or a.mrr_gbp               is distinct from e.mrr_gbp     -- NOT !=, see below
+   or a.mrr_usd               is distinct from e.mrr_usd     -- NOT !=, see below
    or a.desks_contracted      is distinct from e.desks_contracted
-   or a.revenue_gbp           is distinct from e.revenue_gbp
-   or a.direct_costs_gbp      is distinct from e.direct_costs_gbp
-   or a.contribution_gbp      is distinct from e.contribution_gbp
-   or a.revenue_vs_budget_gbp is distinct from e.revenue_vs_budget_gbp
+   or a.revenue_usd           is distinct from e.revenue_usd
+   or a.direct_costs_usd      is distinct from e.direct_costs_usd
+   or a.contribution_usd      is distinct from e.contribution_usd
+   or a.revenue_vs_budget_usd is distinct from e.revenue_vs_budget_usd
 </pre>
 
-<p>⚠️ Why <code>is distinct from</code>? Because <code>NULL != 3475</code> is NULL, not TRUE, so a <code>!=</code> test would <b>pass</b> exactly when revenue has gone missing, which is the story's failure. <code>is distinct from</code> treats NULL as a real difference.</p>
+<p>⚠️ Why <code>is distinct from</code>? Because <code>NULL != 4343.75</code> is NULL, not TRUE, so a <code>!=</code> test would <b>pass</b> exactly when revenue has gone missing, which is the story's failure. <code>is distinct from</code> treats NULL as a real difference.</p>
 
 <p>This is the seed of the launch gate; Season 3 grows it into <b>golden questions</b> the AI must answer correctly against actuals (<a href="../season-3-ai-layer/chapter-25-accuracy-launch-gate.html">Chapter 25</a>).</p>
 
-<p><b>Reconciliation tests</b> compare two systems that should agree. Soho members booked £525 of meeting rooms in Nexudus in September (90 + 30 + 90 + 45 + 90 + 60 + 90 + 30). NetSuite account 4100 shows £525 invoiced minus a £90 goodwill credit = £435. That difference is <b>real and explained</b> (Chapter 11, Q4), so this test should <b>warn</b>, not fail. <b><code>tests/warn_meeting_rooms_nexudus_vs_netsuite.sql</code></b>:</p>
+<p><b>Reconciliation tests</b> compare two systems that should agree. Soho members booked $656.25 of meeting rooms in Nexudus in September (90 + 30 + 90 + 45 + 90 + 60 + 90 + 30). NetSuite account 4100 shows $656.25 invoiced minus a $112.50 goodwill credit = $543.75. That difference is <b>real and explained</b> (Chapter 11, Q4), so this test should <b>warn</b>, not fail. <b><code>tests/warn_meeting_rooms_nexudus_vs_netsuite.sql</code></b>:</p>
 
 <pre>
 {{ config(severity = 'warn') }}
 -- Known causes of differences: credit memos, invoice timing. Investigate, don't panic.
 with bookings as (
-    select site_code, month_start, sum(price_gbp) as booked_gbp
+    select site_code, month_start, sum(price_usd) as booked_usd
     from {{ ref('fct_booking') }}
     where resource_type = 'meeting_room' and status = 'confirmed'
     group by site_code, month_start
 ),
 ledger as (
-    select site_code, month_start, sum(amount_gbp) as ledger_gbp
+    select site_code, month_start, sum(amount_usd) as ledger_usd
     from {{ ref('fct_gl') }} where account_number = 4100
     group by site_code, month_start
 )
-select site_code, month_start, b.booked_gbp, l.ledger_gbp,
-       coalesce(b.booked_gbp, 0) - coalesce(l.ledger_gbp, 0) as difference_gbp
+select site_code, month_start, b.booked_usd, l.ledger_usd,
+       coalesce(b.booked_usd, 0) - coalesce(l.ledger_usd, 0) as difference_usd
 from bookings as b
 full outer join ledger as l using (site_code, month_start)
-where coalesce(b.booked_gbp, 0) != coalesce(l.ledger_gbp, 0)
+where coalesce(b.booked_usd, 0) != coalesce(l.ledger_usd, 0)
 </pre>
 
-<p>Expected: <b>1 warning</b>: SOHO, 2026-09, booked 525, ledger 435, difference 90. Reading reconciles exactly (£200 both sides). Leadership will ask "why don't these match?"; now the answer is ready.</p>
+<p>Expected: <b>1 warning</b>: SOHO, 2026-09, booked 656.25, ledger 543.75, difference 112.50. Reading reconciles exactly ($250 both sides). Leadership will ask "why don't these match?"; now the answer is ready.</p>
 
 <hr/>
 
@@ -208,9 +208,9 @@ unit_tests:
       - input: ref('stg_nexudus__contracts')
         rows:
           - {contract_id: X1, company_id: C9, member_id: M9, plan_code: P-FLEX10, resource_code: RDG-HOT,
-             site_code: RDG, start_date: 2026-07-01, end_date: 2026-07-31, monthly_price_gbp: 180}
+             site_code: RDG, start_date: 2026-07-01, end_date: 2026-07-31, monthly_price_usd: 225}
           - {contract_id: X2, company_id: C9, member_id: M9, plan_code: P-HOT, resource_code: SOHO-HOT,
-             site_code: SOHO, start_date: 2026-07-15, end_date: null, monthly_price_gbp: 320}
+             site_code: SOHO, start_date: 2026-07-15, end_date: null, monthly_price_usd: 400}
       - input: ref('stg_nexudus__resources')
         rows:
           - {resource_code: RDG-HOT, capacity_people: 15}
@@ -221,9 +221,9 @@ unit_tests:
           - {month_start: 2026-08-01, month_end: 2026-08-31}
     expect:
       rows:
-        - {contract_id: X1, month_start: 2026-07-01, desks: 0, mrr_gbp: 180}   # Flex: MRR yes, desk no
-        - {contract_id: X2, month_start: 2026-07-01, desks: 1, mrr_gbp: 320}   # started mid-month: counts
-        - {contract_id: X2, month_start: 2026-08-01, desks: 1, mrr_gbp: 320}   # rolling (NULL end): continues
+        - {contract_id: X1, month_start: 2026-07-01, desks: 0, mrr_usd: 225}   # Flex: MRR yes, desk no
+        - {contract_id: X2, month_start: 2026-07-01, desks: 1, mrr_usd: 400}   # started mid-month: counts
+        - {contract_id: X2, month_start: 2026-08-01, desks: 1, mrr_usd: 400}   # rolling (NULL end): continues
 </pre>
 
 <pre>
@@ -272,9 +272,9 @@ dbt source freshness
 <table border="1" cellpadding="10">
 <tr><th>Break</th><th>How</th><th>What catches it</th></tr>
 <tr><td>Finance renames a location (the story)</td><td>In <code>seeds/site_mapping.csv</code> change <code>Soho</code> to <code>London Soho</code></td><td><code>not_null_fct_gl_site_code</code> fails, so <code>dbt build</code> skips everything downstream of <code>fct_gl</code>. (Run <code>dbt run</code> then <code>dbt test</code> and the golden test fails too: Soho revenue is NULL.)</td></tr>
-<tr><td>Someone forgets rolling contracts</td><td>In <code>int_contract_months</code>, delete <code>c.end_date is null or</code></td><td>Unit test, and golden test (Soho MRR £3,040 → £2,400)</td></tr>
+<tr><td>Someone forgets rolling contracts</td><td>In <code>int_contract_months</code>, delete <code>c.end_date is null or</code></td><td>Unit test, and golden test (Soho MRR $3,800 → $3,000)</td></tr>
 <tr><td>A plan code changes</td><td>In <code>int_contract_months</code>, change <code>'P-HOT'</code> to <code>'P-HOTDESK'</code></td><td>Golden test (Soho desks 6 → 4)</td></tr>
-<tr><td>Grain bug</td><td>In <code>fct_contract_month</code>, add <code>join {{ ref('dim_member') }} using (company_key)</code></td><td>Golden test (Soho MRR £3,040 → £10,240, Pixel Chai's office counted 4 times; Reading £2,700 → £16,200)</td></tr>
+<tr><td>Grain bug</td><td>In <code>fct_contract_month</code>, add <code>join {{ ref('dim_member') }} using (company_key)</code></td><td>Golden test (Soho MRR $3,800 → $12,800, Pixel Chai's office counted 4 times; Reading $3,375 → $20,250)</td></tr>
 </table>
 
 <p>One golden test catches most of these: a <b>few hand-verified numbers</b> are the most valuable tests you can write.</p>
@@ -287,7 +287,7 @@ dbt source freshness
 dbt docs generate &amp;&amp; dbt docs serve    # build the docs site, open it in a browser
 </pre>
 
-<p>A page per model (description, columns, tests, SQL, lineage) answers the brief's <i>"documented and handover ready"</i> principle for the modelling layer. And in Season 3 the same descriptions become <b>context for the AI</b>: when it sees <code>contribution_gbp</code>, it should also see what it means. A column with no description is a column the AI will guess about. Add to <code>_marts.yml</code>:</p>
+<p>A page per model (description, columns, tests, SQL, lineage) answers the brief's <i>"documented and handover ready"</i> principle for the modelling layer. And in Season 3 the same descriptions become <b>context for the AI</b>: when it sees <code>contribution_usd</code>, it should also see what it means. A column with no description is a column the AI will guess about. Add to <code>_marts.yml</code>:</p>
 
 <pre>
   - name: fct_site_month_kpis
@@ -297,8 +297,8 @@ dbt docs generate &amp;&amp; dbt docs serve    # build the docs site, open it in
     columns:
       - name: desk_occupancy
         description: "desks_contracted / sellable_desks. Offices hold their capacity, Unlimited Coworking 1, Flex 0."
-      - name: contribution_gbp
-        description: "revenue_gbp (accounts 4xxx incl. credit memos) minus direct site costs (5000-5999), before central overheads."
+      - name: contribution_usd
+        description: "revenue_usd (accounts 4xxx incl. credit memos) minus direct site costs (5000-5999), before central overheads."
       - name: has_finance_actuals
         description: "FALSE means finance numbers are unknown for this month, not zero."
 </pre>
@@ -360,19 +360,19 @@ from {{ ref('dim_company') }}
 -- models/ai_safe/ai_safe__fct_contract_month.sql   (no member_key: companies and sites, not people)
 {{ config(alias = 'fct_contract_month') }}
 select month_start, month_end, site_code, contract_id, company_key,
-       plan_code, resource_code, is_office, desks, mrr_gbp
+       plan_code, resource_code, is_office, desks, mrr_usd
 from {{ ref('fct_contract_month') }}
 
 -- models/ai_safe/ai_safe__fct_booking.sql   (no member_key)
 {{ config(alias = 'fct_booking') }}
 select booking_id, booking_date, month_start, site_code, resource_code, resource_type,
-       company_key, start_time, end_time, hours, price_gbp, status
+       company_key, start_time, end_time, hours, price_usd, status
 from {{ ref('fct_booking') }}
 
 -- models/ai_safe/ai_safe__fct_gl.sql   (no memo, no entity: free text can hide personal details)
 {{ config(alias = 'fct_gl') }}
 select tran_id, tran_date, month_start, site_code, tran_type, account_number, account_name,
-       account_type, pl_category, company_key, amount_gbp
+       account_type, pl_category, company_key, amount_usd
 from {{ ref('fct_gl') }}
 </pre>
 
@@ -461,8 +461,8 @@ exposures:
 <table border="1" cellpadding="10">
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Test = query</b></td><td>Returns zero rows when everything is right. Generic, singular, unit, freshness.</td></tr>
-<tr><td><b>Golden tests</b></td><td>Hand-verified numbers (Soho Sep revenue £3,475). Compare with <code>is distinct from</code> so NULLs fail.</td></tr>
-<tr><td><b>Reconciliation</b></td><td>Nexudus vs NetSuite meeting rooms: warn on the known £90 credit.</td></tr>
+<tr><td><b>Golden tests</b></td><td>Hand-verified numbers (Soho Sep revenue $4,343.75). Compare with <code>is distinct from</code> so NULLs fail.</td></tr>
+<tr><td><b>Reconciliation</b></td><td>Nexudus vs NetSuite meeting rooms: warn on the known $112.50 credit.</td></tr>
 <tr><td><b>ai_safe</b></td><td>Aliased models over marts, no people-level data, with contracts. As tables, they keep the last good numbers when a test fails.</td></tr>
 </table>
 

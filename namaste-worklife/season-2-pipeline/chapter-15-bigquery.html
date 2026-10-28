@@ -90,11 +90,11 @@ SELECT * FROM events;
 <pre>
    ROW STORE (Postgres, MySQL)            COLUMN STORE (BigQuery)
    ───────────────────────────            ───────────────────────
-   [K001, C001, M001, P-HOT, ... 320]     contract_id:       K001 K002 K003 K004 ...
-   [K002, C001, M001, P-OFFICE, ... 2400] site_code:         SOHO SOHO SOHO SOHO ...
-   [K003, C002, M005, P-OFFICE, ... 1400] monthly_price_gbp: 320  2400 1400 320  ...
+   [K001, C001, M001, P-HOT, ... 400]     contract_id:       K001 K002 K003 K004 ...
+   [K002, C001, M001, P-OFFICE, ... 3000] site_code:         SOHO SOHO SOHO SOHO ...
+   [K003, C002, M005, P-OFFICE, ... 1750] monthly_price_usd: 400  3000 1750 400  ...
 
-   Query: SUM(monthly_price_gbp) BY site_code
+   Query: SUM(monthly_price_usd) BY site_code
    Row store: reads every whole row.     Column store: reads ONLY 2 columns.
 </pre>
 
@@ -125,7 +125,7 @@ SELECT * FROM events;
 SELECT
   site_code,
   COUNT(*)                                      AS active_contracts,
-  SUM(CAST(monthly_price_gbp AS NUMERIC))       AS mrr_gbp
+  SUM(CAST(monthly_price_usd AS NUMERIC))       AS mrr_usd
 FROM raw_nexudus.contracts
 WHERE CAST(start_date AS DATE) &lt;= DATE '2026-09-30'
   AND (SAFE_CAST(end_date AS DATE) IS NULL                 -- blank / '' → NULL → rolling
@@ -135,9 +135,9 @@ ORDER BY site_code;
 </pre>
 
 <table border="1" cellpadding="10">
-<tr><th>site_code</th><th>active_contracts</th><th>mrr_gbp</th></tr>
-<tr><td>RDG</td><td>1</td><td>2700</td></tr>
-<tr><td>SOHO</td><td>3</td><td>3040</td></tr>
+<tr><th>site_code</th><th>active_contracts</th><th>mrr_usd</th></tr>
+<tr><td>RDG</td><td>1</td><td>3375</td></tr>
+<tr><td>SOHO</td><td>3</td><td>3800</td></tr>
 </table>
 
 <p>Matches Chapter 11. ✅ Now desk occupancy, using the Chapter 06 rule: office contracts hold the office's capacity, hot-desk contracts hold 1 desk, Flex holds 0.</p>
@@ -189,7 +189,7 @@ ORDER BY d.site_code;
 <pre>
 -- Lab 15.2 · WRONG on purpose: one row per PERSON × CONTRACT, then sum price
 SELECT c.site_code,
-       SUM(CAST(c.monthly_price_gbp AS NUMERIC)) AS mrr_gbp_WRONG
+       SUM(CAST(c.monthly_price_usd AS NUMERIC)) AS mrr_usd_WRONG
 FROM raw_nexudus.contracts AS c
 JOIN raw_nexudus.members   AS m ON m.company_id = c.company_id
 WHERE CAST(c.start_date AS DATE) &lt;= DATE '2026-09-30'
@@ -199,9 +199,9 @@ GROUP BY c.site_code;
 </pre>
 
 <table border="1" cellpadding="10">
-<tr><th>site_code</th><th>mrr_gbp_WRONG</th><th>Why</th></tr>
-<tr><td>RDG</td><td>16,200</td><td>GreenRoot's £2,700 office × 6 people</td></tr>
-<tr><td>SOHO</td><td>10,240</td><td>Pixel Chai's £2,400 office × 4 people + 320 + 320</td></tr>
+<tr><th>site_code</th><th>mrr_usd_WRONG</th><th>Why</th></tr>
+<tr><td>RDG</td><td>20,250</td><td>GreenRoot's $3,375 office × 6 people</td></tr>
+<tr><td>SOHO</td><td>12,800</td><td>Pixel Chai's $3,000 office × 4 people + 400 + 400</td></tr>
 </table>
 
 <p>The query runs without errors and gives a confident, wrong number. This is the single most common way an AI text-to-SQL system gets money questions wrong. Remember this table; it's the reason Season 3 gives the AI <b>pre-aggregated marts with a clear grain</b> instead of raw tables to join (<a href="../season-3-ai-layer/chapter-20-text-to-sql.html">Chapter 20</a>).</p>
@@ -379,7 +379,7 @@ FROM raw_nexudus.contracts
 <tr><td><b>Serverless</b></td><td>Storage and compute separate; no servers to run. Good fit for "not a data business".</td></tr>
 <tr><td><b>Columnar</b></td><td>Cost follows columns read. <code>LIMIT</code> doesn't reduce it.</td></tr>
 <tr><td><b>Pricing</b></td><td>Storage per GB + queries per byte (or reserved capacity). Free tier exists. Check current prices.</td></tr>
-<tr><td><b>Grain bug</b></td><td>Joining people to contracts turned £2,700 into £16,200. Model it once, correctly.</td></tr>
+<tr><td><b>Grain bug</b></td><td>Joining people to contracts turned $3,375 into $20,250. Model it once, correctly.</td></tr>
 <tr><td><b>Cost guards</b></td><td>Dry runs, maximum bytes billed, custom quotas, <code>INFORMATION_SCHEMA.JOBS</code>.</td></tr>
 <tr><td><b>Controlled copy</b></td><td><code>ai_safe</code>: authorized views, scheduled copies, or a separate project. AI reads only that.</td></tr>
 </table>

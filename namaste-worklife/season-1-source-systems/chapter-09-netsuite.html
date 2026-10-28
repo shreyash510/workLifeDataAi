@@ -2,7 +2,7 @@
 
 <p>Hey everyone! Welcome back to <b>Namaste Work.Life</b>! 🙏</p>
 
-<p>Nexudus tells you who the members are. <b>NetSuite tells you whether the company is making money.</b> 💷 When the board pack says "revenue", "costs" or "profit", those numbers come from here. When the leadership team asks the AI <i>"is Soho profitable?"</i>, the answer must match what finance reports, to the pound. If it doesn't, nobody will ever trust the AI again. So we need to understand how accountants think.</p>
+<p>Nexudus tells you who the members are. <b>NetSuite tells you whether the company is making money.</b> 💵 When the board pack says "revenue", "costs" or "profit", those numbers come from here. When the leadership team asks the AI <i>"is Soho profitable?"</i>, the answer must match what finance reports, to the dollar. If it doesn't, nobody will ever trust the AI again. So we need to understand how accountants think.</p>
 
 <p>What we will cover:</p>
 <ul>
@@ -30,8 +30,8 @@
 <p>It's 1 October. A leader opens the AI and asks <i>"what was Soho's revenue in September?"</i>.</p>
 
 <ul>
-    <li>Nexudus says <b>£3,565</b> (everything invoiced).</li>
-    <li>NetSuite says <b>£3,475</b>.</li>
+    <li>Nexudus says <b>$4,456.25</b> (everything invoiced).</li>
+    <li>NetSuite says <b>$4,343.75</b>.</li>
     <li>And the finance team says <i>"don't use either yet, we haven't closed September."</i></li>
 </ul>
 
@@ -45,7 +45,7 @@
 
 <table border="1" cellpadding="10">
 <tr><th>At Work.Life, NetSuite is most likely used for (typical ERP use; confirm)</th><th>By</th></tr>
-<tr><td>The general ledger (every £ in and out)</td><td>Finance</td></tr>
+<tr><td>The general ledger (every $ in and out)</td><td>Finance</td></tr>
 <tr><td>Supplier bills (rent, rates, cleaning, energy) and paying them</td><td>Accounts payable</td></tr>
 <tr><td>Customer invoices/receipts (likely fed from Nexudus)</td><td>Accounts receivable</td></tr>
 <tr><td>Month-end close, P&amp;L, balance sheet</td><td>Finance lead</td></tr>
@@ -61,19 +61,19 @@
 <p>Every money event is recorded <b>twice</b>: where it came from and where it went. That's <b>double entry</b>. The two sides always balance.</p>
 
 <pre>
-   Pixel Chai is invoiced £2,400 for Office 101 (ignore VAT for now)
+   Pixel Chai is invoiced $3,000 for Office 101 (ignore VAT for now)
 
    ACCOUNT                         DEBIT      CREDIT
    ───────                         ─────      ──────
-   1100 Accounts Receivable        2,400                ← they owe us
-   4000 Office Revenue                         2,400    ← we earned it
+   1100 Accounts Receivable        3,000                ← they owe us
+   4000 Office Revenue                         3,000    ← we earned it
                                   ──────     ──────
-                                   2,400      2,400     ✅ balanced
+                                   3,000      3,000     ✅ balanced
 
    Pixel Chai pays
 
-   1000 Bank                       2,400                ← money arrives
-   1100 Accounts Receivable                    2,400    ← they no longer owe
+   1000 Bank                       3,000                ← money arrives
+   1100 Accounts Receivable                    3,000    ← they no longer owe
 </pre>
 
 <p>Rules of thumb (don't memorise "why", just the pattern):</p>
@@ -131,7 +131,7 @@
 <table border="1" cellpadding="10">
 <tr><th>Transaction</th><th>What happens</th><th>GL effect (simplified)</th><th>In our lab</th></tr>
 <tr><td><b>Invoice</b></td><td>We bill a customer</td><td>Dr AR / Cr Revenue (+ Cr VAT)</td><td>INV-2609-01 to 08</td></tr>
-<tr><td><b>Credit Memo</b></td><td>We reduce what a customer owes</td><td>Dr Revenue / Cr AR</td><td>CN-2609-01 (−£90 goodwill)</td></tr>
+<tr><td><b>Credit Memo</b></td><td>We reduce what a customer owes</td><td>Dr Revenue / Cr AR</td><td>CN-2609-01 (−$112.50 goodwill)</td></tr>
 <tr><td><b>Customer Payment</b></td><td>Customer pays</td><td>Dr Bank / Cr AR</td><td>(not in lab)</td></tr>
 <tr><td><b>Vendor Bill</b></td><td>A supplier bills us</td><td>Dr Expense / Cr AP</td><td>BILL-2609-01 to 10</td></tr>
 <tr><td><b>Bill Payment</b></td><td>We pay a supplier</td><td>Dr AP / Cr Bank</td><td>(not in lab)</td></tr>
@@ -144,20 +144,20 @@
 
 <h3>7. Accrual Accounting and the Prepaid Trap</h3>
 
-<p>Accountants record revenue when it's <b>earned</b>, not when cash arrives. Imagine (made up: in the lab GreenRoot pays monthly) that GreenRoot <b>prepays the full year</b> on 1 January: £32,400.</p>
+<p>Accountants record revenue when it's <b>earned</b>, not when cash arrives. Imagine (made up: in the lab GreenRoot pays monthly) that GreenRoot <b>prepays the full year</b> on 1 January: $40,500.</p>
 
 <pre>
                       NEXUDUS (invoice)        NETSUITE (revenue recognised)
-   January            £32,400                  £2,700   (+ £29,700 to Deferred Revenue)
-   February           £0                       £2,700   (released from Deferred Revenue)
-   March              £0                       £2,700
+   January            $40,500                  $3,375   (+ $37,125 to Deferred Revenue)
+   February           $0                       $3,375   (released from Deferred Revenue)
+   March              $0                       $3,375
    ...                ...                      ...
-   December           £0                       £2,700
+   December           $0                       $3,375
                       ───────                  ───────
-   Year               £32,400                  £32,400   ← same total, very different months
+   Year               $40,500                  $40,500   ← same total, very different months
 </pre>
 
-<p>Ask "Reading revenue in January" and Nexudus says £32,400 while NetSuite says £2,700. Both are "correct" for different questions. The <b>business context</b> must tell the AI: <i>"revenue" means recognised revenue from NetSuite, unless the user asks about invoicing or cash.</i></p>
+<p>Ask "Reading revenue in January" and Nexudus says $40,500 while NetSuite says $3,375. Both are "correct" for different questions. The <b>business context</b> must tell the AI: <i>"revenue" means recognised revenue from NetSuite, unless the user asks about invoicing or cash.</i></p>
 
 <p>Same family of traps: <b>deposits</b> (a liability, not revenue!), <b>VAT</b> (not revenue, owed to HMRC), and <b>rent-free periods</b> on leases.</p>
 
@@ -199,14 +199,14 @@
 
 <pre>
    tran_id      account                      debit     credit
-   INV-2609-01  1100 Accounts Receivable     2,400
-   INV-2609-01  4000 Office Revenue                    2,400
+   INV-2609-01  1100 Accounts Receivable     3,000
+   INV-2609-01  4000 Office Revenue                    3,000
    CN-2609-01   4100 Meeting Room Revenue       90
    CN-2609-01   1100 Accounts Receivable                  90
-   BILL-2609-01 5000 Rent                    4,500
-   BILL-2609-01 2000 Accounts Payable                  4,500
-   JE-2609-03   6000 Central Overheads       1,000
-   JE-2609-03   6900 Central Cost Recovery             1,000   (the "other side" of an allocation)
+   BILL-2609-01 5000 Rent                    5,625
+   BILL-2609-01 2000 Accounts Payable                  5,625
+   JE-2609-03   6000 Central Overheads       1,250
+   JE-2609-03   6900 Central Cost Recovery             1,250   (the "other side" of an allocation)
    ...
 </pre>
 
@@ -220,10 +220,10 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Line</th><th>Nexudus (invoiced)</th><th>NetSuite (recognised)</th><th>Difference</th><th>Why</th></tr>
-<tr><td>Office 101 (Pixel Chai)</td><td>2,400</td><td>2,400</td><td>0</td><td></td></tr>
-<tr><td>Coworking (Ravi, Fatima)</td><td>640</td><td>640</td><td>0</td><td></td></tr>
-<tr><td>Meeting rooms</td><td>525</td><td>435</td><td><b>−90</b></td><td>Goodwill credit memo CN-2609-01 (AV failure)</td></tr>
-<tr><td><b>Total Soho</b></td><td><b>3,565</b></td><td><b>3,475</b></td><td><b>−90</b></td><td>Fully explained ✅</td></tr>
+<tr><td>Office 101 (Pixel Chai)</td><td>3,000</td><td>3,000</td><td>0</td><td></td></tr>
+<tr><td>Coworking (Ravi, Fatima)</td><td>800</td><td>800</td><td>0</td><td></td></tr>
+<tr><td>Meeting rooms</td><td>656.25</td><td>543.75</td><td><b>−112.50</b></td><td>Goodwill credit memo CN-2609-01 (AV failure)</td></tr>
+<tr><td><b>Total Soho</b></td><td><b>4,456.25</b></td><td><b>4,343.75</b></td><td><b>−112.50</b></td><td>Fully explained ✅</td></tr>
 </table>
 
 <p>A difference you can <b>fully explain</b> is fine. A difference you can't explain is a bug (or a process problem). In the real project you'll build exactly this reconciliation as a model, and run it every month. It's one of the best accuracy tests for the AI.</p>
@@ -238,9 +238,9 @@
     <li>Sign up for Xero and open the <b>Demo Company</b> (Xero offers a free demo organisation for learning; check current terms).</li>
     <li>Settings → <b>Tracking categories</b>: create "Site" with options Soho and Reading. (This is Xero's equivalent of NetSuite's Location/Class.)</li>
     <li>Create a few accounts matching our CoA (4000, 4010, 4100, 5000...).</li>
-    <li>Raise <b>invoices</b> to Pixel Chai (£2,400, Site = Soho) and GreenRoot (£2,700, Site = Reading). Add VAT at 20% and see the VAT line go to a liability, not revenue.</li>
-    <li>Enter <b>bills</b> for Soho rent (£4,500) and Reading rent (£1,300).</li>
-    <li>Raise a <b>credit note</b> for £90.</li>
+    <li>Raise <b>invoices</b> to Pixel Chai ($3,000, Site = Soho) and GreenRoot ($3,375, Site = Reading). Add VAT at 20% and see the VAT line go to a liability, not revenue.</li>
+    <li>Enter <b>bills</b> for Soho rent ($5,625) and Reading rent ($1,625).</li>
+    <li>Raise a <b>credit note</b> for $112.50.</li>
     <li>Run <b>Profit and Loss</b>, filtered or split by tracking category "Site". You just built a site P&amp;L in a real ledger.</li>
     <li>Find the <b>journal report</b> / account transactions: every invoice created two or more lines. Double entry, live.</li>
 </ol>
@@ -275,7 +275,7 @@ SELECT
   SUM(CASE WHEN acc.accttype = 'Income'
            THEN COALESCE(tal.credit, 0) - COALESCE(tal.debit, 0)   -- income: credit - debit
            ELSE COALESCE(tal.debit, 0) - COALESCE(tal.credit, 0)   -- expense: debit - credit
-      END)                                   AS amount_gbp
+      END)                                   AS amount_usd
 FROM netsuite.transactionaccountingline AS tal
 JOIN netsuite.transaction      AS t   ON t.id = tal.transaction
 JOIN netsuite.transactionline  AS tl  ON tl.transaction = tal.transaction
@@ -297,7 +297,7 @@ ORDER BY site, account_number;
     <li><b>Multiple books / currencies</b>: if Work.Life ever has more than one subsidiary or currency, filter to the primary accounting book and the reporting currency.</li>
 </ul>
 
-<p>Run this in your head against our lab file: Soho income = 2,400 + 640 + 435 = <b>3,475</b>, Soho site costs = <b>7,650</b>. Same as Chapter 06. ✅</p>
+<p>Run this in your head against our lab file: Soho income = 3,000 + 800 + 543.75 = <b>4,343.75</b>, Soho site costs = <b>9,562.50</b>. Same as Chapter 06. ✅</p>
 
 <hr/>
 

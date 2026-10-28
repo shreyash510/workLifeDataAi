@@ -124,7 +124,7 @@
 <tr><th>Direction</th><td>Mostly two-way, with field mapping and "only if" rules</td></tr>
 <tr><th>How often</th><td>Near real time (sync)</td></tr>
 <tr><th>Owner</th><td>Ops &amp; IT Systems / sales ops (ask)</td></tr>
-<tr><th>Confidence</th><td>📘 Documented: Nexudus offers a native HubSpot integration (listed at £50/location/month). ✅ Confirmed that HubSpot "is being integrated". Which fields and rules are live is ❓ (client question 7).</td></tr>
+<tr><th>Confidence</th><td>📘 Documented: Nexudus offers a native HubSpot integration (listed at $62.50/location/month). ✅ Confirmed that HubSpot "is being integrated". Which fields and rules are live is ❓ (client question 7).</td></tr>
 <tr><th>What breaks</th><td>Duplicates (different emails), merged HubSpot IDs disappearing, edit loops when both sides change the same field, unmapped fields silently not syncing.</td></tr>
 <tr><th>Why it matters</th><td>This is the "source of truth is moving" integration. Source-agnostic design exists because of it.</td></tr>
 </table>
@@ -162,7 +162,7 @@
 <tr><th>Direction</th><td>Nexudus → NetSuite</td></tr>
 <tr><th>Owner</th><td>Finance</td></tr>
 <tr><th>Confidence</th><td>❓ Unknown method. Nexudus's docs list accounting integrations (for example Xero, QuickBooks); how Work.Life links Nexudus to NetSuite is not stated. It could be a connector, middleware or a scheduled import (client question 3).</td></tr>
-<tr><th>What breaks</th><td>A product mapped to the wrong account → revenue in the wrong P&amp;L line. Timing differences → invoiced ≠ recognised. Credit notes raised directly in NetSuite (lab: CN-2609-01, −£90) never appear in Nexudus.</td></tr>
+<tr><th>What breaks</th><td>A product mapped to the wrong account → revenue in the wrong P&amp;L line. Timing differences → invoiced ≠ recognised. Credit notes raised directly in NetSuite (lab: CN-2609-01, −$112.50) never appear in Nexudus.</td></tr>
 <tr><th>Why it matters</th><td>This is the bridge between operations and money. Every "why doesn't Nexudus match finance?" question lives here.</td></tr>
 </table>
 
@@ -183,7 +183,7 @@
 
 <table border="1" cellpadding="10">
 <tr><th>#</th><th>Feed</th><th>Likely method</th><th>Confidence</th><th>Watch out for</th></tr>
-<tr><td>I7</td><td>Nexudus → BigQuery</td><td>Python on the REST API, or Nexudus's native BigQuery integration (listed at £100/location/month)</td><td>🟡 Inferred (client question 2)</td><td>Summary vs full records, deletes missed by incremental loads, CancelledBookings, old names, UTC times</td></tr>
+<tr><td>I7</td><td>Nexudus → BigQuery</td><td>Python on the REST API, or Nexudus's native BigQuery integration (listed at $125/location/month)</td><td>🟡 Inferred (client question 2)</td><td>Summary vs full records, deletes missed by incremental loads, CancelledBookings, old names, UTC times</td></tr>
 <tr><td>I8</td><td>NetSuite → BigQuery</td><td>Fivetran NetSuite connector (via SuiteAnalytics Connect)</td><td>🟡 Inferred</td><td>Posting lines only, period vs date, which segment is "site", Fivetran MAR cost</td></tr>
 <tr><td>I9</td><td>HubSpot → BigQuery</td><td>Fivetran HubSpot connector</td><td>🟡 Inferred (HubSpot is new)</td><td>Merged IDs, dropdown values vs labels, many-to-many associations</td></tr>
 <tr><td>I10</td><td>ACT → BigQuery</td><td>Depends which ACT</td><td>❓ Unknown</td><td>Door events = personal data; CRM = frozen history</td></tr>
@@ -297,7 +297,7 @@
 <h3>Interview Questions</h3>
 
 <p><b>Q: The finance and membership systems disagree on revenue. Where do you look first?</b></p>
-<p><i>"At the integration between them: how invoices flow from Nexudus to NetSuite and how products map to GL accounts. Then at entries that exist only in finance (credit memos, journals, deferrals) and at period timing. I'd build a reconciliation that explains every pound of difference."</i></p>
+<p><i>"At the integration between them: how invoices flow from Nexudus to NetSuite and how products map to GL accounts. Then at entries that exist only in finance (credit memos, journals, deferrals) and at period timing. I'd build a reconciliation that explains every dollar of difference."</i></p>
 
 <p><b>Q: How do you document integrations you didn't build and can't fully see?</b></p>
 <p><i>"An integration register: source, target, data, direction, frequency, owner, failure modes, and a confidence label for each fact (confirmed, vendor-documented, inferred or unknown). The unknowns become client questions. Never present an inference as a fact."</i></p>

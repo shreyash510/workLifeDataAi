@@ -1,6 +1,6 @@
 Please respond to the following. Where something depends on decisions we have not yet made, tell us what you would need from us to firm it up.
 
-> **Draft answers** taken from the series (mainly Chapter 33, with detail from Chapters 23–36). All costs are **estimates**. The £750 day rate is **made up**. The Soho example uses lab numbers, not real Work.Life figures.
+> **Draft answers** taken from the series (mainly Chapter 33, with detail from Chapters 23–36). All costs are **estimates**. The $937.50 day rate is **made up**. The Soho example uses lab numbers, not real Work.Life figures.
 
 ---
 
@@ -103,24 +103,24 @@ The most important person is a **Finance owner** who can agree the money definit
 
 **One off build cost, plus indicative ongoing annual running cost at two levels: leadership team only, and wider team access. How would you manage and cap usage or token costs?**
 
-**Build (one-off): about £63,000 (estimate).** £48,000 for the 3-month launch, and £15,000 for months 4–6 and the handover.
+**Build (one-off): about $78,750 (estimate).** $60,000 for the 3-month launch, and $18,750 for months 4–6 and the handover.
 
-**Running cost per year: about £22,000 for the leadership team, or about £42,500 for the wider team (estimates).** Both are far below the "six figure operation" you ruled out.
+**Running cost per year: about $27,500 for the leadership team, or about $53,125 for the wider team (estimates).** Both are far below the "six figure operation" you ruled out.
 
 | Running cost per year (estimate) | Leadership only (10 users, assumed) | Wider team (70 users, assumed) |
 |---|---|---|
-| AI usage (tokens, including test runs) | £2,500 | £3,500 |
-| BigQuery (queries and storage of the safe copy) | £500 | £1,000 |
-| Hosting, scheduling, logs | £1,000 | £2,000 |
-| **Technology total** | **£4,000** | **£6,500** |
-| Support (2 or 4 days a month, made-up day rate) | £18,000 | £36,000 |
-| **Total per year** | **~£22,000** | **~£42,500** |
+| AI usage (tokens, including test runs) | $3,125 | $4,375 |
+| BigQuery (queries and storage of the safe copy) | $625 | $1,250 |
+| Hosting, scheduling, logs | $1,250 | $2,500 |
+| **Technology total** | **$5,000** | **$8,125** |
+| Support (2 or 4 days a month, made-up day rate) | $22,500 | $45,000 |
+| **Total per year** | **~$27,500** | **~$53,125** |
 
 **Our assumptions** (to agree with you):
 
-- A **made-up** day rate of £750.
+- A **made-up** day rate of $937.50.
 - Leaders: 10 users × 8 questions a working day. Wider team: 70 users × 3 questions a working day. 21 working days a month.
-- About £0.03 per question, using example AI prices. Test runs are the biggest AI cost.
+- About $0.0375 per question, using example AI prices. Test runs are the biggest AI cost.
 - BigQuery stays inside its free monthly allowance. **Check current pricing** before relying on any figure.
 - Your current pipeline and BI tool costs don't change, and aren't included.
 - Wider team access also needs the role-based access work from Phase 2, which we haven't priced, as you asked.

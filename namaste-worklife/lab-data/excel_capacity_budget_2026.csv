@@ -1,7 +1,7 @@
-site_code,month,sellable_desks,budget_revenue_gbp,budget_desk_occupancy,budget_direct_costs_gbp,notes
-SOHO,2026-07,34,9000,0.85,7600,
-SOHO,2026-08,34,9000,0.85,7600,August is quiet - holidays
-SOHO,2026-09,34,9200,0.85,7650,
-RDG,2026-07,31,3100,0.20,2400,
-RDG,2026-08,31,3100,0.20,2400,
-RDG,2026-09,31,3200,0.20,2450,Ortho Robotics could fill O202 from Nov
+site_code,month,sellable_desks,budget_revenue_usd,budget_desk_occupancy,budget_direct_costs_usd,notes
+SOHO,2026-07,34,11250,0.85,9500,
+SOHO,2026-08,34,11250,0.85,9500,August is quiet - holidays
+SOHO,2026-09,34,11500,0.85,9562.5,
+RDG,2026-07,31,3875,0.20,3000,
+RDG,2026-08,31,3875,0.20,3000,
+RDG,2026-09,31,4000,0.20,3062.5,Ortho Robotics could fill O202 from Nov

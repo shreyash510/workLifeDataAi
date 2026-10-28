@@ -25,7 +25,7 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>Brightline Legal rented Office 103 at Soho for £1,400 a month. On 30 Apr 2026 they gave notice. On 30 Jun they left. The reason, which only the CRM knows: <i>"Moving to hybrid; downsizing to home working."</i></p>
+<p>Brightline Legal rented Office 103 at Soho for $1,750 a month. On 30 Apr 2026 they gave notice. On 30 Jun they left. The reason, which only the CRM knows: <i>"Moving to hybrid; downsizing to home working."</i></p>
 
 <p>By the time anyone saw it, it was a <b>lagging</b> fact. Notice had been given. The conversation that might have kept them (a smaller office? a flex plan?) never happened in time.</p>
 
@@ -69,11 +69,11 @@
 <tr><th>Signal</th><th>System</th><th>Lab example</th><th>Leading or lagging?</th></tr>
 <tr><td>Attendance trend (company level)</td><td>ACT365 (aggregated)</td><td>GreenRoot 73% → 23%</td><td>🟢 Leading, the strongest</td></tr>
 <tr><td>Days until contract end</td><td>Nexudus</td><td>GreenRoot: 31 Dec 2026</td><td>🟢 Leading</td></tr>
-<tr><td>Renewal deal stage</td><td>Act! → HubSpot</td><td>GreenRoot: Proposal Sent, £2,800</td><td>🟢 Leading</td></tr>
-<tr><td>Price change at renewal</td><td>CRM vs Nexudus</td><td>£2,700 → £2,800 (+3.7%)</td><td>🟡 Context</td></tr>
-<tr><td>Discount vs list price</td><td>Nexudus</td><td>Pixel Chai: £2,400 vs £2,600 list (7.7%)</td><td>🟡 Context</td></tr>
+<tr><td>Renewal deal stage</td><td>Act! → HubSpot</td><td>GreenRoot: Proposal Sent, $3,500</td><td>🟢 Leading</td></tr>
+<tr><td>Price change at renewal</td><td>CRM vs Nexudus</td><td>$3,375 → $3,500 (+3.7%)</td><td>🟡 Context</td></tr>
+<tr><td>Discount vs list price</td><td>Nexudus</td><td>Pixel Chai: $3,000 vs $3,250 list (7.7%)</td><td>🟡 Context</td></tr>
 <tr><td>Meeting room use trend</td><td>Nexudus bookings</td><td>GreenRoot: 2 bookings, none after 18 Sep</td><td>🟡 Leading, weaker</td></tr>
-<tr><td>Service issues / credits</td><td>NetSuite</td><td>Pixel Chai: −£90 goodwill credit, AV failure</td><td>🟡 Context</td></tr>
+<tr><td>Service issues / credits</td><td>NetSuite</td><td>Pixel Chai: −$112.50 goodwill credit, AV failure</td><td>🟡 Context</td></tr>
 <tr><td>Team size change</td><td>Nexudus members</td><td>Pixel Chai grew 1 → 4 people</td><td>🟡 Context</td></tr>
 <tr><td>Tenure, lead source</td><td>Nexudus, CRM</td><td>GreenRoot: since Jan 2026, referral</td><td>⚪ Background</td></tr>
 <tr><td>Notice given</td><td>Nexudus</td><td>Brightline: 30 Apr</td><td>🔴 Lagging. It's almost the answer.</td></tr>
@@ -129,7 +129,7 @@
 
 <pre>
 -- models/phase2/fct_renewal_risk.sql   (one row per active company × site, rebuilt weekly)
--- Inputs: fct_contract_events / fct_contract_month (contract_end_date, mrr_gbp),
+-- Inputs: fct_contract_events / fct_contract_month (contract_end_date, mrr_usd),
 -- agg_company_week_attendance (the Chapter 24 proposal: company × site × week, person_days,
 -- possible_days, only companies at or above the minimum group size)
 -- (company × site × week, person_days, possible_days), CRM renewal deals, fct_gl credit memos.
@@ -146,11 +146,11 @@ WITH attendance AS (
 ),
 features AS (
   SELECT
-    c.company_key, c.site_code, c.mrr_gbp, c.end_date,
+    c.company_key, c.site_code, c.mrr_usd, c.end_date,
     DATE_DIFF(c.end_date, CURRENT_DATE(), DAY)              AS days_to_end,
     1 - SAFE_DIVIDE(a.rate_recent, a.rate_before)           AS attendance_drop,
     d.stage                                                 AS renewal_stage,
-    d.quoted_monthly_gbp                                    AS renewal_price,
+    d.quoted_monthly_usd                                    AS renewal_price,
     cm.credit_memos_90d
   FROM {{ ref('int_active_contracts') }} c
   LEFT JOIN attendance a USING (company_key, site_code)
@@ -161,7 +161,7 @@ scored AS (
   SELECT *,
     IF(attendance_drop &gt;= 0.50, 40, IF(attendance_drop &gt;= 0.25, 15, 0))                       AS pts_attendance,
     IF(days_to_end &lt;= 120 AND IFNULL(renewal_stage, '') != 'Closed Won', 25, 0)               AS pts_renewal,
-    IF(renewal_price &gt; mrr_gbp, 10, 0)                                                         AS pts_price,
+    IF(renewal_price &gt; mrr_usd, 10, 0)                                                         AS pts_price,
     IF(credit_memos_90d &gt; 0, 10, 0)                                                            AS pts_service
   FROM features
 )
@@ -184,7 +184,7 @@ FROM scored
 <table border="1" cellpadding="10">
 <tr><th>Company</th><th>Site</th><th>Attendance before → recent</th><th>Drop</th><th>Contract</th><th>Other</th><th>Score</th><th>Band</th></tr>
 <tr><td><b>GreenRoot Foods</b></td><td>Reading</td><td>39/54 = 72% → 8/48 = 17%</td><td>77% (+40)</td><td>Ends 31 Dec, renewal open (+25)</td><td>Proposal +3.7% (+10)</td><td><b>75</b></td><td>🔴 High</td></tr>
-<tr><td>Pixel Chai Studio</td><td>Soho</td><td><i>Suppressed: 4 members</i></td><td>— (0)</td><td>Ends 31 Mar 2027 (0)</td><td>£90 credit memo, Sep (+10)</td><td>10</td><td>🟢 Low</td></tr>
+<tr><td>Pixel Chai Studio</td><td>Soho</td><td><i>Suppressed: 4 members</i></td><td>— (0)</td><td>Ends 31 Mar 2027 (0)</td><td>$112.50 credit memo, Sep (+10)</td><td>10</td><td>🟢 Low</td></tr>
 <tr><td>Nomad Analytics</td><td>Soho</td><td><i>Suppressed: 1 member</i></td><td>— (0)</td><td>Rolling (0)</td><td>—</td><td>0</td><td>🟢 Low</td></tr>
 <tr><td>Kite &amp; Key Recruitment</td><td>Soho</td><td><i>Suppressed: 1 member</i></td><td>— (0)</td><td>Rolling (0)</td><td>—</td><td>0</td><td>🟢 Low</td></tr>
 </table>
@@ -250,7 +250,7 @@ SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
 ├──────────────────────────────────────────────────────────────────────┤
 │  THE ACCOUNT                                                         │
 │  Office 201 (6 desks) · 6 members · member since 1 Jan 2026          │
-│  £2,700/month at list price · contract ends 31 Dec 2026 (87 days)    │
+│  $3,375/month at list price · contract ends 31 Dec 2026 (87 days)    │
 │  Came via referral from another member company (Nomad Analytics,     │
 │  Soho)                                                               │
 │                                                                      │
@@ -258,10 +258,10 @@ SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
 │  • Team attendance dropped sharply: weekly badge-in rate             │
 │      wk1 71% · wk2 73% · wk3 40% · wk4 23% · wk5 6% (Mon–Wed)        │
 │  • Renewal due soon and not yet agreed (Proposal Sent)               │
-│  • Renewal proposal is a price increase: £2,800 (+3.7%)              │
+│  • Renewal proposal is a price increase: $3,500 (+3.7%)              │
 │                                                                      │
 │  OTHER FACTS                                                         │
-│  • All invoices paid. September revenue £2,900 (office + rooms)      │
+│  • All invoices paid. September revenue $3,625 (office + rooms)      │
 │  • Meeting rooms: 2 bookings, 5 hours in Sep, none after 18 Sep      │
 │  • No service credits in the last 90 days                            │
 │                                                                      │
@@ -274,8 +274,8 @@ SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
 │  SUGGESTED QUESTIONS (for you to decide, not promises)               │
 │  • Has the way the team works changed since September?               │
 │  • Would a different set-up suit them better? (Flex 10 Days is       │
-│    £180 per person per month; Office 201 is 6 desks)                 │
-│  • Is the £2,800 proposal the right starting point?                  │
+│    $225 per person per month; Office 201 is 6 desks)                 │
+│  • Is the $3,500 proposal the right starting point?                  │
 │                                                                      │
 │  Sources: Nexudus (contract, bookings) · NetSuite (revenue) ·        │
 │  CRM (deal stage, lead source) · door system (company-level          │
@@ -283,7 +283,7 @@ SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
 └──────────────────────────────────────────────────────────────────────┘
 </pre>
 
-<p>Workings: week 1 = 17 / 24 (Tue–Fri), week 2 = 22 / 30, week 3 = 12 / 30, week 4 = 7 / 30, week 5 = 1 / 18. September revenue = £2,700 office + £200 meeting rooms (NetSuite). 87 days = 5 Oct → 31 Dec.</p>
+<p>Workings: week 1 = 17 / 24 (Tue–Fri), week 2 = 22 / 30, week 3 = 12 / 30, week 4 = 7 / 30, week 5 = 1 / 18. September revenue = $3,375 office + $250 meeting rooms (NetSuite). 87 days = 5 Oct → 31 Dec.</p>
 
 <p>The pack is built in two parts:</p>
 <ol>
@@ -326,7 +326,7 @@ SELECT * FROM ML.EXPLAIN_PREDICT(MODEL phase2.renewal_risk_model,
 <tr><th>What</th><th>How</th><th>Launch gate?</th></tr>
 <tr><td>Score logic</td><td>dbt tests: one row per active company, score in 0–85, band matches score</td><td>✅ Every build</td></tr>
 <tr><td>Score usefulness</td><td>Backtest: lead time and hit rate on real history, targets agreed with Sales</td><td>✅ Before first use</td></tr>
-<tr><td>Pack facts</td><td>Golden questions (Chapter 25): "GreenRoot MRR = £2,700, ends 31 Dec, Sep revenue £2,900"</td><td>✅ Every change</td></tr>
+<tr><td>Pack facts</td><td>Golden questions (Chapter 25): "GreenRoot MRR = $3,375, ends 31 Dec, Sep revenue $3,625"</td><td>✅ Every change</td></tr>
 <tr><td>Pack words</td><td>Check every number in the text appears in the facts. Review 10 packs by hand with Sales.</td><td>✅ Before first use</td></tr>
 <tr><td>Privacy</td><td>Test that no person-level attendance or HR field is reachable from <code>ai_safe</code></td><td>✅ Every build</td></tr>
 <tr><td>Outcome</td><td>Track: of High-risk renewals with a pack, how many renewed?</td><td>Ongoing</td></tr>

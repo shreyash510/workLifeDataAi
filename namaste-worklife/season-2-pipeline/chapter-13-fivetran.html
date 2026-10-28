@@ -191,7 +191,7 @@ WHERE NOT COALESCE(_fivetran_deleted, FALSE)     -- drop rows deleted in the sou
 
 <p>We'll load <code>excel_capacity_budget_2026.csv</code> through Fivetran's <b>Google Sheets</b> connector, because it's the closest thing in our lab to "the finance team's spreadsheet".</p>
 
-<p>⚠️ <b>Billing note:</b> Fivetran typically writes to BigQuery with DML such as <code>MERGE</code>, which the sandbox doesn't allow (Chapter 12; check both vendors' current docs). To do this lab you need a BigQuery project <b>with billing enabled</b>. At lab sizes the cost should be zero or pennies within the free tier, but <b>set a budget alert</b> first (Billing → Budgets &amp; alerts → £1). If you'd rather not enable billing, read along and load the file with Python in Chapter 14 instead. You lose nothing.</p>
+<p>⚠️ <b>Billing note:</b> Fivetran typically writes to BigQuery with DML such as <code>MERGE</code>, which the sandbox doesn't allow (Chapter 12; check both vendors' current docs). To do this lab you need a BigQuery project <b>with billing enabled</b>. At lab sizes the cost should be zero or pennies within the free tier, but <b>set a budget alert</b> first (Billing → Budgets &amp; alerts → $1.25). If you'd rather not enable billing, read along and load the file with Python in Chapter 14 instead. You lose nothing.</p>
 
 <ol>
     <li><b>Make the sheet.</b> In Google Sheets, <i>File → Import</i> the CSV. Name the tab <code>budget</code>.</li>
@@ -211,8 +211,8 @@ ORDER BY site_code, month;
 
 <p>Now <b>break it on purpose</b> (like Lab 6.7):</p>
 <ul>
-    <li>Change RDG's September budget from 3200 to 3300 → sync → the row updates. That row is now "active" for MAR this month.</li>
-    <li>Rename the column <code>budget_revenue_gbp</code> to <code>Budget Revenue</code> → sync → look at the table. The old column stops getting values and a new one appears. This is exactly the silent breakage that dbt tests must catch (Chapter 17).</li>
+    <li>Change RDG's September budget from 4000 to 4125 → sync → the row updates. That row is now "active" for MAR this month.</li>
+    <li>Rename the column <code>budget_revenue_usd</code> to <code>Budget Revenue</code> → sync → look at the table. The old column stops getting values and a new one appears. This is exactly the silent breakage that dbt tests must catch (Chapter 17).</li>
     <li>Put the name back when you're done.</li>
 </ul>
 

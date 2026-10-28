@@ -33,9 +33,9 @@
 <p>Ask "what was Soho's revenue in September?" in the lab and you get three honest answers:</p>
 
 <ul>
-    <li><b>£3,040 MRR</b> (Ops, from Nexudus contracts): £2,400 Office 101 + £320 + £320 hot desks. It leaves out meeting rooms, because they're pay-as-you-go, not contracted.</li>
-    <li><b>£3,565 invoiced</b>: everything billed for September, that is, the MRR plus £525 of meeting-room bookings.</li>
-    <li><b>£3,475 recognised</b> (Finance, from the NetSuite GL): invoiced minus the £90 goodwill credit memo CN-2609-01 for the AV failure on 24 September. This is the number a site P&amp;L uses.</li>
+    <li><b>$3,800 MRR</b> (Ops, from Nexudus contracts): $3,000 Office 101 + $400 + $400 hot desks. It leaves out meeting rooms, because they're pay-as-you-go, not contracted.</li>
+    <li><b>$4,456.25 invoiced</b>: everything billed for September, that is, the MRR plus $656.25 of meeting-room bookings.</li>
+    <li><b>$4,343.75 recognised</b> (Finance, from the NetSuite GL): invoiced minus the $112.50 goodwill credit memo CN-2609-01 for the AV failure on 24 September. This is the number a site P&amp;L uses.</li>
 </ul>
 
 <p>None of them is "wrong". They answer different questions: how much recurring income is under contract, what did we bill, and what did we actually earn. The danger is a single word, "revenue", silently meaning any of the three. Now add an AI that writes its own SQL, and you have a <b>fifth</b> definition that changes from day to day.</p>
@@ -82,7 +82,7 @@
 <tr><th>Block</th><th>Meaning</th><th>Work.Life example</th></tr>
 <tr><td><b>Entity</b></td><td>A thing the business has, with a key</td><td>site (<code>site_code</code>), company (<code>company_key</code>). Members exist in the marts (<code>member_key</code>), but member-level data is deliberately not in <code>ai_safe</code></td></tr>
 <tr><td><b>Dimension</b></td><td>A way to slice</td><td>site name, city, month, plan type, account group</td></tr>
-<tr><td><b>Measure</b></td><td>A raw aggregation of a column</td><td><code>SUM(amount_gbp)</code> where account group = income</td></tr>
+<tr><td><b>Measure</b></td><td>A raw aggregation of a column</td><td><code>SUM(amount_usd)</code> where account group = income</td></tr>
 <tr><td><b>Metric</b></td><td>A business KPI built from measures</td><td>site contribution = recognised revenue − direct costs</td></tr>
 </table>
 
@@ -112,25 +112,25 @@ semantic_models:
         type: time
         expr: month_start
         type_params: { time_granularity: month }
-      - name: has_finance_actuals     # NULL finance is "no data", not £0
+      - name: has_finance_actuals     # NULL finance is "no data", not $0
         type: categorical
       # real build: add is_period_closed from NetSuite accounting periods
     measures:
       - name: recognised_revenue
         agg: sum
-        expr: revenue_gbp            # recognised: GL, after credit memos
+        expr: revenue_usd            # recognised: GL, after credit memos
       - name: direct_costs
         agg: sum
-        expr: direct_costs_gbp
+        expr: direct_costs_usd
       - name: central_costs
         agg: sum
-        expr: central_costs_gbp
+        expr: central_costs_usd
       - name: budget_revenue
         agg: sum
-        expr: budget_revenue_gbp
+        expr: budget_revenue_usd
       - name: mrr
         agg: sum
-        expr: mrr_gbp
+        expr: mrr_usd
       - name: desks_contracted
         agg: sum
         expr: desks_contracted
@@ -198,7 +198,7 @@ metrics:
     <li><code>revenue_churn</code>: MRR from contracts ended as <i>churn</i> (not upgrade, not transfer) ÷ MRR at the start of the month. Which mart and which column does the churn classification come from?</li>
 </ol>
 
-<p><b>Check yourself:</b> <code>room_utilisation</code> needs a booking-level model plus an hours-available column per room per day. <code>revenue_churn</code> needs one more mart that the Season 2 lab doesn't have yet: a contract-movements model with a <code>movement_type</code> column (new, upgrade, transfer, churn), built once in dbt from the contract end reasons (<code>end_reason</code> in <code>stg_nexudus__contracts</code>: <i>left</i> = churn; <i>upgrade</i> and <i>transfer</i> are not). That's the classification from Chapter 02. Why it matters: K001 (Pixel Chai moving from a hot desk to Office 101) and K006 (Kite &amp; Key moving from Reading to Soho) both "ended", but the customer stayed and paid more or the same. Counting them as churn would tell leadership they lost three customers when they lost one. For 2026 in the lab, revenue churned is <b>£1,400</b> (Brightline only).</p>
+<p><b>Check yourself:</b> <code>room_utilisation</code> needs a booking-level model plus an hours-available column per room per day. <code>revenue_churn</code> needs one more mart that the Season 2 lab doesn't have yet: a contract-movements model with a <code>movement_type</code> column (new, upgrade, transfer, churn), built once in dbt from the contract end reasons (<code>end_reason</code> in <code>stg_nexudus__contracts</code>: <i>left</i> = churn; <i>upgrade</i> and <i>transfer</i> are not). That's the classification from Chapter 02. Why it matters: K001 (Pixel Chai moving from a hot desk to Office 101) and K006 (Kite &amp; Key moving from Reading to Soho) both "ended", but the customer stayed and paid more or the same. Counting them as churn would tell leadership they lost three customers when they lost one. For 2026 in the lab, revenue churned is <b>$1,750</b> (Brightline only).</p>
 
 <hr/>
 
@@ -238,14 +238,14 @@ metrics:
           ▼
    ④ COMPILE    the semantic layer turns that into SQL. Same SQL every time.
           ▼
-   ⑥ EXECUTE    → 3475 | 9200 | −0.62 | −4175
+   ⑥ EXECUTE    → 4343.75 | 11500 | −0.62 | −5218.75
           ▼
-   ⑦ ANSWER     "Soho's September revenue was £3,475, 62% below its £9,200
-                 budget. Contribution was −£4,175. [Revenue (recognised) v1.2]
+   ⑦ ANSWER     "Soho's September revenue was $4,343.75, 62% below its $11,500
+                 budget. Contribution was −$5,218.75. [Revenue (recognised) v1.2]
                  · Sep 2026, closed"
 </pre>
 
-<p>Notice the LLM never writes <code>revenue_gbp - direct_costs_gbp</code>. It just says "site_contribution". If Finance changes the definition (say, rates move from direct to central costs), they change <b>one line of YAML</b>, the tests run, and every dashboard and every AI answer updates together.</p>
+<p>Notice the LLM never writes <code>revenue_usd - direct_costs_usd</code>. It just says "site_contribution". If Finance changes the definition (say, rates move from direct to central costs), they change <b>one line of YAML</b>, the tests run, and every dashboard and every AI answer updates together.</p>
 
 <hr/>
 

@@ -25,9 +25,9 @@
 
 <h3>1. A Small Story First</h3>
 
-<p>Lab Soho, 30 September 2026. Office 102 is an 8-person office with a list price of <b>£5,000 a month</b>. Nobody holds a contract for it anywhere in our lab data. Every month the rent (£4,500) and rates (£900) bills still arrive.</p>
+<p>Lab Soho, 30 September 2026. Office 102 is an 8-person office with a list price of <b>$6,250 a month</b>. Nobody holds a contract for it anywhere in our lab data. Every month the rent ($5,625) and rates ($1,125) bills still arrive.</p>
 
-<p>Now imagine (made up) a team of 8 walks in and says: <i>"We'll take it today for £4,000 on 12 months."</i> The sales lead hesitates. That's a 20% discount. Should they say yes?</p>
+<p>Now imagine (made up) a team of 8 walks in and says: <i>"We'll take it today for $5,000 on 12 months."</i> The sales lead hesitates. That's a 20% discount. Should they say yes?</p>
 
 <p>To answer, you need the site's costs, its break-even point, how long the office might otherwise sit empty, and what a discount does to the renewal. That is <b>flex workspace economics</b>.</p>
 
@@ -82,121 +82,121 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Line</th><th>Explained simply</th><th>Lab Soho</th><th>Trap for the data</th></tr>
-<tr><td><b>Rent</b> (5000)</td><td>What the lease says you pay the landlord, reset at periodic "rent reviews".</td><td>£4,500</td><td>Lease accounting (for example IFRS 16) can replace "rent" with depreciation + interest, and rent-free may be spread over the lease. GL "Rent" may not equal cash paid. Ask finance.</td></tr>
-<tr><td><b>Business rates</b> (5010)</td><td>UK local property tax, based on the building's "rateable value", paid to the council.</td><td>£900</td><td>Still payable on empty property after short reliefs, so a half-empty site still pays in full.</td></tr>
-<tr><td><b>Service charge</b> (5020)</td><td>Landlord recharges the cost of running the shared building (lifts, common areas, insurance).</td><td>£400</td><td>Billed on estimates, reconciled yearly: a lump "balancing charge" can hit one month.</td></tr>
-<tr><td><b>Utilities, cleaning</b> (5100, 5300)</td><td>Energy, water, internet, cleaning contracts.</td><td>£350 + £300</td><td>Semi-fixed: they barely change with occupancy. Energy is seasonal.</td></tr>
-<tr><td><b>Site staff</b> (5200)</td><td>Community/site team for that building.</td><td>£1,200</td><td>In the lab this is a <b>journal allocation</b> from payroll, not a bill. Staff who cover two sites get split by a rule someone chose.</td></tr>
+<tr><td><b>Rent</b> (5000)</td><td>What the lease says you pay the landlord, reset at periodic "rent reviews".</td><td>$5,625</td><td>Lease accounting (for example IFRS 16) can replace "rent" with depreciation + interest, and rent-free may be spread over the lease. GL "Rent" may not equal cash paid. Ask finance.</td></tr>
+<tr><td><b>Business rates</b> (5010)</td><td>UK local property tax, based on the building's "rateable value", paid to the council.</td><td>$1,125</td><td>Still payable on empty property after short reliefs, so a half-empty site still pays in full.</td></tr>
+<tr><td><b>Service charge</b> (5020)</td><td>Landlord recharges the cost of running the shared building (lifts, common areas, insurance).</td><td>$500</td><td>Billed on estimates, reconciled yearly: a lump "balancing charge" can hit one month.</td></tr>
+<tr><td><b>Utilities, cleaning</b> (5100, 5300)</td><td>Energy, water, internet, cleaning contracts.</td><td>$437.50 + $375</td><td>Semi-fixed: they barely change with occupancy. Energy is seasonal.</td></tr>
+<tr><td><b>Site staff</b> (5200)</td><td>Community/site team for that building.</td><td>$1,500</td><td>In the lab this is a <b>journal allocation</b> from payroll, not a bill. Staff who cover two sites get split by a rule someone chose.</td></tr>
 <tr><td><b>Fit-out &amp; depreciation</b></td><td>Upfront cost of turning a shell into offices (walls, furniture, AV), charged to the P&amp;L in monthly slices ("depreciation").</td><td>not in lab GL</td><td>Hits profit, not monthly cash. EBITDA excludes it. In the site P&amp;L or not? Ask.</td></tr>
 <tr><td><b>Dilapidations</b></td><td>The repair bill to hand the building back in its original condition at lease end; often provided for over the lease.</td><td>not in lab GL</td><td>A site near lease end can look worse than its trading.</td></tr>
 <tr><td><b>Break clause</b></td><td>A lease date when a party may end it early, with notice and conditions.</td><td>not a cost</td><td>Key fact for "should we exit this site?". Lives in lease documents, not systems.</td></tr>
 <tr><td><b>Rent-free period</b></td><td>Landlord incentive: rent-free months at lease start, to help fund fit-out.</td><td>not in lab</td><td>Makes a new site look cheap early on.</td></tr>
 </table>
 
-<p>Add Soho's six direct cost lines: 4,500 + 900 + 400 + 350 + 300 + 1,200 = <b>£7,650</b>. The number to beat every month (it matches the September <code>budget_direct_costs_gbp</code>). The <b>occupancy cost</b> (rent + rates + service charge = £5,800) is 76% of it. So the property deal matters more than anything the site team does.</p>
+<p>Add Soho's six direct cost lines: 5,625 + 1,125 + 500 + 437.50 + 375 + 1,500 = <b>$9,562.50</b>. The number to beat every month (it matches the September <code>budget_direct_costs_usd</code>). The <b>occupancy cost</b> (rent + rates + service charge = $7,250) is 76% of it. So the property deal matters more than anything the site team does.</p>
 
 <hr/>
 
 <h3>5. Pricing: Per Desk, Per Office, Per Square Foot</h3>
 
-<p>Coworking is sold <b>per member per month</b> (lab: Unlimited £320, Flex 10 Days £180). Private offices are sold <b>per office per month</b>, usually all-inclusive: rent, rates, service charge, utilities, cleaning and wifi bundled into one fee (Office 101 £2,600). Brokers compare offices <b>per desk</b> (£2,600 / 4 = £650). And the operator's own cost is quoted <b>per sq ft per year</b> (Soho occupancy cost £5,800 × 12 / 3,200 = ~£21.75).</p>
+<p>Coworking is sold <b>per member per month</b> (lab: Unlimited $400, Flex 10 Days $225). Private offices are sold <b>per office per month</b>, usually all-inclusive: rent, rates, service charge, utilities, cleaning and wifi bundled into one fee (Office 101 $3,250). Brokers compare offices <b>per desk</b> ($3,250 / 4 = $812.50). And the operator's own cost is quoted <b>per sq ft per year</b> (Soho occupancy cost $7,250 × 12 / 3,200 = ~$27.1875).</p>
 
 <p>The core trick of flex: the operator <b>buys space per square foot on long terms and sells it per desk on short terms</b>. Margin comes from density and the premium for flexibility; risk comes from the mismatch (long lease, customers who can leave in months).</p>
 
 <p>Lab list prices per desk:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Resource</th><th>Desks</th><th>List £/month</th><th>£ per desk</th><th>Status 30 Sep 2026</th></tr>
-<tr><td>Soho Office 101</td><td>4</td><td>2,600</td><td>650</td><td>Pixel Chai at £2,400 (7.7% discount = £600/desk)</td></tr>
-<tr><td>Soho Office 102</td><td>8</td><td>5,000</td><td>625</td><td>Empty</td></tr>
-<tr><td>Soho Office 103</td><td>2</td><td>1,400</td><td>700</td><td>Empty since Brightline left (30 Jun)</td></tr>
-<tr><td>Soho hot desks</td><td>20</td><td>320 each</td><td>320</td><td>2 sold</td></tr>
+<tr><th>Resource</th><th>Desks</th><th>List $/month</th><th>$ per desk</th><th>Status 30 Sep 2026</th></tr>
+<tr><td>Soho Office 101</td><td>4</td><td>3,250</td><td>812.50</td><td>Pixel Chai at $3,000 (7.7% discount = $750/desk)</td></tr>
+<tr><td>Soho Office 102</td><td>8</td><td>6,250</td><td>781.25</td><td>Empty</td></tr>
+<tr><td>Soho Office 103</td><td>2</td><td>1,750</td><td>875</td><td>Empty since Brightline left (30 Jun)</td></tr>
+<tr><td>Soho hot desks</td><td>20</td><td>400 each</td><td>400</td><td>2 sold</td></tr>
 </table>
 
-<p>Notice: an office desk earns roughly <b>double</b> a hot desk. And smaller offices earn more per desk (Office 103 £700 vs Office 102 £625). That's normal: bigger teams negotiate.</p>
+<p>Notice: an office desk earns roughly <b>double</b> a hot desk. And smaller offices earn more per desk (Office 103 $875 vs Office 102 $781.25). That's normal: bigger teams negotiate.</p>
 
 <hr/>
 
 <h3>6. Break-Even Occupancy, Worked on Lab Soho</h3>
 
-<p>Because almost all costs are fixed, break-even is simply: <b>how much must we sell to cover £7,650 a month?</b> (We ignore the tiny variable costs like coffee; the lab has none.)</p>
+<p>Because almost all costs are fixed, break-even is simply: <b>how much must we sell to cover $9,562.50 a month?</b> (We ignore the tiny variable costs like coffee; the lab has none.)</p>
 
 <pre>
    SOHO TODAY (30 Sep 2026)
-   MRR = Office 101 £2,400 + 2 hot desks × £320       = £3,040
-   Ancillary (meeting rooms 405+60+60, credit −90)    =   £435
-   Recognised revenue                                  = £3,475
-   Direct costs                                        = £7,650
-   Contribution                                        = −£4,175
-   Central allocation                                  = −£1,000
-   After central                                       = −£5,175
+   MRR = Office 101 $3,000 + 2 hot desks × $400       = $3,800
+   Ancillary (meeting rooms 506.25+75+75, credit −112.50)    =   $543.75
+   Recognised revenue                                  = $4,343.75
+   Direct costs                                        = $9,562.50
+   Contribution                                        = −$5,218.75
+   Central allocation                                  = −$1,250
+   After central                                       = −$6,468.75
 </pre>
 
-<p><b>Scenario A: fill only with coworking.</b> 7,650 / 320 = 23.9, so 24 hot desks. But Soho only has 20. Even a full coworking floor (20 × £320 = £6,400) can't cover the costs. <b>Soho cannot break even on hot desks alone.</b></p>
+<p><b>Scenario A: fill only with coworking.</b> 9,562.50 / 400 = 23.9, so 24 hot desks. But Soho only has 20. Even a full coworking floor (20 × $400 = $8,000) can't cover the costs. <b>Soho cannot break even on hot desks alone.</b></p>
 
 <p><b>Scenario B: fill offices first, at list.</b></p>
 
 <pre>
-   Office 102 (8 desks)                £5,000
- + Office 101 (4 desks)                £2,600
+   Office 102 (8 desks)                $6,250
+ + Office 101 (4 desks)                $3,250
                                        ───────
-   12 desks                            £7,600   ← £50 short of £7,650
- + 1 hot desk                          £  320
+   12 desks                            $9,500   ← $62.50 short of $9,562.50
+ + 1 hot desk                          $  400
                                        ───────
-   13 desks                            £7,920   → contribution +£270
+   13 desks                            $9,900   → contribution +$337.50
 
    Break-even desk occupancy ≈ 13 / 34 = 38%
 </pre>
 
-<p><b>Scenario C: the real starting point.</b> Office 101 is sold at £2,400 (not list), 2 hot desks are sold. Gap to cover from MRR alone: 7,650 − 3,040 = £4,610.</p>
+<p><b>Scenario C: the real starting point.</b> Office 101 is sold at $3,000 (not list), 2 hot desks are sold. Gap to cover from MRR alone: 9,562.50 − 3,800 = $5,762.50.</p>
 
 <pre>
-   Sell Office 102 at list:   3,040 + 5,000 = £8,040 MRR
-   + September's ancillary £435             = £8,475 revenue
-   − direct costs £7,650                    = +£825 contribution
-   − central £1,000                         = −£175 after central
+   Sell Office 102 at list:   3,800 + 6,250 = $10,050 MRR
+   + September's ancillary $543.75             = $10,593.75 revenue
+   − direct costs $9,562.50                    = +$1,031.25 contribution
+   − central $1,250                         = −$218.75 after central
 
-   + one more hot desk (+£320)              = +£145 after central
+   + one more hot desk (+$400)              = +$181.25 after central
    Desks sold: 6 + 8 + 1 = 15 / 34          = 44% desk occupancy
 </pre>
 
-<p><b>So "break-even occupancy" is not one number.</b> Offices first at list: ~38% of desks. Coworking only: impossible. Before vs after central: different again. It depends on <b>mix, price and which costs you include</b>; say all three whenever you quote it. A cleaner way to say it is break-even in <b>revenue</b> terms. Soho fully let at list = 5,000 + 2,600 + 1,400 + 20 × 320 = <b>£15,400</b> potential MRR. Break-even = 7,650 / 15,400 = <b>~50% of potential revenue</b> before central, 8,650 / 15,400 = ~56% after. That figure doesn't depend on mix, which makes it easier to compare sites.</p>
+<p><b>So "break-even occupancy" is not one number.</b> Offices first at list: ~38% of desks. Coworking only: impossible. Before vs after central: different again. It depends on <b>mix, price and which costs you include</b>; say all three whenever you quote it. A cleaner way to say it is break-even in <b>revenue</b> terms. Soho fully let at list = 6,250 + 3,250 + 1,750 + 20 × 400 = <b>$19,250</b> potential MRR. Break-even = 9,562.50 / 19,250 = <b>~50% of potential revenue</b> before central, 10,812.50 / 19,250 = ~56% after. That figure doesn't depend on mix, which makes it easier to compare sites.</p>
 
-<p>💡 Sanity-check the lab budget: Soho September is budgeted at 85% desk occupancy (~29 desks) but only £9,200 revenue (~£318 per desk), while 29 desks at lab list prices would bring more than £12,000. The two don't obviously agree. On the real project, ask finance how budget occupancy and prices are defined before an AI compares actuals to them.</p>
+<p>💡 Sanity-check the lab budget: Soho September is budgeted at 85% desk occupancy (~29 desks) but only $11,500 revenue (~$397.50 per desk), while 29 desks at lab list prices would bring more than $15,000. The two don't obviously agree. On the real project, ask finance how budget occupancy and prices are defined before an AI compares actuals to them.</p>
 
 <hr/>
 
 <h3>7. The Occupancy / Price / Mix Balance</h3>
 
-<p>Back to the story. Office 102, list £5,000. Offer: £4,000 today, 12 months (made up). Alternative: hold out for list price. Compare over the same 12 months:</p>
+<p>Back to the story. Office 102, list $6,250. Offer: $5,000 today, 12 months (made up). Alternative: hold out for list price. Compare over the same 12 months:</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Option (made up)</th><th>Months empty</th><th>Months paid</th><th>Revenue over 12 months</th></tr>
-<tr><td>Accept £4,000 now</td><td>0</td><td>12</td><td>12 × 4,000 = £48,000</td></tr>
-<tr><td>Hold for £5,000, let in 2 months</td><td>2</td><td>10</td><td>10 × 5,000 = £50,000</td></tr>
-<tr><td>Hold for £5,000, let in 3 months</td><td>3</td><td>9</td><td>9 × 5,000 = £45,000</td></tr>
+<tr><td>Accept $5,000 now</td><td>0</td><td>12</td><td>12 × 5,000 = $60,000</td></tr>
+<tr><td>Hold for $6,250, let in 2 months</td><td>2</td><td>10</td><td>10 × 6,250 = $62,500</td></tr>
+<tr><td>Hold for $6,250, let in 3 months</td><td>3</td><td>9</td><td>9 × 6,250 = $56,250</td></tr>
 </table>
 
-<p>The break-even wait is when 12 × 4,000 = (12 − w) × 5,000, so <b>w = 2.4 months</b>. If you're confident of letting at list within about 2.4 months, hold the price. If not, the discount wins, because <b>an empty office earns zero while every cost keeps running</b>.</p>
+<p>The break-even wait is when 12 × 5,000 = (12 − w) × 6,250, so <b>w = 2.4 months</b>. If you're confident of letting at list within about 2.4 months, hold the price. If not, the discount wins, because <b>an empty office earns zero while every cost keeps running</b>.</p>
 
 <p>But the table hides three things leaders weigh:</p>
 <ul>
     <li><b>Anchoring.</b> A discounted price becomes the starting point for the renewal. 20% off can follow the office for years.</li>
     <li><b>Term.</b> A discount in exchange for a longer term buys certainty (Pixel Chai's 7.7% discount came with a 12-month term, per the lab CRM note).</li>
-    <li><b>Pipeline.</b> The lab CRM has <b>no open deal for Office 102</b>. All open pipeline (£7,000/month) is Reading. With no one in the pipeline, "wait for list price" is a hope, not a plan.</li>
+    <li><b>Pipeline.</b> The lab CRM has <b>no open deal for Office 102</b>. All open pipeline ($8,750/month) is Reading. With no one in the pipeline, "wait for list price" is a hope, not a plan.</li>
 </ul>
 
-<p><b>Mix</b> is the third lever. Soho's 20 hot desks take space that, as offices, would earn £625–£700 per desk instead of £320. Re-planning a floor is a capital decision (new fit-out), and it starts with exactly this data.</p>
+<p><b>Mix</b> is the third lever. Soho's 20 hot desks take space that, as offices, would earn $781.25–$875 per desk instead of $400. Re-planning a floor is a capital decision (new fit-out), and it starts with exactly this data.</p>
 
 <hr/>
 
 <h3>8. Ancillary Revenue's Real Role</h3>
 
-<p>Ancillary = everything that isn't the membership or office fee: meeting rooms, events, day passes, extras. Lab Soho, September: meeting rooms 405 + 60 + 60 = £525, less the −£90 credit note = £435, or 12.5% of recognised revenue.</p>
+<p>Ancillary = everything that isn't the membership or office fee: meeting rooms, events, day passes, extras. Lab Soho, September: meeting rooms 506.25 + 75 + 75 = $656.25, less the −$112.50 credit note = $543.75, or 12.5% of recognised revenue.</p>
 <ul>
     <li><b>It's high margin.</b> The room exists anyway; an extra booked hour costs almost nothing.</li>
-    <li><b>It follows occupancy.</b> Residents make most bookings: Pixel Chai alone made £405 of the £525. Empty offices mean empty rooms (Brick Lane: 9 of ~220 hours, 4.1%).</li>
-    <li><b>It can't rescue a site.</b> Doubling Soho's ancillary adds £435 against a £4,175 gap. A site that "looks fine" only thanks to one big event month will look bad next month.</li>
+    <li><b>It follows occupancy.</b> Residents make most bookings: Pixel Chai alone made $506.25 of the $656.25. Empty offices mean empty rooms (Brick Lane: 9 of ~220 hours, 4.1%).</li>
+    <li><b>It can't rescue a site.</b> Doubling Soho's ancillary adds $543.75 against a $5,218.75 gap. A site that "looks fine" only thanks to one big event month will look bad next month.</li>
 </ul>
 
 <hr/>
@@ -207,8 +207,8 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Month after opening (all made up)</th><th>Desk occupancy</th><th>Rent paid</th><th>Contribution</th></tr>
-<tr><td>1–3</td><td>10% → 30%</td><td>£0 (rent-free)</td><td>Negative (staff, rates already running)</td></tr>
-<tr><td>4–6</td><td>30% → 50%</td><td>£0 (rent-free)</td><td>Around break-even, flattered by no rent</td></tr>
+<tr><td>1–3</td><td>10% → 30%</td><td>$0 (rent-free)</td><td>Negative (staff, rates already running)</td></tr>
+<tr><td>4–6</td><td>30% → 50%</td><td>$0 (rent-free)</td><td>Around break-even, flattered by no rent</td></tr>
 <tr><td>7–12</td><td>50% → 75%</td><td>Full rent starts</td><td>Dips when rent starts, then climbs</td></tr>
 <tr><td>13+ (mature)</td><td>~80–90%</td><td>Full rent</td><td>Positive, stable</td></tr>
 </table>
@@ -224,19 +224,19 @@
 
 <h3>10. Central Costs and Allocation</h3>
 
-<p>Central costs are things no single site causes: head office, finance, sales and marketing, IT, leadership. Finance often <b>allocates</b> a share to each site with a journal, so each site shows a result "after central". In the lab that's account 6000: Soho £1,000, Reading £500 (JE-2609-03 and 04).</p>
+<p>Central costs are things no single site causes: head office, finance, sales and marketing, IT, leadership. Finance often <b>allocates</b> a share to each site with a journal, so each site shows a result "after central". In the lab that's account 6000: Soho $1,250, Reading $625 (JE-2609-03 and 04).</p>
 
-<p>The allocation is a <b>choice</b>, and the choice can change the answer. Same £1,500 total, different keys:</p>
+<p>The allocation is a <b>choice</b>, and the choice can change the answer. Same $1,875 total, different keys:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Allocation key</th><th>Soho share</th><th>Reading share</th><th>Reading after central (contribution £450)</th></tr>
-<tr><td>Lab journal (basis not stated)</td><td>£1,000</td><td>£500</td><td>−£50</td></tr>
-<tr><td>By sq ft (3,200 : 2,900)</td><td>£787</td><td>£713</td><td>−£263</td></tr>
-<tr><td>By recognised revenue (3,475 : 2,900)</td><td>£818</td><td>£682</td><td>−£232</td></tr>
-<tr><td>Not allocated at all</td><td>£0</td><td>£0</td><td>+£450</td></tr>
+<tr><th>Allocation key</th><th>Soho share</th><th>Reading share</th><th>Reading after central (contribution $562.50)</th></tr>
+<tr><td>Lab journal (basis not stated)</td><td>$1,250</td><td>$625</td><td>−$62.50</td></tr>
+<tr><td>By sq ft (3,200 : 2,900)</td><td>$983.75</td><td>$891.25</td><td>−$328.75</td></tr>
+<tr><td>By recognised revenue (4,343.75 : 3,625)</td><td>$1,022.50</td><td>$852.50</td><td>−$290</td></tr>
+<tr><td>Not allocated at all</td><td>$0</td><td>$0</td><td>+$562.50</td></tr>
 </table>
 
-<p>Reading's £50 "loss" is smaller than the gap between allocation methods. The honest answer to "is Reading profitable?" is: <b>yes at site level (+£450); marginally no after the current allocation (−£50), a figure that depends on how central costs are split.</b> Closing a site doesn't remove its allocated central costs; they move to the other sites. So site decisions start from contribution.</p>
+<p>Reading's $62.50 "loss" is smaller than the gap between allocation methods. The honest answer to "is Reading profitable?" is: <b>yes at site level (+$562.50); marginally no after the current allocation (−$62.50), a figure that depends on how central costs are split.</b> Closing a site doesn't remove its allocated central costs; they move to the other sites. So site decisions start from contribution.</p>
 
 <p>❓ <b>New question for the client:</b> "What basis do you use to allocate central costs to sites, and is it the same in the board pack and in NetSuite?"</p>
 
@@ -248,12 +248,12 @@
 <tr><th>Driver</th><th>System (likely)</th><th>Lab file</th><th>Warehouse</th></tr>
 <tr><td>Rent, rates, service charge, utilities, cleaning, site staff</td><td>NetSuite bills (staff via payroll journal)</td><td>netsuite_gl_sep2026 (5000–5300)</td><td><code>fct_gl</code>, pl_category = direct_cost</td></tr>
 <tr><td>Central allocation</td><td>NetSuite journals</td><td>netsuite_gl_sep2026 (6000)</td><td><code>fct_gl</code> central_cost</td></tr>
-<tr><td>Recognised revenue (incl. credits)</td><td>NetSuite</td><td>netsuite_gl_sep2026 (4000–4100)</td><td><code>fct_gl</code> revenue → <code>revenue_gbp</code></td></tr>
+<tr><td>Recognised revenue (incl. credits)</td><td>NetSuite</td><td>netsuite_gl_sep2026 (4000–4100)</td><td><code>fct_gl</code> revenue → <code>revenue_usd</code></td></tr>
 <tr><td>List prices, plans</td><td>Nexudus</td><td>resources, plans</td><td>list vs actual price on <code>fct_contract_month</code></td></tr>
-<tr><td>Actual price, discount, term, dates</td><td>Nexudus contracts</td><td>contracts</td><td><code>fct_contract_month</code> → <code>mrr_gbp</code></td></tr>
+<tr><td>Actual price, discount, term, dates</td><td>Nexudus contracts</td><td>contracts</td><td><code>fct_contract_month</code> → <code>mrr_usd</code></td></tr>
 <tr><td>Ancillary bookings</td><td>Nexudus bookings</td><td>bookings_sep2026</td><td><code>fct_booking</code></td></tr>
 <tr><td>Sellable desks, sq ft</td><td>Excel capacity sheet (+ Nexudus)</td><td>excel_capacity_budget_2026, sites</td><td><code>sellable_desks</code>, <code>desk_occupancy</code></td></tr>
-<tr><td>Budget revenue / costs / occupancy</td><td>Excel</td><td>excel_capacity_budget_2026</td><td><code>revenue_vs_budget_gbp</code></td></tr>
+<tr><td>Budget revenue / costs / occupancy</td><td>Excel</td><td>excel_capacity_budget_2026</td><td><code>revenue_vs_budget_usd</code></td></tr>
 <tr><td>Pipeline to fill empty space</td><td>CRM (today's tool to confirm; HubSpot incoming)</td><td>act_opportunities</td><td>pipeline model</td></tr>
 <tr><td>Lease model, expiry, break dates, rent-free, rent reviews</td><td><b>Unknown</b> (often a lease schedule in Excel or legal documents)</td><td>not in lab</td><td>candidate <code>dim_site</code> columns, if the client wants them</td></tr>
 <tr><td>Fit-out depreciation, dilapidation provisions</td><td>NetSuite (fixed assets / balance sheet), if tracked per site</td><td>not in lab</td><td>ask whether these belong in the site P&amp;L</td></tr>
@@ -269,42 +269,42 @@
 
 <pre>
    STEP 1  WHETHER  (NetSuite, fct_gl)
-           Revenue £3,475 − direct costs £7,650 = −£4,175 contribution
-           After central: −£5,175.  → Not profitable, at either level.
+           Revenue $4,343.75 − direct costs $9,562.50 = −$5,218.75 contribution
+           After central: −$6,468.75.  → Not profitable, at either level.
 
    STEP 2  COSTS OR REVENUE?  (vs Excel budget)
-           Direct costs £7,650 vs budget £7,650  → costs on plan
-           Revenue £3,475 vs budget £9,200       → −£5,725 → REVENUE problem
+           Direct costs $9,562.50 vs budget $9,562.50  → costs on plan
+           Revenue $4,343.75 vs budget $11,500       → −$7,156.25 → REVENUE problem
 
    STEP 3  WHICH REVENUE DRIVER?  (Nexudus)
            Occupancy:  6 / 34 desks = 17.6% vs 85% budget   ← main cause
-           Offices:    1 / 3 let (Office 102 empty, £5,000 list;
-                       Office 103 empty since Brightline left, £1,400)
+           Offices:    1 / 3 let (Office 102 empty, $6,250 list;
+                       Office 103 empty since Brightline left, $1,750)
            Coworking:  2 / 20 hot desks sold
-           Price:      Office 101 at 7.7% discount = −£200/month (small)
-           Ancillary:  £435, −£90 credit note (small)
+           Price:      Office 101 at 7.7% discount = −$250/month (small)
+           Ancillary:  $543.75, −$112.50 credit note (small)
 
    STEP 4  WILL IT FIX ITSELF?  (CRM, site age)
            No open Soho pipeline. Site is mature (opened 2019).
 
-   ANSWER  "Soho lost £4,175 at site level in September (−£5,175 after
+   ANSWER  "Soho lost $5,218.75 at site level in September (−$6,468.75 after
            central costs). Costs are on budget; the problem is revenue:
            only 6 of 34 desks are let. Letting Office 102 at list would
            roughly cover direct costs on its own. There is no open deal
            for it in the CRM."
 </pre>
 
-<p>Reading, same method: contribution +£450, −£50 after central. Its occupancy cost is £1,700/month (Soho £5,800), so one office covers the site, and Office 202 has a live deal (Ortho Robotics, £4,200). Similar occupancy, opposite story: <b>cost base and mix</b> matter as much as occupancy.</p>
+<p>Reading, same method: contribution +$562.50, −$62.50 after central. Its occupancy cost is $2,125/month (Soho $7,250), so one office covers the site, and Office 202 has a live deal (Ortho Robotics, $5,250). Similar occupancy, opposite story: <b>cost base and mix</b> matter as much as occupancy.</p>
 
 <hr/>
 
 <h3>Interview Questions</h3>
 
 <p><b>Q: How would you calculate break-even occupancy for a site?</b></p>
-<p><i>"Take the site's fixed monthly costs from finance, decide whether central allocation is in, and divide by potential revenue at list price. In desks it depends on mix, so I'd state that assumption. Lab Soho needs ~50% of its £15,400 potential revenue before central, or ~13 desks if offices let first."</i></p>
+<p><i>"Take the site's fixed monthly costs from finance, decide whether central allocation is in, and divide by potential revenue at list price. In desks it depends on mix, so I'd state that assumption. Lab Soho needs ~50% of its $19,250 potential revenue before central, or ~13 desks if offices let first."</i></p>
 
-<p><b>Q: An empty office lists at £5,000. A prospect offers £4,000 for 12 months. How do you think about it?</b></p>
-<p><i>"Compare 12 months at £4,000 against how long it would otherwise sit empty. The break-even wait is 2.4 months: if it would take longer than that to let at list, take the deal. Then weigh anchoring at renewal, the term, and whether there's any real pipeline for it."</i></p>
+<p><b>Q: An empty office lists at $6,250. A prospect offers $5,000 for 12 months. How do you think about it?</b></p>
+<p><i>"Compare 12 months at $5,000 against how long it would otherwise sit empty. The break-even wait is 2.4 months: if it would take longer than that to let at list, take the deal. Then weigh anchoring at renewal, the term, and whether there's any real pipeline for it."</i></p>
 
 <p><b>Q: Why might two sites with the same occupancy have opposite profits?</b></p>
 <p><i>"Different cost bases, different mix (offices vs hot desks), discounting, a rent-free period still running, or a different property model: leased and managed sites have different P&amp;L shapes. Central allocation can also tip a marginal site either way."</i></p>
@@ -320,10 +320,10 @@
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Site = small business</b></td><td>Site × month is the grain of almost every economics question.</td></tr>
 <tr><td><b>Property model</b></td><td>Lease, management agreement, revenue share, owned: industry background. Work.Life's is unknown, so ask.</td></tr>
-<tr><td><b>Occupancy cost</b></td><td>Rent + rates + service charge: 76% of lab Soho's £7,650 direct costs.</td></tr>
+<tr><td><b>Occupancy cost</b></td><td>Rent + rates + service charge: 76% of lab Soho's $9,562.50 direct costs.</td></tr>
 <tr><td><b>Flex arbitrage</b></td><td>Buy per sq ft on long terms, sell per desk on short terms.</td></tr>
 <tr><td><b>Break-even</b></td><td>Depends on mix, price and whether central costs are in. Soho: ~50% of potential revenue before central.</td></tr>
-<tr><td><b>Discount vs wait</b></td><td>£4,000 now beats £5,000 later if the office would sit empty more than 2.4 months.</td></tr>
+<tr><td><b>Discount vs wait</b></td><td>$5,000 now beats $6,250 later if the office would sit empty more than 2.4 months.</td></tr>
 <tr><td><b>Ancillary</b></td><td>High margin, follows occupancy, can't rescue a site.</td></tr>
 <tr><td><b>Ramp-up</b></td><td>Compare sites by age; watch the rent-free cliff.</td></tr>
 <tr><td><b>Allocation</b></td><td>A choice that can flip "profitable". Decide on contribution first.</td></tr>

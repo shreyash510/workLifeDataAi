@@ -27,8 +27,8 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Option</th><th>How it works</th><th>Cost</th><th>The catch</th></tr>
-<tr><td><b>Python extractor</b> (this guide)</td><td>Our code calls the Nexudus REST API each night and loads JSON into <code>raw_nexudus</code></td><td>Cloud Run runs a few minutes a night: usually pennies to a few pounds a month (estimate)</td><td>Someone must look after the code when the API changes</td></tr>
-<tr><td><b>Nexudus native BigQuery integration</b> 📘</td><td>Turned on in Nexudus settings; Nexudus sends changes to BigQuery as they happen</td><td>Listed at £100 per location per month at the time of writing. For 14 sites that is about £16,800 a year. Check the current price.</td><td>No code, but you get Nexudus's table shapes and a per-site bill that grows with the client</td></tr>
+<tr><td><b>Python extractor</b> (this guide)</td><td>Our code calls the Nexudus REST API each night and loads JSON into <code>raw_nexudus</code></td><td>Cloud Run runs a few minutes a night: usually pennies to a few dollars a month (estimate)</td><td>Someone must look after the code when the API changes</td></tr>
+<tr><td><b>Nexudus native BigQuery integration</b> 📘</td><td>Turned on in Nexudus settings; Nexudus sends changes to BigQuery as they happen</td><td>Listed at $125 per location per month at the time of writing. For 14 sites that is about $21,000 a year. Check the current price.</td><td>No code, but you get Nexudus's table shapes and a per-site bill that grows with the client</td></tr>
 <tr><td><b>Fivetran</b></td><td>A managed connector, if one exists</td><td>Priced on monthly active rows (Chapter 13)</td><td>At the time of writing we did not find a ready-made Nexudus connector in Fivetran's list. Check again. Fivetran's "build your own" options still mean writing code.</td></tr>
 </table>
 
@@ -540,7 +540,7 @@ SELECT
   l.id                                                   AS contract_id,
   JSON_VALUE(l.payload, '$.CoworkerId')                  AS customer_id,
   JSON_VALUE(l.payload, '$.TariffId')                    AS plan_id,
-  SAFE_CAST(JSON_VALUE(l.payload, '$.Price') AS NUMERIC) AS monthly_price_gbp,
+  SAFE_CAST(JSON_VALUE(l.payload, '$.Price') AS NUMERIC) AS monthly_price_usd,
   -- deleted = missing from the latest weekly scan (only once a scan exists)
   (c.id IS NULL AND (SELECT COUNT(*) FROM current_ids) &gt; 0) AS is_deleted_in_source,
   l._loaded_at
@@ -548,7 +548,7 @@ FROM latest AS l
 LEFT JOIN current_ids AS c ON c.id = l.id
 </pre>
 
-<p>Forget the <code>QUALIFY</code> line and MRR counts each contract several times (Chapter 14, Lab 14.2 shows a £5,000 mistake from one missing line). Guide 07 adds a test that every staging model has one row per id.</p>
+<p>Forget the <code>QUALIFY</code> line and MRR counts each contract several times (Chapter 14, Lab 14.2 shows a $6,250 mistake from one missing line). Guide 07 adds a test that every staging model has one row per id.</p>
 
 <hr/>
 

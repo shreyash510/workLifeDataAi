@@ -25,12 +25,12 @@
 
 <pre>
    Leader:  "What was Soho's revenue in September?"
-   Demo:    "Soho's revenue in September 2026 was £3,565."
+   Demo:    "Soho's revenue in September 2026 was $4,456.25."
 
-   Finance: "That's not what the ledger says. We closed September at £3,475."
+   Finance: "That's not what the ledger says. We closed September at $4,343.75."
 </pre>
 
-<p>The demo summed Nexudus invoices. Finance's number is <b>recognised revenue</b> in NetSuite, which includes the £90 goodwill credit memo for the AV failure on 24 September (Chapter 09). Both numbers exist. The demo picked one, said it with total confidence, and didn't show its workings.</p>
+<p>The demo summed Nexudus invoices. Finance's number is <b>recognised revenue</b> in NetSuite, which includes the $112.50 goodwill credit memo for the AV failure on 24 September (Chapter 09). Both numbers exist. The demo picked one, said it with total confidence, and didn't show its workings.</p>
 
 <p>Nothing crashed. No error appeared. And trust was lost in one sentence. That's the failure the brief warns about: <i>"If it confidently returns a wrong figure, trust is lost."</i></p>
 
@@ -71,7 +71,7 @@
    │  Leader  │──────────────►│ LLM + "here is the schema │───────►│ BigQuery │
    └──────────┘               │  of every table"          │        │ (all of  │
         ▲                     └──────────────────────────┘        │  it)     │
-        │        "Soho's revenue was £3,565"                       └────┬─────┘
+        │        "Soho's revenue was $4,456.25"                       └────┬─────┘
         └───────────────────────────────────────────────────────────────┘
 </pre>
 
@@ -85,11 +85,11 @@
 
 <table border="1" cellpadding="10">
 <tr><th>#</th><th>Failure</th><th>Lab example</th><th>Wrong answer</th><th>Right answer</th></tr>
-<tr><td>1</td><td><b>Wrong source</b> for the metric</td><td>"Soho revenue, September"</td><td>£3,565 (Nexudus invoices)</td><td>£3,475 (NetSuite recognised)</td></tr>
-<tr><td>2</td><td><b>Grain fan-out</b>: join at the wrong level</td><td>"GreenRoot's MRR": join members (6 people) to contracts</td><td>£16,200</td><td>£2,700</td></tr>
+<tr><td>1</td><td><b>Wrong source</b> for the metric</td><td>"Soho revenue, September"</td><td>$4,456.25 (Nexudus invoices)</td><td>$4,343.75 (NetSuite recognised)</td></tr>
+<tr><td>2</td><td><b>Grain fan-out</b>: join at the wrong level</td><td>"GreenRoot's MRR": join members (6 people) to contracts</td><td>$20,250</td><td>$3,375</td></tr>
 <tr><td>3</td><td><b>Wrong definition</b></td><td>"How many members churned in 2026?" counting every ended contract</td><td>3 contracts</td><td>1 company (Brightline), 2 people. K001 was an upgrade, K006 a transfer.</td></tr>
-<tr><td>4</td><td><b>Hidden double meaning</b></td><td>"Is Soho profitable?"</td><td>"Yes/No" with no basis</td><td>"Before central costs: −£4,175. After: −£5,175."</td></tr>
-<tr><td>5</td><td><b>Wrong join key</b></td><td>"Soho actual vs budget": join NetSuite <code>Soho</code> to Excel <code>SOHO</code> on text</td><td>No rows, so "no budget set"</td><td>−£5,725 vs budget (−62%)</td></tr>
+<tr><td>4</td><td><b>Hidden double meaning</b></td><td>"Is Soho profitable?"</td><td>"Yes/No" with no basis</td><td>"Before central costs: −$5,218.75. After: −$6,468.75."</td></tr>
+<tr><td>5</td><td><b>Wrong join key</b></td><td>"Soho actual vs budget": join NetSuite <code>Soho</code> to Excel <code>SOHO</code> on text</td><td>No rows, so "no budget set"</td><td>−$7,156.25 vs budget (−62%)</td></tr>
 </table>
 
 <p>Look at the pattern. None of these is a SQL <i>syntax</i> problem. Every one is a <b>business knowledge</b> problem. A better LLM doesn't fix them. A better <b>design</b> does: give the LLM tables that are already at the right grain, with the definitions already applied and the keys already joined. That's what the marts from Season 2 and the semantic layer from Chapter 21 are for.</p>
@@ -142,7 +142,7 @@
 <tr><td>⑦ Answer with workings</td><td>Makes any remaining error <b>visible</b>, so a human catches it</td></tr>
 </table>
 
-<p><b>Why the period rule in step ①?</b> Finance numbers for a month keep moving until Finance <b>closes</b> that period in NetSuite (Chapter 09). Look at the lab GL: the meeting-room invoices, the £90 credit memo CN-2609-01, the site-staff journals and the central cost allocations are all dated <b>30 September</b>, the last day of the month. Ask "Soho revenue for September" on 25 September and you'd get a different number from the one Finance closes with. So when a leader doesn't name a month, the assistant uses the <b>last closed month</b>. When they ask about a month that's still open, it answers, but labels the figure <b>PROVISIONAL</b> and says what usually still changes (late invoices, credit memos, accruals, allocations). When Work.Life's close usually finishes is unknown: that's client question #11.</p>
+<p><b>Why the period rule in step ①?</b> Finance numbers for a month keep moving until Finance <b>closes</b> that period in NetSuite (Chapter 09). Look at the lab GL: the meeting-room invoices, the $112.50 credit memo CN-2609-01, the site-staff journals and the central cost allocations are all dated <b>30 September</b>, the last day of the month. Ask "Soho revenue for September" on 25 September and you'd get a different number from the one Finance closes with. So when a leader doesn't name a month, the assistant uses the <b>last closed month</b>. When they ask about a month that's still open, it answers, but labels the figure <b>PROVISIONAL</b> and says what usually still changes (late invoices, credit memos, accruals, allocations). When Work.Life's close usually finishes is unknown: that's client question #11.</p>
 
 <p>In our design the LLM reaches the warehouse through exactly <b>three tools</b>, and nothing else. We use these names for the rest of the series:</p>
 
@@ -162,7 +162,7 @@
 <table border="1" cellpadding="10">
 <tr><th></th><th>Free SQL (text-to-SQL), tool <code>run_sql</code></th><th>Metric queries (text-to-metric), tool <code>query_metrics</code></th></tr>
 <tr><td><b>What the LLM writes</b></td><td>Any SELECT over the allowed tables</td><td>"metric + dimensions + filters + period", which the semantic layer compiles to SQL</td></tr>
-<tr><td><b>Example</b></td><td><code>SELECT SUM(amount_gbp) FROM fct_gl WHERE …</code></td><td><code>{metric: site_contribution, site: Soho, month: 2026-09}</code></td></tr>
+<tr><td><b>Example</b></td><td><code>SELECT SUM(amount_usd) FROM fct_gl WHERE …</code></td><td><code>{metric: site_contribution, site: Soho, month: 2026-09}</code></td></tr>
 <tr><td><b>Flexibility</b></td><td>✅ Very high</td><td>🟡 Only what's been defined</td></tr>
 <tr><td><b>Accuracy</b></td><td>🟠 Depends on the LLM's guess every time</td><td>✅ Same definition every time</td></tr>
 <tr><td><b>Testability</b></td><td>🟠 Hard: infinite possible queries</td><td>✅ Test each metric once</td></tr>
@@ -178,46 +178,46 @@
 <p>You are the LLM. You've been given the tables in <code>ai_safe</code> (built in Season 2, Chapters 16 and 17). Write the BigQuery SQL for each question, then check it against the answer. Here are the columns you're allowed to use:</p>
 
 <pre>
-   ai_safe.fct_site_month_kpis   site_code, month_start, mrr_gbp, desks_contracted,
+   ai_safe.fct_site_month_kpis   site_code, month_start, mrr_usd, desks_contracted,
                                  sellable_desks, desk_occupancy, has_finance_actuals,
-                                 revenue_gbp, direct_costs_gbp, contribution_gbp,
-                                 central_costs_gbp, contribution_after_central_gbp,
-                                 budget_revenue_gbp, revenue_vs_budget_gbp,
+                                 revenue_usd, direct_costs_usd, contribution_usd,
+                                 central_costs_usd, contribution_after_central_usd,
+                                 budget_revenue_usd, revenue_vs_budget_usd,
                                  budget_desk_occupancy, meeting_room_hours
    ai_safe.dim_site              site_code, site_name, ...
    ai_safe.fct_booking           booking_id, booking_date, month_start, site_code,
                                  resource_code, resource_type, company_key,
-                                 hours, price_gbp, status
+                                 hours, price_usd, status
 </pre>
 
-<p>💡 <code>revenue_gbp</code> here is <b>recognised</b> revenue: the NetSuite GL lines with <code>pl_category = 'revenue'</code>, credit memos included. The lab mart has no "is this period closed?" column yet; in the real build that flag comes from NetSuite's accounting periods (client question #11), and the AI service adds the PROVISIONAL label from it.</p>
+<p>💡 <code>revenue_usd</code> here is <b>recognised</b> revenue: the NetSuite GL lines with <code>pl_category = 'revenue'</code>, credit memos included. The lab mart has no "is this period closed?" column yet; in the real build that flag comes from NetSuite's accounting periods (client question #11), and the AI service adds the PROVISIONAL label from it.</p>
 
 <p><b>Q1. "Is Soho profitable?"</b> (no month named, so use the last closed month: in this lab, September 2026)</p>
 <pre>
 SELECT
   site_code,
-  revenue_gbp,
-  direct_costs_gbp,
-  contribution_gbp,                    -- before central costs
-  contribution_after_central_gbp
+  revenue_usd,
+  direct_costs_usd,
+  contribution_usd,                    -- before central costs
+  contribution_after_central_usd
 FROM ai_safe.fct_site_month_kpis
 WHERE site_code = 'SOHO'
   AND month_start = DATE '2026-09-01';
 
--- Expected: SOHO | 3475 | 7650 | -4175 | -5175
+-- Expected: SOHO | 4343.75 | 9562.50 | -5218.75 | -6468.75
 </pre>
 
 <p><b>Q2. "Which sites are furthest below budget on revenue?"</b></p>
 <pre>
 SELECT
   site_code,
-  revenue_vs_budget_gbp                                           AS gap_gbp,
-  ROUND(SAFE_DIVIDE(revenue_gbp, budget_revenue_gbp) - 1, 3)      AS gap_pct
+  revenue_vs_budget_usd                                           AS gap_usd,
+  ROUND(SAFE_DIVIDE(revenue_usd, budget_revenue_usd) - 1, 3)      AS gap_pct
 FROM ai_safe.fct_site_month_kpis
 WHERE month_start = DATE '2026-09-01'
-ORDER BY gap_gbp;
+ORDER BY gap_usd;
 
--- Expected: SOHO −5,725 (−62%), RDG −300 (−9%)
+-- Expected: SOHO −7,156.25 (−62%), RDG −375 (−9%)
 </pre>
 
 <p><b>Q3. "How busy was Brick Lane in September?"</b></p>
@@ -252,7 +252,7 @@ WHERE resource_code = 'SOHO-MR-BRICK'
 <tr><td>No numbers from memory</td><td>Answer step gets only the result rows; a check flags any number in the answer that isn't in the rows</td></tr>
 </table>
 
-<p>💡 That last check is cheap and powerful. Extract every number from the drafted answer and confirm each one appears in (or is a simple rounding of) the query results. If the LLM writes "£3,565" and the result says 3475, block it.</p>
+<p>💡 That last check is cheap and powerful. Extract every number from the drafted answer and confirm each one appears in (or is a simple rounding of) the query results. If the LLM writes "$4,456.25" and the result says 4343.75, block it.</p>
 
 <hr/>
 
@@ -264,10 +264,10 @@ WHERE resource_code = 'SOHO-MR-BRICK'
 ├──────────────────────────────────────────────────────────────────────┤
 │ No. In September 2026 Soho made a loss.                              │
 │                                                                      │
-│   Recognised revenue        £3,475    (budget £9,200, −62%)          │
-│   Direct costs              £7,650    (on budget)                    │
-│   Site contribution        −£4,175    ← before central costs         │
-│   After central costs      −£5,175                                   │
+│   Recognised revenue        $4,343.75    (budget $11,500, −62%)          │
+│   Direct costs              $9,562.50    (on budget)                    │
+│   Site contribution        −$5,218.75    ← before central costs         │
+│   After central costs      −$6,468.75                                   │
 │                                                                      │
 │ Main driver: revenue, not costs. 2 of 3 private offices are empty    │
 │ (Office 102 all year, Office 103 since Brightline left in June) and  │

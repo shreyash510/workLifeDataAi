@@ -71,15 +71,15 @@
 
 <pre>
    ILLUSTRATIVE PRICES (made up: check current pricing for the chosen model)
-     input:  £2 per million tokens
-     output: £10 per million tokens
+     input:  $2.50 per million tokens
+     output: $12.50 per million tokens
 
-   One question ≈ 11,000 × £2/1M  +  1,000 × £10/1M
-                = £0.022          +  £0.010
-                ≈ £0.03
+   One question ≈ 11,000 × $2.50/1M  +  1,000 × $12.50/1M
+                = $0.0275          +  $0.0125
+                ≈ $0.0375
 </pre>
 
-<p>Three pence a question. Even if the real price is several times higher, a leadership team won't run up a big bill <b>by asking questions</b>. The risk is the uncapped cases from the story.</p>
+<p>About four cents a question. Even if the real price is several times higher, a leadership team won't run up a big bill <b>by asking questions</b>. The risk is the uncapped cases from the story.</p>
 
 <hr/>
 
@@ -93,12 +93,12 @@
 <tr><td>Questions per user per working day (assumption)</td><td>8</td><td>3</td></tr>
 <tr><td>Working days per month</td><td>21</td><td>21</td></tr>
 <tr><td>Questions per month</td><td>10 × 8 × 21 = <b>1,680</b></td><td>70 × 3 × 21 = <b>4,410</b></td></tr>
-<tr><td>Cost per question (illustrative)</td><td>£0.03</td><td>£0.03</td></tr>
-<tr><td><b>Question tokens per month (estimate)</b></td><td><b>≈ £50</b> (1,680 × £0.03)</td><td><b>≈ £130</b> (4,410 × £0.03)</td></tr>
-<tr><td>Digest + alerts (narration only, ~50 calls/week)</td><td>≈ £5</td><td>≈ £10</td></tr>
+<tr><td>Cost per question (illustrative)</td><td>$0.0375</td><td>$0.0375</td></tr>
+<tr><td><b>Question tokens per month (estimate)</b></td><td><b>≈ $62.50</b> (1,680 × $0.0375)</td><td><b>≈ $162.50</b> (4,410 × $0.0375)</td></tr>
+<tr><td>Digest + alerts (narration only, ~50 calls/week)</td><td>≈ $6.25</td><td>≈ $12.50</td></tr>
 </table>
 
-<p>Now stress-test it. What if the real model is <b>5× the illustrative price</b>? Leadership ≈ £250/month (about £3,000 a year), wider team ≈ £660/month (about £8,000 a year). These are estimates built on assumptions; Chapter 35 adds them to the people and hosting costs. Still nowhere near six figures a year. That's the honest headline for the response: <b>token cost is real but small, and we cap it anyway.</b></p>
+<p>Now stress-test it. What if the real model is <b>5× the illustrative price</b>? Leadership ≈ $312.50/month (about $3,750 a year), wider team ≈ $825/month (about $10,000 a year). These are estimates built on assumptions; Chapter 35 adds them to the people and hosting costs. Still nowhere near six figures a year. That's the honest headline for the response: <b>token cost is real but small, and we cap it anyway.</b></p>
 
 <hr/>
 
@@ -109,9 +109,9 @@
 <pre>
    Golden set:          150 questions × 4 variants   = 600 questions per run
    If run nightly:      600 × 30                     = 18,000 questions/month
-   At £0.03 each:                                    ≈ £540/month
+   At $0.0375 each:                                    ≈ $675/month
 
-   vs leadership usage (estimate):                   ≈ £50/month
+   vs leadership usage (estimate):                   ≈ $62.50/month
 </pre>
 
 <p>The test suite would cost <b>more than ten times</b> what the leadership team does! This catches teams out. The fix is to run the <b>right amount</b> of testing at the right time:</p>
@@ -155,7 +155,7 @@
 
 <h3>7. Hosting: Serverless Means Idle Is Nearly Free</h3>
 
-<p>Leaders ask questions in bursts: Monday mornings and before board meetings. A server that runs 24/7 would be paid for while idle most of the week. Cloud Run scales to <b>zero</b> when no one is using it and bills per request-second when they are. The scheduler, the small logging dataset and secret storage add a few pounds a month.</p>
+<p>Leaders ask questions in bursts: Monday mornings and before board meetings. A server that runs 24/7 would be paid for while idle most of the week. Cloud Run scales to <b>zero</b> when no one is using it and bills per request-second when they are. The scheduler, the small logging dataset and secret storage add a few dollars a month.</p>
 
 <p>The catch: the first question after a quiet period can take a second or two longer while the service starts (a "cold start"). If leaders notice, keep one instance warm during working hours. It's a small, predictable cost.</p>
 
@@ -202,13 +202,13 @@
    AI LAYER · COST · October 2026 (made up)
    ─────────────────────────────────────────────────────────
    Questions asked             1,210     (cap: 100/user/day)
-   LLM cost                      £36     ▓▓▓░░░░░░░  budget £100
+   LLM cost                      $45     ▓▓▓░░░░░░░  budget $125
    BigQuery scanned            41 GB     (within free tier)
-   Test runs                     £64     nightly Tier 1 + 3 full runs
-   Hosting                        £9
+   Test runs                     $80     nightly Tier 1 + 3 full runs
+   Hosting                        $11.25
    ─────────────────────────────────────────────────────────
-   Total run (excl. people)     £109     ▓▓▓▓▓░░░░░  budget £250
-   Cost per question          £0.03      top user: 18% of questions
+   Total run (excl. people)     $136.25     ▓▓▓▓▓░░░░░  budget $312.50
+   Cost per question          $0.0375      top user: 18% of questions
 </pre>
 
 <p>Review it monthly with Finance alongside the accuracy reconciliation (Chapter 25). Same meeting, two numbers: <b>is it right, and is it affordable?</b></p>

@@ -142,7 +142,7 @@
 <tr><td>members.csv</td><td><code>first_name</code>, <code>last_name</code>, <code>email</code></td><td>🟠</td><td>Out. In fact the whole member table (<code>dim_member</code>) and the identity crosswalk (<code>member_xref</code>) stay out of <code>ai_safe</code>: leadership questions are about sites and companies.</td></tr>
 <tr><td>members.csv</td><td><code>role</code> ("Founder", "Designer")</td><td>🟠</td><td>Drop. Job title + small company = identifiable person.</td></tr>
 <tr><td>members.csv</td><td><code>joined_on</code></td><td>🟠</td><td>Not in <code>ai_safe</code>. If leaders need "new members per month", add it as a site × month count, not per person.</td></tr>
-<tr><td>contracts.csv</td><td><code>monthly_price_gbp</code>, <code>list_price_gbp</code></td><td>🟢</td><td>Keep</td></tr>
+<tr><td>contracts.csv</td><td><code>monthly_price_usd</code>, <code>list_price_usd</code></td><td>🟢</td><td>Keep</td></tr>
 <tr><td>companies.csv</td><td><code>billing_email</code></td><td>🟠</td><td>Drop</td></tr>
 <tr><td>act365_cardholders.csv</td><td><code>card_number</code></td><td>🔴</td><td>Never. Not even into the warehouse copy.</td></tr>
 <tr><td>act365_door_events_sep2026.csv</td><td>every row</td><td>🔴 raw / 🟢 aggregated</td><td>Only company × week attendance rate</td></tr>

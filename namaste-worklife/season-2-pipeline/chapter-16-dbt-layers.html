@@ -167,8 +167,8 @@ select
     upper(trim(site_code))                          as site_code,
     cast(start_date as date)                        as start_date,
     safe_cast(nullif(end_date, '') as date)         as end_date,   -- blank/NULL = rolling
-    cast(monthly_price_gbp as numeric)              as monthly_price_gbp,
-    cast(list_price_gbp as numeric)                 as list_price_gbp,
+    cast(monthly_price_usd as numeric)              as monthly_price_usd,
+    cast(list_price_usd as numeric)                 as list_price_usd,
     safe_cast(nullif(notice_given_on, '') as date)  as notice_given_on,
     nullif(end_reason, '')                          as end_reason  -- upgrade / transfer / left
 from {{ source('nexudus', 'contracts') }}
@@ -188,7 +188,7 @@ from {{ source('nexudus', 'sites') }}
 -- stg_nexudus__resources.sql   (resource_type: private_office / hot_desk_area / meeting_room)
 select resource_code, upper(trim(site_code)) as site_code, resource_type, name as resource_name,
        cast(capacity_people as int64) as capacity_people,
-       cast(list_price_gbp as numeric) as list_price_gbp, price_unit
+       cast(list_price_usd as numeric) as list_price_usd, price_unit
 from {{ source('nexudus', 'resources') }}
 
 -- stg_nexudus__companies.sql
@@ -205,7 +205,7 @@ from {{ source('nexudus', 'members') }}
 select booking_id, resource_code, upper(trim(site_code)) as site_code, member_id, company_id,
        cast(booking_date as date) as booking_date,
        parse_time('%H:%M', start_time) as start_time, parse_time('%H:%M', end_time) as end_time,
-       cast(hours as numeric) as hours, cast(price_gbp as numeric) as price_gbp, status
+       cast(hours as numeric) as hours, cast(price_usd as numeric) as price_usd, status
 from {{ source('nexudus', 'bookings') }}
 </pre>
 
@@ -218,15 +218,15 @@ select tran_id, cast(tran_date as date) as tran_date,
        cast(account as int64) as account_number, account_name,
        account_type,                                -- Income / Expense
        location as netsuite_location,               -- 'Soho', 'Reading'
-       entity, memo, cast(amount_gbp as numeric) as amount_gbp
+       entity, memo, cast(amount_usd as numeric) as amount_usd
 from {{ source('netsuite', 'gl_lines') }}
 
 -- stg_excel__capacity_budget.sql   ('2026-09' becomes 2026-09-01)
 select upper(trim(site_code)) as site_code, parse_date('%Y-%m', month) as month_start,
        cast(sellable_desks as int64) as sellable_desks,
-       cast(budget_revenue_gbp as numeric) as budget_revenue_gbp,
+       cast(budget_revenue_usd as numeric) as budget_revenue_usd,
        cast(budget_desk_occupancy as numeric) as budget_desk_occupancy,
-       cast(budget_direct_costs_gbp as numeric) as budget_direct_costs_gbp,
+       cast(budget_direct_costs_usd as numeric) as budget_direct_costs_usd,
        nullif(notes, '') as notes
 from {{ source('excel', 'capacity_budget_2026') }}
 
@@ -295,7 +295,7 @@ select
         when 'P-HOT'    then 1                 -- unlimited coworking = 1 desk
         else 0                                 -- Flex = day passes, no desk
     end                                        as desks,
-    c.monthly_price_gbp                        as mrr_gbp
+    c.monthly_price_usd                        as mrr_usd
 from contracts as c
 join months as m
   on c.start_date &lt;= m.month_end
@@ -433,7 +433,7 @@ left join act    as a on a.email_domain = m.email_domain and a.name_key = m.name
 -- Grain: one row per contract per month (active at month end). MRR and desks live here.
 select cm.month_start, cm.month_end, cm.site_code, cm.contract_id, c.company_key,
        concat('MB-', cm.member_id) as member_key,   -- the contract holder
-       cm.plan_code, cm.resource_code, cm.is_office, cm.desks, cm.mrr_gbp
+       cm.plan_code, cm.resource_code, cm.is_office, cm.desks, cm.mrr_usd
 from {{ ref('int_contract_months') }} as cm
 left join {{ ref('dim_company') }} as c on c.nexudus_company_id = cm.company_id
 
@@ -442,7 +442,7 @@ left join {{ ref('dim_company') }} as c on c.nexudus_company_id = cm.company_id
 select b.booking_id, b.booking_date, date_trunc(b.booking_date, month) as month_start,
        b.site_code, b.resource_code, r.resource_type, c.company_key,
        concat('MB-', b.member_id) as member_key,
-       b.start_time, b.end_time, b.hours, b.price_gbp, b.status
+       b.start_time, b.end_time, b.hours, b.price_usd, b.status
 from {{ ref('stg_nexudus__bookings') }} as b
 left join {{ ref('stg_nexudus__resources') }} as r using (resource_code)
 left join {{ ref('dim_company') }} as c on c.nexudus_company_id = b.company_id
@@ -465,7 +465,7 @@ select
         else 'other'
     end                             as pl_category,
     c.company_key,                  -- customers only; suppliers stay NULL
-    gl.entity, gl.memo, gl.amount_gbp
+    gl.entity, gl.memo, gl.amount_usd
 from {{ ref('stg_netsuite__gl_lines') }} as gl
 left join {{ ref('site_mapping') }} as s
   on s.netsuite_location = gl.netsuite_location
@@ -490,20 +490,20 @@ with site_months as (
     from {{ ref('dim_site') }} as s cross join {{ ref('int_month_spine') }} as m
 ),
 contracts as (
-    select site_code, month_start, sum(mrr_gbp) as mrr_gbp, sum(desks) as desks_contracted,
+    select site_code, month_start, sum(mrr_usd) as mrr_usd, sum(desks) as desks_contracted,
            countif(is_office) as offices_occupied, count(distinct company_key) as active_companies
     from {{ ref('fct_contract_month') }} group by site_code, month_start
 ),
 finance as (
     select site_code, month_start,
-           sum(if(pl_category = 'revenue',      amount_gbp, 0)) as revenue_gbp,
-           sum(if(pl_category = 'direct_cost',  amount_gbp, 0)) as direct_costs_gbp,
-           sum(if(pl_category = 'central_cost', amount_gbp, 0)) as central_costs_gbp
+           sum(if(pl_category = 'revenue',      amount_usd, 0)) as revenue_usd,
+           sum(if(pl_category = 'direct_cost',  amount_usd, 0)) as direct_costs_usd,
+           sum(if(pl_category = 'central_cost', amount_usd, 0)) as central_costs_usd
     from {{ ref('fct_gl') }} group by site_code, month_start
 ),
 rooms as (
     select site_code, month_start, sum(hours) as meeting_room_hours,
-           sum(price_gbp) as meeting_room_booked_gbp
+           sum(price_usd) as meeting_room_booked_usd
     from {{ ref('fct_booking') }}
     where resource_type = 'meeting_room' and status = 'confirmed'
     group by site_code, month_start
@@ -513,7 +513,7 @@ budget as (select * from {{ ref('stg_excel__capacity_budget') }})
 select
     site_code, month_start,              -- USING columns: refer to them unqualified
     -- membership (Nexudus): full history, so 0 really means 0
-    coalesce(c.mrr_gbp, 0) as mrr_gbp,
+    coalesce(c.mrr_usd, 0) as mrr_usd,
     coalesce(c.active_companies, 0) as active_companies,
     coalesce(c.desks_contracted, 0) as desks_contracted,
     coalesce(b.sellable_desks, sm.total_desks) as sellable_desks,     -- Excel first
@@ -522,17 +522,17 @@ select
     coalesce(c.offices_occupied, 0) as offices_occupied,
     sm.private_offices as offices_total,
     -- finance (NetSuite): NULL when no GL loaded for the month. No data is NOT zero.
-    f.revenue_gbp is not null as has_finance_actuals,
-    f.revenue_gbp, f.direct_costs_gbp,
-    f.revenue_gbp - f.direct_costs_gbp as contribution_gbp,
-    f.central_costs_gbp,
-    f.revenue_gbp - f.direct_costs_gbp - f.central_costs_gbp as contribution_after_central_gbp,
+    f.revenue_usd is not null as has_finance_actuals,
+    f.revenue_usd, f.direct_costs_usd,
+    f.revenue_usd - f.direct_costs_usd as contribution_usd,
+    f.central_costs_usd,
+    f.revenue_usd - f.direct_costs_usd - f.central_costs_usd as contribution_after_central_usd,
     -- meeting rooms (Nexudus bookings)
-    r.meeting_room_hours, r.meeting_room_booked_gbp,
+    r.meeting_room_hours, r.meeting_room_booked_usd,
     -- budget (Excel)
-    b.budget_revenue_gbp,
-    f.revenue_gbp - b.budget_revenue_gbp as revenue_vs_budget_gbp,
-    b.budget_desk_occupancy, b.budget_direct_costs_gbp
+    b.budget_revenue_usd,
+    f.revenue_usd - b.budget_revenue_usd as revenue_vs_budget_usd,
+    b.budget_desk_occupancy, b.budget_direct_costs_usd
 from site_months as sm
 left join contracts as c using (site_code, month_start)
 left join finance   as f using (site_code, month_start)
@@ -540,7 +540,7 @@ left join rooms     as r using (site_code, month_start)
 left join budget    as b using (site_code, month_start)
 </pre>
 
-<p>Note <b>NULL vs 0</b>. We have every contract, so no contracts really is £0 MRR. GL exists only for September 2026; July revenue of £0 would tell the CEO Soho earned nothing. <code>NULL</code> plus <code>has_finance_actuals = false</code> lets the AI say <i>"no finance actuals for July yet"</i>: part of the accuracy story in <a href="../season-3-ai-layer/chapter-25-accuracy-launch-gate.html">Chapter 25</a>.</p>
+<p>Note <b>NULL vs 0</b>. We have every contract, so no contracts really is $0 MRR. GL exists only for September 2026; July revenue of $0 would tell the CEO Soho earned nothing. <code>NULL</code> plus <code>has_finance_actuals = false</code> lets the AI say <i>"no finance actuals for July yet"</i>: part of the accuracy story in <a href="../season-3-ai-layer/chapter-25-accuracy-launch-gate.html">Chapter 25</a>.</p>
 
 <hr/>
 
@@ -556,26 +556,26 @@ dbt seed &amp;&amp; dbt run     # or dbt build: seeds + models + tests (Ch 17) i
 select * from marts.fct_site_month_kpis where month_start = '2026-09-01' order by site_code;
 
 column                            RDG      SOHO     hand-checked in
-mrr_gbp                           2,700    3,040    Ch 11 Q3
+mrr_usd                           3,375    3,800    Ch 11 Q3
 desks_contracted / sellable       6 / 31   6 / 34   Ch 06
 desk_occupancy                    0.1935   0.1765   19.4% / 17.6%
 offices_occupied / offices_total  1 / 2    1 / 3    Ch 06
-revenue_gbp                       2,900    3,475    Ch 11 Q4
-direct_costs_gbp                  2,450    7,650    Ch 09
-contribution_gbp                  450      -4,175   Ch 11 Q5
-contribution_after_central_gbp    -50      -5,175   Ch 11 Q5
-revenue_vs_budget_gbp             -300     -5,725   Ch 11 Q6 (budget 3,200 / 9,200)
+revenue_usd                       3,625    4,343.75    Ch 11 Q4
+direct_costs_usd                  3,062.50    9,562.50    Ch 09
+contribution_usd                  562.50      -5,218.75   Ch 11 Q5
+contribution_after_central_usd    -62.50      -6,468.75   Ch 11 Q5
+revenue_vs_budget_usd             -375     -7,156.25   Ch 11 Q6 (budget 4,000 / 11,500)
 meeting_room_hours                5        13       bookings file
 </pre>
 
-<p>Soho revenue: 2,400 + 320 + 320 + 405 + 60 + 60 − 90 (credit memo) = <b>3,475</b>; costs 4,500 + 900 + 400 + 350 + 300 + 1,200 = <b>7,650</b>.</p>
+<p>Soho revenue: 3,000 + 400 + 400 + 506.25 + 75 + 75 − 112.50 (credit memo) = <b>4,343.75</b>; costs 5,625 + 1,125 + 500 + 437.50 + 375 + 1,500 = <b>9,562.50</b>.</p>
 
 <p>And <b>July 2026</b>, where the definitions matter:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Site</th><th>mrr_gbp</th><th>desks</th><th>Why</th></tr>
-<tr><td>SOHO</td><td>2,720</td><td>5</td><td>Office 101 (4 desks, £2,400) + Ravi (1, £320). K003 ended 30 Jun; K007 starts 1 Aug.</td></tr>
-<tr><td>RDG</td><td>2,880</td><td>6</td><td>GreenRoot (6, £2,700) + Flex K006 (£180, <b>0 desks</b>), active on 31 Jul, its last day</td></tr>
+<tr><th>Site</th><th>mrr_usd</th><th>desks</th><th>Why</th></tr>
+<tr><td>SOHO</td><td>3,400</td><td>5</td><td>Office 101 (4 desks, $3,000) + Ravi (1, $400). K003 ended 30 Jun; K007 starts 1 Aug.</td></tr>
+<tr><td>RDG</td><td>3,600</td><td>6</td><td>GreenRoot (6, $3,375) + Flex K006 ($225, <b>0 desks</b>), active on 31 Jul, its last day</td></tr>
 </table>
 
 <p>July revenue is <code>NULL</code> (no GL loaded), not 0. If all of that matches, you've rebuilt Work.Life's modelling layer in miniature. 🎉</p>
@@ -587,7 +587,7 @@ meeting_room_hours                5        13       bookings file
 <ul>
     <li><code>stg_&lt;source&gt;__&lt;table&gt;</code> shows the source; a source swap means new <code>stg_hubspot__...</code> models. <code>int_&lt;what it does&gt;</code> = building blocks, not for end users.</li>
     <li>Marts: <code>dim_</code> for things, <code>fct_</code> for events/measures, <b>never</b> a source name (<code>fct_contract_month</code>, not <code>fct_nexudus_contracts</code>). The AI only knows business names: that's <b>source agnostic</b>.</li>
-    <li>Only staging reads <code>source()</code>, and every model states its grain in a comment (it prevents the £16,200 bug, Ch 15).</li>
+    <li>Only staging reads <code>source()</code>, and every model states its grain in a comment (it prevents the $20,250 bug, Ch 15).</li>
 </ul>
 
 <hr/>
@@ -608,7 +608,7 @@ meeting_room_hours                5        13       bookings file
 <tr><th>Concept</th><th>Key Takeaway</th></tr>
 <tr><td><b>Layers</b></td><td>Staging cleans; intermediate holds shared rules; marts are named for the business.</td></tr>
 <tr><td><b>Grain</b></td><td>Aggregate each source to site × month <b>before</b> joining.</td></tr>
-<tr><td><b>The proof</b></td><td>Soho Sep: MRR £3,040, 6/34 desks, revenue £3,475, contribution −£4,175, −£5,725 vs budget.</td></tr>
+<tr><td><b>The proof</b></td><td>Soho Sep: MRR $3,800, 6/34 desks, revenue $4,343.75, contribution −$5,218.75, −$7,156.25 vs budget.</td></tr>
 <tr><td><b>NULL ≠ 0</b></td><td>Missing finance data stays NULL with a flag.</td></tr>
 </table>
 

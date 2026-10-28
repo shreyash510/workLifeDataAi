@@ -109,7 +109,7 @@ Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter 
 
 - **Datasets** (BigQuery region `europe-west2`): `raw_nexudus`, `raw_netsuite`, `raw_excel`, `raw_act`, `raw_act365`, `staging`, `intermediate`, `marts`, `ai_safe`, `ai_logs`, `ai_eval`.
 - **Marts:** `dim_site`, `dim_company`, `dim_member`, `member_xref`, `fct_contract_month` (one row per contract per month, active on the month's last day), `fct_booking`, `fct_gl` (`pl_category` is revenue / direct_cost / central_cost), and `fct_site_month_kpis`.
-  - `fct_site_month_kpis` columns: `mrr_gbp`, `revenue_gbp`, `direct_costs_gbp`, `contribution_gbp`, `central_costs_gbp`, `contribution_after_central_gbp`, `revenue_vs_budget_gbp`, `desk_occupancy`, `sellable_desks`, `desks_contracted`, `has_finance_actuals`, and others.
+  - `fct_site_month_kpis` columns: `mrr_usd`, `revenue_usd`, `direct_costs_usd`, `contribution_usd`, `central_costs_usd`, `contribution_after_central_usd`, `revenue_vs_budget_usd`, `desk_occupancy`, `sellable_desks`, `desks_contracted`, `has_finance_actuals`, and others.
   - The contract-movements model is `fct_contract_events` (Ch 29), with `movement_type` = new / upgrade / downgrade / transfer / renewal / churn.
   - Proposed attendance aggregate: `agg_company_week_attendance`, company × week with a minimum group size of 5.
 - **`ai_safe`** (the AI reads ONLY this):
@@ -123,33 +123,35 @@ Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter 
   - Zero confidently wrong answers.
   - Finance signs off money answers; Ops signs off member and occupancy answers.
 - **Cost assumptions** (estimates, "check current pricing"):
-  - Leadership: 10 users × 8 questions/day × 21 days ≈ 1,680 questions/month ≈ £50/month in tokens.
-  - Wider team: 70 users × 3 questions/day × 21 days ≈ £130/month.
-  - BigQuery: about 67 GB/month. About £0.03 per question.
-  - Ch 35 totals: leadership ≈ £22k/yr, wider team ≈ £42.5k/yr (mostly support). The build is 84 days ≈ £63k at a made-up £750 day rate.
+  - Leadership: 10 users × 8 questions/day × 21 days ≈ 1,680 questions/month ≈ $62.50/month in tokens.
+  - Wider team: 70 users × 3 questions/day × 21 days ≈ $162.50/month.
+  - BigQuery: about 67 GB/month. About $0.0375 per question.
+  - Ch 35 totals: leadership ≈ $27.5k/yr, wider team ≈ $53.1k/yr (mostly support). The build is 84 days ≈ $78.8k at a made-up $937.50 day rate.
 - **Plan:** go-live by end of December 2026 (the 3-month mark). Handover at the end of March 2027 (the 6-month mark).
 - **Client question numbering:** Ch 11 has #1–12, Ch 03 has #13–22, Ch 39 has #23–25. New questions start at #26 or stay unnumbered.
 
 ## 8. Lab truths (snapshot 30 Sep 2026)
 
+- **Currency (changed 2026-10-28):** all money in the series is **US dollars ($)**. The lab was first written in pounds and then converted at an assumed rate of **£1 = $1.25 (made up)**, so every percentage and ratio is unchanged. Lab CSV money columns end in `_usd` (for example `monthly_price_usd`, `amount_usd`, `mrr_usd`). Every dollar figure in this file and in the chapters is already converted. Use dollars in any new text, SQL or tests.
+
 - **Soho:**
-  - MRR £3,040 (Pixel Chai Office 101 £2,400 + Ravi/Nomad £320 + Fatima/Kite & Key £320)
-  - Invoiced £3,565 vs recognised £3,475 (−£90 credit memo CN-2609-01)
-  - Direct costs £7,650; contribution −£4,175; after central −£5,175
-  - −£5,725 vs budget (−62%)
+  - MRR $3,800 (Pixel Chai Office 101 $3,000 + Ravi/Nomad $400 + Fatima/Kite & Key $400)
+  - Invoiced $4,456.25 vs recognised $4,343.75 (−$112.50 credit memo CN-2609-01)
+  - Direct costs $9,562.50; contribution −$5,218.75; after central −$6,468.75
+  - −$7,156.25 vs budget (−62%)
   - Desk occupancy 6/34 = 17.6%; office occupancy 1/3
   - Brick Lane 9/220 = 4.1%
 - **Reading:**
-  - MRR £2,700 (GreenRoot Office 201, ends 31 Dec 2026)
-  - Revenue £2,900; contribution +£450; after central −£50
+  - MRR $3,375 (GreenRoot Office 201, ends 31 Dec 2026)
+  - Revenue $3,625; contribution +$562.50; after central −$62.50
   - Desk occupancy 6/31
 - **Members:** by contract site, Soho 6 / Reading 6. By home site, Soho 5 / Reading 7.
 - **Churn in 2026:**
-  - 1 company: Brightline (2 people, £1,400 MRR, "moving to hybrid", notice 30 Apr, ended 30 Jun).
+  - 1 company: Brightline (2 people, $1,750 MRR, "moving to hybrid", notice 30 Apr, ended 30 Jun).
   - K001 was an upgrade and K006 a transfer, so neither is churn.
 - **Sales pipeline:**
-  - Open pipeline £7,000/month: GreenRoot renewal £2,800 (opened 2026-09-15) + Ortho Robotics £4,200.
-  - Win rate 3/5. Pixel Chai discount 7.7% (£2,600 list → £2,400).
+  - Open pipeline $8,750/month: GreenRoot renewal $3,500 (opened 2026-09-15) + Ortho Robotics $5,250.
+  - Win rate 3/5. Pixel Chai discount 7.7% ($3,250 list → $3,000).
 - **Door data:**
   - 276 door events in September.
   - GreenRoot weekly badge-in rate: 73% → 40% → 23% → ~0.
@@ -158,12 +160,12 @@ Filenames are `chapter-NN-<slug>.html` inside each season folder. Every chapter 
   - 4000 Office, 4010 Coworking, 4100 Meeting Rooms, 4200 Events (no Sep rows)
   - 5000 Rent, 5010 Rates, 5020 Service Charge, 5100 Utilities, 5200 Site Staff, 5300 Cleaning
   - 6000 Central Overheads
-  - Expenses are stored as positive `amount_gbp`.
+  - Expenses are stored as positive `amount_usd`.
 
 ## 9. Open items / next steps
 
 1. Season 2 review is DONE. Ch 16/17 are ~30 KB / ~25 KB.
-2. Season 7 (41–44) is written; optionally have an agent review it. Known flags: the lab Soho budget (85% occupancy but only £9,200 revenue) is taught as a finance question in Ch 41; Ch 43 states FRS 102 lease changes apply from 2026 (verify); Ch 42 invents liability account numbers 2100/2200/2300 (labelled made up).
+2. Season 7 (41–44) is written; optionally have an agent review it. Known flags: the lab Soho budget (85% occupancy but only $11,500 revenue) is taught as a finance question in Ch 41; Ch 43 states FRS 102 lease changes apply from 2026 (verify); Ch 42 invents liability account numbers 2100/2200/2300 (labelled made up).
 3. Re-run the whole-series checks (bash):
    - `grep -n -i -E "173tech|the deck|Jules|\bSam\b|Barbican" namaste-worklife/season-*/*.html` (expect nothing)
    - Tag balance for table / pre / ul / ol / p / tr / li per file

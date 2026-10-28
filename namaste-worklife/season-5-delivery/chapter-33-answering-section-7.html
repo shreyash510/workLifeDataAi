@@ -140,22 +140,22 @@
 <p><b>Q4 · Cost</b></p>
 <p><i>What they're checking:</i> real numbers, side by side, at two levels, with a believable limit. (Built up line by line in <a href="chapter-35-cost-build-and-run.html">Chapter 35</a>.)</p>
 <blockquote>
-<p><b>Build (one-off): about £63,000 (estimate).</b> £48,000 for the 3-month launch, and £15,000 for months 4–6 and the handover.</p>
-<p><b>Running cost per year: about £22,000 for the leadership team, or about £42,500 for the wider team (estimates).</b> Both are far below the "six figure operation" you ruled out.</p>
+<p><b>Build (one-off): about $78,750 (estimate).</b> $60,000 for the 3-month launch, and $18,750 for months 4–6 and the handover.</p>
+<p><b>Running cost per year: about $27,500 for the leadership team, or about $53,125 for the wider team (estimates).</b> Both are far below the "six figure operation" you ruled out.</p>
 <table border="1" cellpadding="10">
 <tr><th>Running cost per year (estimate)</th><th>Leadership only (10 users, assumed)</th><th>Wider team (70 users, assumed)</th></tr>
-<tr><td>AI usage (tokens, including test runs)</td><td>£2,500</td><td>£3,500</td></tr>
-<tr><td>BigQuery (queries and storage of the safe copy)</td><td>£500</td><td>£1,000</td></tr>
-<tr><td>Hosting, scheduling, logs</td><td>£1,000</td><td>£2,000</td></tr>
-<tr><td><b>Technology total</b></td><td><b>£4,000</b></td><td><b>£6,500</b></td></tr>
-<tr><td>Support (2 or 4 days a month, made-up day rate)</td><td>£18,000</td><td>£36,000</td></tr>
-<tr><td><b>Total per year</b></td><td><b>~£22,000</b></td><td><b>~£42,500</b></td></tr>
+<tr><td>AI usage (tokens, including test runs)</td><td>$3,125</td><td>$4,375</td></tr>
+<tr><td>BigQuery (queries and storage of the safe copy)</td><td>$625</td><td>$1,250</td></tr>
+<tr><td>Hosting, scheduling, logs</td><td>$1,250</td><td>$2,500</td></tr>
+<tr><td><b>Technology total</b></td><td><b>$5,000</b></td><td><b>$8,125</b></td></tr>
+<tr><td>Support (2 or 4 days a month, made-up day rate)</td><td>$22,500</td><td>$45,000</td></tr>
+<tr><td><b>Total per year</b></td><td><b>~$27,500</b></td><td><b>~$53,125</b></td></tr>
 </table>
 <p><b>Our assumptions</b> (to agree with you):</p>
 <ul>
-    <li>A <b>made-up</b> day rate of £750.</li>
+    <li>A <b>made-up</b> day rate of $937.50.</li>
     <li>Leaders: 10 users × 8 questions a working day. Wider team: 70 users × 3 questions a working day. 21 working days a month.</li>
-    <li>About £0.03 per question, using example AI prices (Chapter 27). Test runs are the biggest AI cost.</li>
+    <li>About $0.0375 per question, using example AI prices (Chapter 27). Test runs are the biggest AI cost.</li>
     <li>BigQuery stays inside its free monthly allowance. <b>Check current pricing</b> before relying on any figure.</li>
     <li>Your current pipeline and BI tool costs don't change, and aren't included.</li>
     <li>Wider team access also needs the role-based access work from Phase 2, which we haven't priced, as you asked.</li>
@@ -319,8 +319,8 @@
 │              after passing the accuracy launch gate.             │
 │  MONTH 6     Wider coverage, alerts, full handover, Phase 2      │
 │              design ready.                                       │
-│  BUILD       ~£63k one-off (£48k to launch + £15k to month 6)    │
-│  RUN / YEAR  ~£22k leadership only · ~£42.5k wider team          │
+│  BUILD       ~$78.8k one-off ($60k to launch + $18.8k to month 6)    │
+│  RUN / YEAR  ~$27.5k leadership only · ~$53.1k wider team          │
 │              (estimates; made-up day rate; check current prices) │
 │              Hard monthly caps on AI and query spend.            │
 │  SECURITY    Work.Life sign-in only · reads a controlled copy    │
@@ -349,7 +349,7 @@
 <tr><td>Safe data only</td><td>Q5</td><td>"Same rule as your current reporting extracts, signed off by you"</td><td>✓</td></tr>
 <tr><td>People data excluded</td><td>Q5</td><td>"Never connect: the HR system or any people data"</td><td>✓</td></tr>
 <tr><td>Accuracy is a launch gate</td><td>Q6</td><td>"Zero wrong on tier 1… a failure stops the release"</td><td>✓</td></tr>
-<tr><td>Cost conscious</td><td>Q4, Q9</td><td>"~£22k a year (estimate)… hard monthly budget… no hires"</td><td>✓</td></tr>
+<tr><td>Cost conscious</td><td>Q4, Q9</td><td>"~$27.5k a year (estimate)… hard monthly budget… no hires"</td><td>✓</td></tr>
 <tr><td>Secure by design</td><td>Q5</td><td>"Work.Life accounts only… inside your Google Cloud project"</td><td>✓</td></tr>
 <tr><td>Documented and handover ready</td><td>Q8</td><td>"Your team runs the service for two weeks from the documents alone"</td><td>✓</td></tr>
 </table>
@@ -371,7 +371,7 @@
 <p><i>"Exactly their 10 headings, in their order, each starting with a one-line answer. A half-page summary at the top. Numbers in tables at the levels they asked for. An appendix of assumptions and open questions. They'll compare suppliers side by side, so I make that comparison easy."</i></p>
 
 <p><b>Q: You don't know the client's user count or accuracy bar, but they want a cost and an approach. What do you do?</b></p>
-<p><i>"State a clear assumption, price on it, and say what changes if it's wrong. For example: 'we've assumed 10 leadership users; each extra 10 users adds about £600 a year in usage'. Then list the decision as something we need from them, with a date. That's what the brief asked for, and it's more useful than refusing to give a number."</i></p>
+<p><i>"State a clear assumption, price on it, and say what changes if it's wrong. For example: 'we've assumed 10 leadership users; each extra 10 users adds about $750 a year in usage'. Then list the decision as something we need from them, with a date. That's what the brief asked for, and it's more useful than refusing to give a number."</i></p>
 
 <p><b>Q: What must Work.Life provide for Phase 1, and why does each item matter?</b></p>
 <p><i>"Read access to BigQuery and dbt, because we can't check what the marts already hold without it. A recent board pack and owners for KPI definitions, because the board pack is the business context and Finance decides what 'revenue' means. The NetSuite site mapping and close calendar, because every site P&amp;L and every 'is this month final?' answer depends on them. The identity provider for sign-in. And the people to check golden answers from closed months, because that's the launch gate."</i></p>
@@ -389,7 +389,7 @@
 <tr><td><b>Format</b></td><td>Their 10 headings, their order, short answer first, mechanism second.</td></tr>
 <tr><td><b>Two levels</b></td><td>3 vs 6 months, leadership vs wider team, us vs in house. Always both.</td></tr>
 <tr><td><b>Approach</b></td><td>Controlled copy → one definition per KPI → business context → assistant behind sign-in.</td></tr>
-<tr><td><b>Numbers</b></td><td>Estimates: build ~£63k; run ~£22k (leadership, 10 users × 8 q/day) or ~£42.5k (wider team, 70 users × 3 q/day) a year, 21 working days a month.</td></tr>
+<tr><td><b>Numbers</b></td><td>Estimates: build ~$78.8k; run ~$27.5k (leadership, 10 users × 8 q/day) or ~$53.1k (wider team, 70 users × 3 q/day) a year, 21 working days a month.</td></tr>
 <tr><td><b>Accuracy</b></td><td>50 golden questions; zero wrong on board-pack KPIs before go-live.</td></tr>
 <tr><td><b>What we need</b></td><td>A dated list of decisions and owners, mostly Ops &amp; IT and Finance. That's the honest answer to "it depends".</td></tr>
 <tr><td><b>Self-check</b></td><td>All 8 principles answered in their words; no Phase 2 price; no HR data.</td></tr>

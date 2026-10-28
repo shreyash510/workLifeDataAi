@@ -136,24 +136,24 @@ where month_start = '2026-09-01';                 -- 12 / 65 = 0.1846
     <li>Open <b>Looker Studio</b> with the same Google account as your BigQuery project. Create a blank report.</li>
     <li><b>Add data → BigQuery</b> → your project → <code>marts</code> → <code>fct_site_month_kpis</code>.</li>
     <li>Add a <b>date range control</b> on <code>month_start</code>, and a <b>drop-down control</b> on <code>site_code</code>.</li>
-    <li>Add <b>scorecards</b> for <code>mrr_gbp</code>, <code>revenue_gbp</code>, <code>contribution_gbp</code> (aggregation: Sum).</li>
+    <li>Add <b>scorecards</b> for <code>mrr_usd</code>, <code>revenue_usd</code>, <code>contribution_usd</code> (aggregation: Sum).</li>
     <li>For occupancy, <b>don't</b> drag in <code>desk_occupancy</code>. Create a calculated field <code>SUM(desks_contracted) / SUM(sellable_desks)</code> and format it as a percentage. (Yes, this is a BI-side formula. That's the gap Chapter 21's semantic layer closes.)</li>
-    <li>Add a <b>bar chart</b>: dimension <code>site_code</code>, metrics <code>revenue_gbp</code> and <code>budget_revenue_gbp</code>.</li>
-    <li>Add a <b>table</b>: <code>site_code</code>, <code>month_start</code>, <code>mrr_gbp</code>, <code>desks_contracted</code>, <code>sellable_desks</code>, <code>contribution_gbp</code>, <code>has_finance_actuals</code>.</li>
+    <li>Add a <b>bar chart</b>: dimension <code>site_code</code>, metrics <code>revenue_usd</code> and <code>budget_revenue_usd</code>.</li>
+    <li>Add a <b>table</b>: <code>site_code</code>, <code>month_start</code>, <code>mrr_usd</code>, <code>desks_contracted</code>, <code>sellable_desks</code>, <code>contribution_usd</code>, <code>has_finance_actuals</code>.</li>
 </ol>
 
 <p><b>Check your dashboard against the golden numbers</b>, filtered to September 2026:</p>
 
 <table border="1" cellpadding="10">
 <tr><th>Tile</th><th>All sites</th><th>SOHO only</th></tr>
-<tr><td>MRR</td><td>£5,740</td><td>£3,040</td></tr>
-<tr><td>Revenue</td><td>£6,375</td><td>£3,475</td></tr>
-<tr><td>Contribution</td><td>−£3,725</td><td>−£4,175</td></tr>
+<tr><td>MRR</td><td>$7,175</td><td>$3,800</td></tr>
+<tr><td>Revenue</td><td>$7,968.75</td><td>$4,343.75</td></tr>
+<tr><td>Contribution</td><td>−$4,656.25</td><td>−$5,218.75</td></tr>
 <tr><td>Desk occupancy</td><td>18.5% (12 / 65)</td><td>17.6%</td></tr>
-<tr><td>Revenue vs budget</td><td>£6,375 vs £12,400</td><td>£3,475 vs £9,200</td></tr>
+<tr><td>Revenue vs budget</td><td>$7,968.75 vs $15,500</td><td>$4,343.75 vs $11,500</td></tr>
 </table>
 
-<p>Now widen the date range to July–September and look at the revenue tiles. July and August have <b>no</b> finance actuals in our lab, so they're <code>NULL</code>, and the scorecard sums only September. A careless reader might think the quarter's revenue was £6,375. Add <code>has_finance_actuals</code> to the table, or a note on the dashboard. Dashboards have to be honest about missing data too.</p>
+<p>Now widen the date range to July–September and look at the revenue tiles. July and August have <b>no</b> finance actuals in our lab, so they're <code>NULL</code>, and the scorecard sums only September. A careless reader might think the quarter's revenue was $7,968.75. Add <code>has_finance_actuals</code> to the table, or a note on the dashboard. Dashboards have to be honest about missing data too.</p>
 
 <hr/>
 
@@ -171,7 +171,7 @@ docker run -d -p 3000:3000 --name metabase metabase/metabase
     <li>In Google Cloud: <i>IAM → Service accounts → Create</i> a <code>bi-reader</code> account.</li>
     <li>Grant it <b>BigQuery Data Viewer</b> on the <code>marts</code> dataset only, plus <b>BigQuery Job User</b> on the project. Nothing on <code>raw_*</code>. This is the permission plan from Chapter 15.</li>
     <li>Create a JSON key, upload it in Metabase's BigQuery connection form, and limit the connection to the <code>marts</code> dataset if the form offers it.</li>
-    <li>Ask a question with the query builder: <code>fct_site_month_kpis</code>, filter month = September 2026, sum of <code>revenue_gbp</code> by <code>site_code</code>. Check: SOHO 3,475 and RDG 2,900.</li>
+    <li>Ask a question with the query builder: <code>fct_site_month_kpis</code>, filter month = September 2026, sum of <code>revenue_usd</code> by <code>site_code</code>. Check: SOHO 4,343.75 and RDG 3,625.</li>
 </ol>
 
 <p>⚠️ A JSON key is a password. Never commit it, and <b>delete the key</b> in Google Cloud when the lab is done. In production you'd use the platform's managed identity features where possible.</p>
@@ -253,7 +253,7 @@ docker run -d -p 3000:3000 --name metabase metabase/metabase
 <tr><td><b>Definitions</b></td><td>Logic in dbt; metric formulas in a shared semantic layer; BI stays thin.</td></tr>
 <tr><td><b>Ratio trap</b></td><td>Sum numerator and denominator, then divide. Never average percentages.</td></tr>
 <tr><td><b>BI ⟂ AI</b></td><td>Siblings on the same tested models. Swap the BI tool without touching the AI.</td></tr>
-<tr><td><b>Golden numbers</b></td><td>Sep 2026: MRR £5,740, revenue £6,375, contribution −£3,725 across both sites.</td></tr>
+<tr><td><b>Golden numbers</b></td><td>Sep 2026: MRR $7,175, revenue $7,968.75, contribution −$4,656.25 across both sites.</td></tr>
 </table>
 
 <hr/>

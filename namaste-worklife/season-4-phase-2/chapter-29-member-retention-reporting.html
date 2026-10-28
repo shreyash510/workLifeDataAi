@@ -86,14 +86,14 @@
 <p>Let's run the rules on our Mini Work.Life <code>contracts.csv</code>. There are 7 contracts:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Contract</th><th>Company</th><th>Site</th><th>Start → End</th><th>£/month</th><th>Notice given</th></tr>
-<tr><td>K001</td><td>C001 Pixel Chai</td><td>SOHO hot desk</td><td>2025-10-01 → 2026-03-31</td><td>320</td><td></td></tr>
-<tr><td>K002</td><td>C001 Pixel Chai</td><td>SOHO Office 101</td><td>2026-04-01 → 2027-03-31</td><td>2,400</td><td></td></tr>
-<tr><td>K003</td><td>C002 Brightline Legal</td><td>SOHO Office 103</td><td>2025-07-01 → 2026-06-30</td><td>1,400</td><td>2026-04-30</td></tr>
-<tr><td>K004</td><td>C003 Nomad Analytics</td><td>SOHO hot desk</td><td>2025-01-15 → (rolling)</td><td>320</td><td></td></tr>
-<tr><td>K005</td><td>C004 GreenRoot Foods</td><td>RDG Office 201</td><td>2026-01-01 → 2026-12-31</td><td>2,700</td><td></td></tr>
-<tr><td>K006</td><td>C005 Kite &amp; Key</td><td>RDG Flex 10</td><td>2026-02-01 → 2026-07-31</td><td>180</td><td></td></tr>
-<tr><td>K007</td><td>C005 Kite &amp; Key</td><td>SOHO hot desk</td><td>2026-08-01 → (rolling)</td><td>320</td><td></td></tr>
+<tr><th>Contract</th><th>Company</th><th>Site</th><th>Start → End</th><th>$/month</th><th>Notice given</th></tr>
+<tr><td>K001</td><td>C001 Pixel Chai</td><td>SOHO hot desk</td><td>2025-10-01 → 2026-03-31</td><td>400</td><td></td></tr>
+<tr><td>K002</td><td>C001 Pixel Chai</td><td>SOHO Office 101</td><td>2026-04-01 → 2027-03-31</td><td>3,000</td><td></td></tr>
+<tr><td>K003</td><td>C002 Brightline Legal</td><td>SOHO Office 103</td><td>2025-07-01 → 2026-06-30</td><td>1,750</td><td>2026-04-30</td></tr>
+<tr><td>K004</td><td>C003 Nomad Analytics</td><td>SOHO hot desk</td><td>2025-01-15 → (rolling)</td><td>400</td><td></td></tr>
+<tr><td>K005</td><td>C004 GreenRoot Foods</td><td>RDG Office 201</td><td>2026-01-01 → 2026-12-31</td><td>3,375</td><td></td></tr>
+<tr><td>K006</td><td>C005 Kite &amp; Key</td><td>RDG Flex 10</td><td>2026-02-01 → 2026-07-31</td><td>225</td><td></td></tr>
+<tr><td>K007</td><td>C005 Kite &amp; Key</td><td>SOHO hot desk</td><td>2026-08-01 → (rolling)</td><td>400</td><td></td></tr>
 </table>
 
 <p>This is <b>the contract-movements model</b> that Season 3 kept referring to as a proposal (Chapter 21 needed its <code>movement_type</code> column for <code>revenue_churn</code>; Chapter 28 used <code>movement_type = 'churn'</code>). Here we finally build it. One row per contract change, with <code>movement_type</code> in (new, upgrade, downgrade, transfer, renewal, churn), the MRR change, and the contract dates, including the <code>contract_end_date</code> that Chapter 24 proposed adding. Season 2 doesn't have it yet, so it is new in Phase 2 (or brought forward into Phase 1 if the client wants churn as a board-pack KPI).</p>
@@ -104,11 +104,11 @@
 -- models/marts/fct_contract_events.sql  (simplified)
 with c as (
   select
-    company_id, contract_id, site_code, start_date, end_date, monthly_price_gbp,
+    company_id, contract_id, site_code, start_date, end_date, monthly_price_usd,
     lead(contract_id)        over w as next_contract_id,
     lead(start_date)         over w as next_start,
     lead(site_code)          over w as next_site,
-    lead(monthly_price_gbp)  over w as next_price
+    lead(monthly_price_usd)  over w as next_price
   from {{ ref('int_contracts') }}   -- contract-grain intermediate model (one row per contract)
   window w as (partition by company_id order by start_date)
 )
@@ -119,11 +119,11 @@ select
     when next_start is null
       or date_diff(next_start, end_date, day) > {{ var('gap_days') }} then 'churn'
     when next_site != site_code                                   then 'transfer'
-    when next_price  > monthly_price_gbp                          then 'upgrade'
-    when next_price  < monthly_price_gbp                          then 'downgrade'
+    when next_price  > monthly_price_usd                          then 'upgrade'
+    when next_price  < monthly_price_usd                          then 'downgrade'
     else 'renewal'
   end as movement_type,
-  coalesce(next_price, 0) - monthly_price_gbp as mrr_change_gbp,
+  coalesce(next_price, 0) - monthly_price_usd as mrr_change_usd,
   date_trunc(date_add(end_date, interval 1 day), month) as effective_month   -- end 31 Mar → shows in April
 from c
 </pre>
@@ -134,14 +134,14 @@ from c
 
 <table border="1" cellpadding="10">
 <tr><th>Date</th><th>Company</th><th>Event</th><th>MRR change</th><th>Why</th></tr>
-<tr><td>2025-01-15</td><td>Nomad Analytics</td><td><b>new</b></td><td>+320</td><td>First contract</td></tr>
-<tr><td>2025-07-01</td><td>Brightline Legal</td><td><b>new</b></td><td>+1,400</td><td>First contract</td></tr>
-<tr><td>2025-10-01</td><td>Pixel Chai</td><td><b>new</b></td><td>+320</td><td>First contract</td></tr>
-<tr><td>2026-01-01</td><td>GreenRoot Foods</td><td><b>new</b></td><td>+2,700</td><td>First contract</td></tr>
-<tr><td>2026-02-01</td><td>Kite &amp; Key</td><td><b>new</b></td><td>+180</td><td>First contract</td></tr>
-<tr><td>2026-03-31</td><td>Pixel Chai</td><td><b>upgrade</b></td><td>+2,080</td><td>Hot desk → Office 101 next day, same site</td></tr>
-<tr><td>2026-06-30</td><td>Brightline Legal</td><td><b>churn</b></td><td>−1,400</td><td>Nothing after; notice given 61 days before</td></tr>
-<tr><td>2026-07-31</td><td>Kite &amp; Key</td><td><b>transfer</b></td><td>+140</td><td>Reading Flex → Soho hot desk next day</td></tr>
+<tr><td>2025-01-15</td><td>Nomad Analytics</td><td><b>new</b></td><td>+400</td><td>First contract</td></tr>
+<tr><td>2025-07-01</td><td>Brightline Legal</td><td><b>new</b></td><td>+1,750</td><td>First contract</td></tr>
+<tr><td>2025-10-01</td><td>Pixel Chai</td><td><b>new</b></td><td>+400</td><td>First contract</td></tr>
+<tr><td>2026-01-01</td><td>GreenRoot Foods</td><td><b>new</b></td><td>+3,375</td><td>First contract</td></tr>
+<tr><td>2026-02-01</td><td>Kite &amp; Key</td><td><b>new</b></td><td>+225</td><td>First contract</td></tr>
+<tr><td>2026-03-31</td><td>Pixel Chai</td><td><b>upgrade</b></td><td>+2,600</td><td>Hot desk → Office 101 next day, same site</td></tr>
+<tr><td>2026-06-30</td><td>Brightline Legal</td><td><b>churn</b></td><td>−1,750</td><td>Nothing after; notice given 61 days before</td></tr>
+<tr><td>2026-07-31</td><td>Kite &amp; Key</td><td><b>transfer</b></td><td>+175</td><td>Reading Flex → Soho hot desk next day</td></tr>
 </table>
 
 <p>Notice the Kite &amp; Key row. For the <b>business</b> it's a transfer (no one left). For <b>Reading</b> it's a loss and for <b>Soho</b> it's a gain. So the report needs both views: company level for "how many members did we lose?" and site level for "how is Reading doing?". Same events, two lenses.</p>
@@ -186,10 +186,10 @@ from c
 
 <table border="1" cellpadding="10">
 <tr><th>Company</th><th>MRR on 1 Jan 2026</th><th>MRR on 30 Sep 2026</th><th>Story</th></tr>
-<tr><td>Pixel Chai</td><td>£320</td><td>£2,400</td><td>Upgraded to an office</td></tr>
-<tr><td>Brightline Legal</td><td>£1,400</td><td>£0</td><td>Churned</td></tr>
-<tr><td>Nomad Analytics</td><td>£320</td><td>£320</td><td>Stayed</td></tr>
-<tr><td><b>Total</b></td><td><b>£2,040</b></td><td><b>£2,720</b></td><td></td></tr>
+<tr><td>Pixel Chai</td><td>$400</td><td>$3,000</td><td>Upgraded to an office</td></tr>
+<tr><td>Brightline Legal</td><td>$1,750</td><td>$0</td><td>Churned</td></tr>
+<tr><td>Nomad Analytics</td><td>$400</td><td>$400</td><td>Stayed</td></tr>
+<tr><td><b>Total</b></td><td><b>$2,550</b></td><td><b>$3,400</b></td><td></td></tr>
 </table>
 
 <pre>
@@ -197,43 +197,43 @@ from c
                            = 2 / 3  =  67%      😟 "we lost a third of our customers!"
 
    NET REVENUE RETENTION   = their MRR now / their MRR at start
-                           = 2,720 / 2,040  =  133%   😀 "existing customers grew a third!"
+                           = 3,400 / 2,550  =  133%   😀 "existing customers grew a third!"
 </pre>
 
 <p>Both are true. Which one is "retention"? <b>That's the client's call</b>, and it must be written in the KPI dictionary. If it isn't, the AI will pick one, and someone in the board meeting will be holding the other. This is the Chapter 02 occupancy argument all over again.</p>
 
-<p>Our recommendation: report <b>both</b>, always labelled, plus <b>revenue churn</b> (MRR lost from churned companies / starting MRR = 1,400 / 2,040 = 69% here, because the lab is tiny and Brightline was the biggest customer at the start). In a real 14-site, 8,000-member business these numbers will be much steadier.</p>
+<p>Our recommendation: report <b>both</b>, always labelled, plus <b>revenue churn</b> (MRR lost from churned companies / starting MRR = 1,750 / 2,550 = 69% here, because the lab is tiny and Brightline was the biggest customer at the start). In a real 14-site, 8,000-member business these numbers will be much steadier.</p>
 
 <hr/>
 
 <h3>7. The MRR Bridge, and Why a Naive Report Gets It Wrong</h3>
 
-<p>A <b>bridge</b> (or waterfall) explains how you got from the start number to the end number. Sum the 2026 rows of <code>fct_contract_events</code> by <code>movement_type</code>. At <b>company</b> level the Kite &amp; Key transfer is +£140; at <b>site</b> level it is Reading −£180 and Soho +£320 (the two lenses from Section 4):</p>
+<p>A <b>bridge</b> (or waterfall) explains how you got from the start number to the end number. Sum the 2026 rows of <code>fct_contract_events</code> by <code>movement_type</code>. At <b>company</b> level the Kite &amp; Key transfer is +$175; at <b>site</b> level it is Reading −$225 and Soho +$400 (the two lenses from Section 4):</p>
 
 <pre>
    MRR BRIDGE, Dec 2025 → Sep 2026 (lab data)
 
                        SOHO        READING       COMPANY TOTAL
    ─────────────────  ────────    ─────────     ─────────────
-   MRR in Dec 2025     £2,040        £0             £2,040     (K001 320 + K003 1,400 + K004 320)
-   + New                   £0    +£2,880           +£2,880     (GreenRoot 2,700 + Kite &amp; Key 180)
-   + Upgrade           +£2,080        £0           +£2,080     (Pixel Chai)
-   − Churn             −£1,400        £0           −£1,400     (Brightline)
-   ± Transfers           +£320     −£180             +£140     (Kite &amp; Key)
+   MRR in Dec 2025     $2,550        $0             $2,550     (K001 400 + K003 1,750 + K004 400)
+   + New                   $0    +$3,600           +$3,600     (GreenRoot 3,375 + Kite &amp; Key 225)
+   + Upgrade           +$2,600        $0           +$2,600     (Pixel Chai)
+   − Churn             −$1,750        $0           −$1,750     (Brightline)
+   ± Transfers           +$400     −$225             +$175     (Kite &amp; Key)
    ─────────────────  ────────    ─────────     ─────────────
-   MRR in Sep 2026     £3,040    £2,700            £5,740
+   MRR in Sep 2026     $3,800    $3,375            $7,175
 </pre>
 
 <p>Now compare with the naive "contract ended = churn, contract started = new" report that a rushed Monday spreadsheet produces:</p>
 
 <table border="1" cellpadding="10">
 <tr><th></th><th>Naive</th><th>Correct</th><th>Why</th></tr>
-<tr><td>Churned MRR 2026</td><td>£1,900 (K001 + K003 + K006)</td><td><b>£1,400</b> (Brightline only)</td><td>The upgrade and the transfer aren't losses</td></tr>
-<tr><td>New MRR 2026</td><td>£5,600 (K002 + K005 + K006 + K007)</td><td><b>£2,880</b></td><td>Pixel Chai's office and Kite &amp; Key's Soho plan aren't new customers</td></tr>
+<tr><td>Churned MRR 2026</td><td>$2,375 (K001 + K003 + K006)</td><td><b>$1,750</b> (Brightline only)</td><td>The upgrade and the transfer aren't losses</td></tr>
+<tr><td>New MRR 2026</td><td>$7,000 (K002 + K005 + K006 + K007)</td><td><b>$3,600</b></td><td>Pixel Chai's office and Kite &amp; Key's Soho plan aren't new customers</td></tr>
 <tr><td>Companies churned</td><td>3</td><td><b>1</b></td><td>Same answer as Chapter 11, exam question 7</td></tr>
 </table>
 
-<p>Both reports end at the same £5,740. Only the explanation differs, and the explanation is what leadership acts on. ⚠️ Two edge cases to agree with the client, not guess: (1) a company that leaves and returns after the gap window is "new" here, but they may prefer "reactivated"; (2) a short gap between contracts (end 31 Jul, start 3 Aug) is hidden by the gap window, which is usually what you want. Both belong to the board-pack definitions (Chapter 11, question 10).</p>
+<p>Both reports end at the same $7,175. Only the explanation differs, and the explanation is what leadership acts on. ⚠️ Two edge cases to agree with the client, not guess: (1) a company that leaves and returns after the gap window is "new" here, but they may prefer "reactivated"; (2) a short gap between contracts (end 31 Jul, start 3 Aug) is hidden by the gap window, which is usually what you want. Both belong to the board-pack definitions (Chapter 11, question 10).</p>
 
 <hr/>
 
@@ -249,11 +249,11 @@ from c
 │  MEMBERS        12   ▲ 0 vs last week                            │
 │  NET MOVEMENT   +8 year to date                                  │
 │  NOTICES IN      0 this week   ·  open notices: 0                │
-│  ENDING ≤90d     1 contract  (GreenRoot, RDG, £2,700, 31 Dec)    │
+│  ENDING ≤90d     1 contract  (GreenRoot, RDG, $3,375, 31 Dec)    │
 │                                                                  │
 │  BY SITE      members   joined  left  transfers in/out   MRR     │
-│  SOHO            6        0      0        0 / 0         £3,040   │
-│  RDG             6        0      0        0 / 0         £2,700   │
+│  SOHO            6        0      0        0 / 0         $3,800   │
+│  RDG             6        0      0        0 / 0         $3,375   │
 │                                                                  │
 │  RETENTION (YTD)  logo 67% · net revenue 133% · revenue churn 69%│
 │                                                                  │
@@ -287,14 +287,14 @@ from c
 -- tests/assert_mrr_bridge_reconciles.sql
 -- Fails if, for any month, last month's MRR + this month's events ≠ this month's MRR.
 with mrr as (
-  select month, sum(mrr_gbp) as mrr
+  select month, sum(mrr_usd) as mrr
   from {{ ref('fct_contract_month') }}
   group by 1
 ),
 moves as (
   select effective_month as month,      -- first month the change shows in MRR:
                                         -- the start month for 'new', the month after the end otherwise
-         sum(mrr_change_gbp) as change
+         sum(mrr_change_usd) as change
   from {{ ref('fct_contract_events') }}
   group by 1
 )
@@ -310,7 +310,7 @@ where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
 <tr><td>Bridge reconciles (above)</td><td>A classification rule that drops or double-counts money</td></tr>
 <tr><td><code>accepted_values</code> on <code>movement_type</code></td><td>A new kind of change nobody classified</td></tr>
 <tr><td>Source freshness on Nexudus</td><td>A stalled sync. The report would show "no change" when really there's no data.</td></tr>
-<tr><td>MRR vs NetSuite within tolerance</td><td>Drift between contracted and recognised revenue (a small gap is expected, for example Soho's −£90 credit memo, but not a big one)</td></tr>
+<tr><td>MRR vs NetSuite within tolerance</td><td>Drift between contracted and recognised revenue (a small gap is expected, for example Soho's −$112.50 credit memo, but not a big one)</td></tr>
 <tr><td>No test/staff accounts</td><td>Inflated member counts (Chapter 11, question 9)</td></tr>
 </table>
 
@@ -330,7 +330,7 @@ where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
 <tr><td>Semantic layer</td><td>✅ Metric definitions</td><td>Add <code>net_member_movements</code>, <code>logo_retention</code>, <code>nrr</code>, <code>revenue_churn</code></td></tr>
 <tr><td>KPI dictionary &amp; business context</td><td>✅</td><td>Add the gap-window rule and retention definitions</td></tr>
 <tr><td>Proactive digests</td><td>✅ Chapter 24</td><td>One new digest template</td></tr>
-<tr><td>Golden-question tests</td><td>✅ Chapter 25</td><td>Add retention questions with hand-checked answers, for example "MRR churned in 2026 = £1,400, not £1,900"</td></tr>
+<tr><td>Golden-question tests</td><td>✅ Chapter 25</td><td>Add retention questions with hand-checked answers, for example "MRR churned in 2026 = $1,750, not $2,375"</td></tr>
 <tr><td>Security &amp; SSO</td><td>✅</td><td>Nothing (still leadership only)</td></tr>
 </table>
 
@@ -368,7 +368,7 @@ where coalesce(prv.mrr, 0) + coalesce(mv.change, 0) != cur.mrr
 <tr><td><b>Gap window</b></td><td>A business decision, recorded in the KPI dictionary.</td></tr>
 <tr><td><b>Two lenses</b></td><td>A transfer is neutral for the business, a loss for one site and a gain for another.</td></tr>
 <tr><td><b>Retention</b></td><td>Logo vs net revenue retention can tell opposite stories. Report both, labelled.</td></tr>
-<tr><td><b>Lab bridge</b></td><td>£2,040 → £5,740. Real churn £1,400, not the naive £1,900.</td></tr>
+<tr><td><b>Lab bridge</b></td><td>$2,550 → $7,175. Real churn $1,750, not the naive $2,375.</td></tr>
 <tr><td><b>Tests gate publishing</b></td><td>The bridge must reconcile and sources must be fresh, or the report doesn't go out.</td></tr>
 <tr><td><b>Reuse</b></td><td>One new model + metrics + a digest template. No new infrastructure.</td></tr>
 </table>

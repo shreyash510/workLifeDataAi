@@ -202,7 +202,7 @@ raw_act365.door_events                276 rows
 <p>We could have let BigQuery guess the types ("autodetect"). We deliberately didn't. Look at <code>plans.csv</code>:</p>
 
 <pre>
-plan_code,plan_name,type,monthly_price_gbp,...
+plan_code,plan_name,type,monthly_price_usd,...
 P-HOT,Unlimited Coworking,coworking,320,...
 P-FLEX10,Flex 10 Days,coworking,180,...
 P-OFFICE,Private Office,office,priced per office,...     ← text in a price column!
@@ -212,8 +212,8 @@ P-OFFICE,Private Office,office,priced per office,...     ← text in a price col
 
 <table border="1" cellpadding="10">
 <tr><th>Layer</th><th>Job</th><th>Example</th></tr>
-<tr><td>Raw</td><td>Accept anything, change nothing</td><td><code>monthly_price_gbp = 'priced per office'</code> (STRING)</td></tr>
-<tr><td>Staging</td><td>Cast with <code>SAFE_CAST</code>, turn junk into <code>NULL</code>, and <b>test</b> it</td><td><code>SAFE_CAST(monthly_price_gbp AS NUMERIC)</code> → <code>NULL</code> for P-OFFICE</td></tr>
+<tr><td>Raw</td><td>Accept anything, change nothing</td><td><code>monthly_price_usd = 'priced per office'</code> (STRING)</td></tr>
+<tr><td>Staging</td><td>Cast with <code>SAFE_CAST</code>, turn junk into <code>NULL</code>, and <b>test</b> it</td><td><code>SAFE_CAST(monthly_price_usd AS NUMERIC)</code> → <code>NULL</code> for P-OFFICE</td></tr>
 </table>
 
 <p>Check what landed:</p>
@@ -381,7 +381,7 @@ if __name__ == "__main__":
 SELECT
   id                                             AS contract_id,
   JSON_VALUE(payload, '$.CoworkerId')            AS member_id,
-  SAFE_CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC) AS monthly_price_gbp,
+  SAFE_CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC) AS monthly_price_usd,
   updated_on
 FROM raw_nexudus_api.coworker_contracts
 WHERE TRUE
@@ -461,21 +461,21 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_on DESC, _loaded_at 
 -- 1. A pretend append-only table: 3 loads, 2 versions of K002, 1 of K004
 CREATE OR REPLACE TABLE raw_nexudus.contracts_api_sim AS
 SELECT 'K002' AS id, TIMESTAMP '2026-03-14 10:00:00' AS updated_on,
-       '{"Id":"K002","CoworkerId":"M001","Price":2600}' AS payload,
+       '{"Id":"K002","CoworkerId":"M001","Price":3250}' AS payload,
        TIMESTAMP '2026-03-15 02:00:00' AS _loaded_at
 UNION ALL SELECT 'K002', TIMESTAMP '2026-03-20 16:30:00',
-       '{"Id":"K002","CoworkerId":"M001","Price":2400}',          -- discount agreed (made up timing)
+       '{"Id":"K002","CoworkerId":"M001","Price":3000}',          -- discount agreed (made up timing)
        TIMESTAMP '2026-03-21 02:00:00'
 UNION ALL SELECT 'K002', TIMESTAMP '2026-03-20 16:30:00',          -- same version again (>= boundary)
-       '{"Id":"K002","CoworkerId":"M001","Price":2400}',
+       '{"Id":"K002","CoworkerId":"M001","Price":3000}',
        TIMESTAMP '2026-03-22 02:00:00'
 UNION ALL SELECT 'K004', TIMESTAMP '2025-01-15 09:00:00',
-       '{"Id":"K004","CoworkerId":"M007","Price":320}',
+       '{"Id":"K004","CoworkerId":"M007","Price":400}',
        TIMESTAMP '2026-03-15 02:00:00';
 
 -- 2. Naive sum: WRONG (counts K002 three times)
 SELECT SUM(CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC)) AS naive_mrr
-FROM raw_nexudus.contracts_api_sim;                                -- 7,720
+FROM raw_nexudus.contracts_api_sim;                                -- 9,650
 
 -- 3. De-duplicated: latest version per id. RIGHT
 SELECT SUM(CAST(JSON_VALUE(payload, '$.Price') AS NUMERIC)) AS mrr
@@ -484,10 +484,10 @@ FROM (
   FROM raw_nexudus.contracts_api_sim
   WHERE TRUE
   QUALIFY ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_on DESC, _loaded_at DESC) = 1
-);                                                                  -- 2,720 = 2,400 + 320
+);                                                                  -- 3,400 = 3,000 + 400
 </pre>
 
-<p><code>CREATE OR REPLACE TABLE ... AS SELECT</code> is DDL, so it runs in the sandbox. Notice how easy it is to be wrong by £5,000 a month with one missing line. That <code>QUALIFY</code> belongs in every staging model on append-only data.</p>
+<p><code>CREATE OR REPLACE TABLE ... AS SELECT</code> is DDL, so it runs in the sandbox. Notice how easy it is to be wrong by $6,250 a month with one missing line. That <code>QUALIFY</code> belongs in every staging model on append-only data.</p>
 
 <hr/>
 

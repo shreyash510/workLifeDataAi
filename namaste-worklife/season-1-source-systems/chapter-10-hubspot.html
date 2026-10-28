@@ -72,7 +72,7 @@
 <tr><th>Concept</th><th>Meaning</th><th>Mini Work.Life example</th></tr>
 <tr><td><b>Contact</b></td><td>A person. Unique by email.</td><td>Priya Sharma</td></tr>
 <tr><td><b>Company</b></td><td>An organisation. Often matched by domain.</td><td>Pixel Chai Studio (pixelchai.co.uk)</td></tr>
-<tr><td><b>Deal</b></td><td>An opportunity with amount, stage, close date</td><td>"Ortho Robotics – Office 202", £4,200</td></tr>
+<tr><td><b>Deal</b></td><td>An opportunity with amount, stage, close date</td><td>"Ortho Robotics – Office 202", $5,250</td></tr>
 <tr><td><b>Pipeline</b></td><td>A set of stages a deal moves through</td><td>"New Business", "Renewals"</td></tr>
 <tr><td><b>Association</b></td><td>A link between records (many-to-many)</td><td>Priya ↔ Pixel Chai ↔ Office 101 deal</td></tr>
 <tr><td><b>Property</b></td><td>A field. Can be custom.</td><td><code>nexudus_customer_id</code>, <code>home_site</code></td></tr>
@@ -104,7 +104,7 @@
 
 <ol>
     <li>Sign up for the free HubSpot CRM with a personal email.</li>
-    <li>Skip the website tracking code for now. Set currency to <b>GBP</b> and time zone <b>Europe/London</b>.</li>
+    <li>Skip the website tracking code for now. Set currency to <b>USD</b> and time zone <b>Europe/London</b>.</li>
     <li>Explore: <b>CRM → Contacts / Companies / Deals</b>. Open <b>Settings → Properties</b> and look at how many built-in properties exist. Each one is a potential warehouse column.</li>
 </ol>
 
@@ -159,7 +159,7 @@
 
 <ol>
     <li>Open <b>Deals</b> in board view. Drag Ortho Robotics from "Tour Done" to "Proposal Sent". Watch the stage history.</li>
-    <li>Create a deal view: <b>Renewals pipeline, close date in next 90 days</b>. You'll see GreenRoot (£2,800, due 30 Nov).</li>
+    <li>Create a deal view: <b>Renewals pipeline, close date in next 90 days</b>. You'll see GreenRoot ($3,500, due 30 Nov).</li>
     <li>Create a simple report: deal amount by stage, by pipeline.</li>
     <li>Add a <b>note</b> to GreenRoot: "Door data shows attendance dropped to ~23% in late Sep (Chapter 08)". This is the "context pack" idea from Phase 2, done by hand.</li>
 </ol>
@@ -168,7 +168,7 @@
 
 <h3>10. The Nexudus ↔ HubSpot Sync</h3>
 
-<p>Nexudus has a native HubSpot integration (listed at £50 per location per month at the time of writing). Per Nexudus's docs (vendor facts; whether Work.Life uses this integration or another route is a question for the client):</p>
+<p>Nexudus has a native HubSpot integration (listed at $62.50 per location per month at the time of writing). Per Nexudus's docs (vendor facts; whether Work.Life uses this integration or another route is a question for the client):</p>
 
 <table border="1" cellpadding="10">
 <tr><th>HubSpot</th><th>↔</th><th>Nexudus</th><th>Direction</th></tr>
@@ -277,7 +277,7 @@ for c in fetch_all():
 <tr><td>Lifecycle only goes forward</td><td>Churned members still "Customer"</td><td>Use member_status derived from Nexudus contracts</td></tr>
 <tr><td>Dropdown value vs label</td><td>API returns internal value (<code>hybrid_remote</code>), UI shows label ("Hybrid / remote")</td><td>Load the property definitions too, map in staging</td></tr>
 <tr><td>Many-to-many associations</td><td>A contact can link to 2 companies; a deal to 3 contacts</td><td>Pick a "primary" association rule; don't double count deal amounts</td></tr>
-<tr><td>Deal amount meaning</td><td>Is £4,200 monthly or contract total?</td><td>Define it! (Ours = monthly.) Put it in the KPI dictionary.</td></tr>
+<tr><td>Deal amount meaning</td><td>Is $5,250 monthly or contract total?</td><td>Define it! (Ours = monthly.) Put it in the KPI dictionary.</td></tr>
 <tr><td>Timestamps</td><td>Often UTC / epoch milliseconds</td><td>Convert once in staging</td></tr>
 <tr><td>Two-way sync loops</td><td>A change bounces between HubSpot and Nexudus</td><td>Field-level ownership (section 11)</td></tr>
 </table>

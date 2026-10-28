@@ -31,9 +31,9 @@
 
 <pre>
    Board meeting, slide 3.
-   CEO: "The assistant says Soho's September contribution was +£4,175."
+   CEO: "The assistant says Soho's September contribution was +$5,218.75."
 
-   Finance: "It was −£4,175. The sign is wrong."
+   Finance: "It was −$5,218.75. The sign is wrong."
 </pre>
 
 <p>One wrong sign, in the one room that matters, and the brief's prediction comes true: <i>trust is lost</i>. Nobody remembers the 95%.</p>
@@ -46,8 +46,8 @@
 
 <table border="1" cellpadding="10">
 <tr><th>Type</th><th>Example</th><th>Danger</th></tr>
-<tr><td><b>1. Confidently wrong</b></td><td>"Soho revenue was £3,565" (invoiced, not recognised), no warning note</td><td>🔴 Worst. Destroys trust.</td></tr>
-<tr><td><b>2. Right number, wrong definition shown</b></td><td>Gives MRR (£3,040) and calls it "revenue"</td><td>🔴 Same as above, in disguise</td></tr>
+<tr><td><b>1. Confidently wrong</b></td><td>"Soho revenue was $4,456.25" (invoiced, not recognised), no warning note</td><td>🔴 Worst. Destroys trust.</td></tr>
+<tr><td><b>2. Right number, wrong definition shown</b></td><td>Gives MRR ($3,800) and calls it "revenue"</td><td>🔴 Same as above, in disguise</td></tr>
 <tr><td><b>3. Right number, wrong period</b></td><td>"Latest" quietly means September while September is still open (or August because September isn't loaded yet), and the answer doesn't say which</td><td>🟠 Subtle, common</td></tr>
 <tr><td><b>4. Unhelpful refusal</b></td><td>"I can't answer that" to "What's Soho's revenue?"</td><td>🟡 Annoying, but safe</td></tr>
 </table>
@@ -74,9 +74,9 @@
     metric: site_contribution
     filters: { site: SOHO, month: 2026-09 }
     values:
-      contribution_gbp: -4175
-      contribution_after_central_gbp: -5175
-    tolerance_gbp: 0                     # Finance figure: exact
+      contribution_usd: -5218.75
+      contribution_after_central_usd: -6468.75
+    tolerance_usd: 0                     # Finance figure: exact
     must_mention: ["before central costs", "after central costs"]
     must_state_period: true
   verified_by: Finance                   # a person/role, not "us"
@@ -106,13 +106,13 @@
 <tr><th>#</th><th>Question (Ch 11)</th><th>Expected</th><th>Tier</th><th>Tolerance / must mention</th></tr>
 <tr><td>1</td><td>Active members &amp; companies per site</td><td>Soho 6 / 3; Reading 6 / 1</td><td>1</td><td>Exact</td></tr>
 <tr><td>2</td><td>Soho desk &amp; office occupancy</td><td>17.6%; 33%</td><td>1</td><td>±0.1 pt; must say which definition</td></tr>
-<tr><td>3</td><td>MRR per site (Sep)</td><td>Soho £3,040; Reading £2,700</td><td>1</td><td>Exact; must not call it "revenue"</td></tr>
-<tr><td>4</td><td>Soho recognised revenue, and why ≠ Nexudus</td><td>£3,475 vs £3,565; £90 credit memo</td><td>2</td><td>Exact; must mention the credit</td></tr>
-<tr><td>5</td><td>Is Soho profitable? Why not?</td><td>−£4,175 / −£5,175; empty offices + hot desks</td><td>1 + 2</td><td>Exact; both bases; names drivers</td></tr>
-<tr><td>6</td><td>Soho vs budget</td><td>−£5,725 (−62%); costs on budget</td><td>1</td><td>±£1; ±0.5 pt</td></tr>
-<tr><td>7</td><td>Members churned in 2026</td><td>1 company, 2 people, £1,400 MRR</td><td>1</td><td>Exact; must NOT count upgrade/transfer</td></tr>
+<tr><td>3</td><td>MRR per site (Sep)</td><td>Soho $3,800; Reading $3,375</td><td>1</td><td>Exact; must not call it "revenue"</td></tr>
+<tr><td>4</td><td>Soho recognised revenue, and why ≠ Nexudus</td><td>$4,343.75 vs $4,456.25; $112.50 credit memo</td><td>2</td><td>Exact; must mention the credit</td></tr>
+<tr><td>5</td><td>Is Soho profitable? Why not?</td><td>−$5,218.75 / −$6,468.75; empty offices + hot desks</td><td>1 + 2</td><td>Exact; both bases; names drivers</td></tr>
+<tr><td>6</td><td>Soho vs budget</td><td>−$7,156.25 (−62%); costs on budget</td><td>1</td><td>±$1.25; ±0.5 pt</td></tr>
+<tr><td>7</td><td>Members churned in 2026</td><td>1 company, 2 people, $1,750 MRR</td><td>1</td><td>Exact; must NOT count upgrade/transfer</td></tr>
 <tr><td>8</td><td>Why did Brightline leave?</td><td>"Moving to hybrid; downsizing to home working"</td><td>2</td><td>Meaning match</td></tr>
-<tr><td>9</td><td>Open pipeline &amp; at-risk renewal</td><td>£7,000/month; GreenRoot</td><td>2</td><td>Exact; names GreenRoot</td></tr>
+<tr><td>9</td><td>Open pipeline &amp; at-risk renewal</td><td>$8,750/month; GreenRoot</td><td>2</td><td>Exact; names GreenRoot</td></tr>
 <tr><td>10</td><td>Brick Lane utilisation (Sep)</td><td>9 / 220 = 4.1%</td><td>2</td><td>±0.1 pt</td></tr>
 </table>
 
@@ -174,7 +174,7 @@
 <pre>
    SOURCE OF "ACTUALS"                       HOW WE USE IT
    ───────────────────                       ─────────────
-   Closed months in NetSuite         ──►    Tier 1 money answers (exact, £0 tolerance)
+   Closed months in NetSuite         ──►    Tier 1 money answers (exact, $0 tolerance)
    Past board packs (as presented)   ──►    Tier 1 KPIs leadership already trusts
    Nexudus contract snapshots        ──►    Members, MRR, occupancy at month end
    Hand-verified diagnostic answers  ──►    Tier 2 (Finance/Ops write the "why")

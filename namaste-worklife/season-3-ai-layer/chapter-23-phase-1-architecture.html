@@ -130,7 +130,7 @@
 -- models/ai_safe/ai_safe__fct_contract_month.sql   (as in Chapter 17)
 {{ config(alias = 'fct_contract_month') }}
 select month_start, month_end, site_code, contract_id, company_key,
-       plan_code, resource_code, is_office, desks, mrr_gbp
+       plan_code, resource_code, is_office, desks, mrr_usd
     -- no member_key: questions are about companies and sites, not people
 from {{ ref('fct_contract_month') }}
 </pre>
@@ -153,7 +153,7 @@ from {{ ref('fct_contract_month') }}
 <tr><td>8</td><td>⑦ Log</td><td>Question, tools called, metrics, SQL, tokens, bytes, latency and user written to <code>ai_logs</code></td><td>async</td></tr>
 </table>
 
-<p>Total: roughly <b>5 to 12 seconds</b>. The answer card looks like the one at the end of Chapter 20: −£4,175 before central costs, −£5,175 after, driven by empty Offices 102 and 103 and unsold hot desks, with definitions, period status and "Show SQL".</p>
+<p>Total: roughly <b>5 to 12 seconds</b>. The answer card looks like the one at the end of Chapter 20: −$5,218.75 before central costs, −$6,468.75 after, driven by empty Offices 102 and 103 and unsold hot desks, with definitions, period status and "Show SQL".</p>
 
 <hr/>
 
@@ -207,7 +207,7 @@ from {{ ref('fct_contract_month') }}
 <tr><td><b>Safe data only</b></td><td>A written list of allowed columns in the copy models; PII dropped or aggregated.</td></tr>
 <tr><td><b>People data excluded</b></td><td>No HR connector, dataset or credentials. Payroll only as site totals.</td></tr>
 <tr><td><b>Accuracy is a launch gate</b></td><td>Golden set in <code>ai_eval</code>, run nightly by ⑧. Go-live blocked until the gate passes: tier 1 (board-pack KPIs) 100% correct on the last 3 closed months, tier 2 (diagnostic) at least 90% with every miss a refusal or warning note, tier 3 (must-refuse) 100% (Ch 25).</td></tr>
-<tr><td><b>Cost conscious</b></td><td>Serverless, idle ≈ £0, byte caps, token budgets per user (Ch 27).</td></tr>
+<tr><td><b>Cost conscious</b></td><td>Serverless, idle ≈ $0, byte caps, token budgets per user (Ch 27).</td></tr>
 <tr><td><b>Secure by design</b></td><td>① SSO + allow-list; read-only service account on one dataset; audit log (Ch 26).</td></tr>
 <tr><td><b>Documented, handover ready</b></td><td>Everything in git: dbt, definitions, context, infrastructure-as-code, runbooks (Ch 36).</td></tr>
 </table>

@@ -31,13 +31,13 @@
 <p>In the lab file both sheets sit together in one table, one row per site per month:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>site_code</th><th>month</th><th>sellable_desks</th><th>budget_revenue_gbp</th><th>budget_desk_occupancy</th><th>budget_direct_costs_gbp</th><th>notes</th></tr>
-<tr><td>SOHO</td><td>2026-07</td><td>34</td><td>9000</td><td>0.85</td><td>7600</td><td></td></tr>
-<tr><td>SOHO</td><td>2026-08</td><td>34</td><td>9000</td><td>0.85</td><td>7600</td><td>August is quiet - holidays</td></tr>
-<tr><td>SOHO</td><td>2026-09</td><td>34</td><td>9200</td><td>0.85</td><td>7650</td><td></td></tr>
-<tr><td>RDG</td><td>2026-07</td><td>31</td><td>3100</td><td>0.20</td><td>2400</td><td></td></tr>
-<tr><td>RDG</td><td>2026-08</td><td>31</td><td>3100</td><td>0.20</td><td>2400</td><td></td></tr>
-<tr><td>RDG</td><td>2026-09</td><td>31</td><td>3200</td><td>0.20</td><td>2450</td><td>Ortho Robotics could fill O202 from Nov</td></tr>
+<tr><th>site_code</th><th>month</th><th>sellable_desks</th><th>budget_revenue_usd</th><th>budget_desk_occupancy</th><th>budget_direct_costs_usd</th><th>notes</th></tr>
+<tr><td>SOHO</td><td>2026-07</td><td>34</td><td>11250</td><td>0.85</td><td>9500</td><td></td></tr>
+<tr><td>SOHO</td><td>2026-08</td><td>34</td><td>11250</td><td>0.85</td><td>9500</td><td>August is quiet - holidays</td></tr>
+<tr><td>SOHO</td><td>2026-09</td><td>34</td><td>11500</td><td>0.85</td><td>9562.50</td><td></td></tr>
+<tr><td>RDG</td><td>2026-07</td><td>31</td><td>3875</td><td>0.20</td><td>3000</td><td></td></tr>
+<tr><td>RDG</td><td>2026-08</td><td>31</td><td>3875</td><td>0.20</td><td>3000</td><td></td></tr>
+<tr><td>RDG</td><td>2026-09</td><td>31</td><td>4000</td><td>0.20</td><td>3062.50</td><td>Ortho Robotics could fill O202 from Nov</td></tr>
 </table>
 
 <p>💡 <code>sellable_desks</code> is the capacity part (operations). The <code>budget_...</code> columns are the budget part (finance). ❓ Your company may keep them as two tabs or two files; the rules below are the same either way. If one file has two owners, agree who may edit which columns.</p>
@@ -66,7 +66,7 @@
 <tr><td>2</td><td><b>Site from the drop-down list only</b></td><td>"Soho", "soho ", "Soho site (new)"</td><td>SOHO</td></tr>
 <tr><td>3</td><td><b>One row per site per month</b></td><td>Two rows for SOHO 2026-09, or one row covering "Jul–Sep"</td><td>Exactly one row for each site and month</td></tr>
 <tr><td>4</td><td><b>Month in the agreed format</b></td><td>"Sept 26", "09/2026"</td><td>2026-09 (or whatever the template says; ❓)</td></tr>
-<tr><td>5</td><td><b>Numbers as numbers, not text</b></td><td>"£9,200", "9.2k", "85%" typed as text, "TBC"</td><td>9200 and 0.85. Leave a cell empty if unknown, and say why in <code>notes</code>.</td></tr>
+<tr><td>5</td><td><b>Numbers as numbers, not text</b></td><td>"$11,500", "9.2k", "85%" typed as text, "TBC"</td><td>11500 and 0.85. Leave a cell empty if unknown, and say why in <code>notes</code>.</td></tr>
 <tr><td>6</td><td><b>No merged cells</b></td><td>Merging the SOHO cells across three months to look tidy</td><td>Repeat SOHO on every row</td></tr>
 <tr><td>7</td><td><b>No totals, subtotals or blank rows inside the table</b></td><td>A "Total Soho" row under September</td><td>Totals go on a separate tab, or in the dashboard</td></tr>
 <tr><td>8</td><td><b>Do not type over a formula</b> "just this month"</td><td>Typing 9500 over a calculated cell</td><td>Change the inputs, or write a note and tell the owner</td></tr>
@@ -134,8 +134,8 @@
 <tr><th>Mistake</th><th>What happens</th></tr>
 <tr><td>Column renamed or moved</td><td>The data load stops, or loads the wrong column. Dashboards show yesterday's numbers or blanks.</td></tr>
 <tr><td>"Soho " with a space</td><td>That row matches no site and silently drops out. Soho's budget looks too low.</td></tr>
-<tr><td>Two rows for the same site and month</td><td>The budget is counted twice. Soho's September budget becomes £18,400.</td></tr>
-<tr><td>"£9,200" typed as text</td><td>Read as blank or rejected. "Revenue vs budget" goes missing.</td></tr>
+<tr><td>Two rows for the same site and month</td><td>The budget is counted twice. Soho's September budget becomes $23,000.</td></tr>
+<tr><td>"$11,500" typed as text</td><td>Read as blank or rejected. "Revenue vs budget" goes missing.</td></tr>
 <tr><td>A totals row inside the table</td><td>Counted as if it were a site. Totals double.</td></tr>
 <tr><td>File moved or copied</td><td>The load reads the old file. Your changes never reach the dashboards.</td></tr>
 </table>
@@ -152,7 +152,7 @@
    [ ] Header row untouched (no renamed, moved, new or deleted columns)
    [ ] Every site code picked from the drop-down
    [ ] Exactly one row per site per month
-   [ ] Every number is a number (no £, no %, no "TBC")
+   [ ] Every number is a number (no $, no %, no "TBC")
    [ ] No merged cells, no totals or blank rows inside the table
    [ ] Past months unchanged (unless finance asked for a correction)
    [ ] Reason written in notes for any change
@@ -166,11 +166,11 @@
 <p>Use a <b>copy</b> of <code>excel_capacity_budget_2026.csv</code> in a training folder, never the real shared file.</p>
 
 <ol>
-    <li>What is Soho's total budget revenue for July to September? (Answer: 9,000 + 9,000 + 9,200 = £27,200.) And Reading's? (3,100 + 3,100 + 3,200 = £9,400.)</li>
+    <li>What is Soho's total budget revenue for July to September? (Answer: 11,250 + 11,250 + 11,500 = $34,000.) And Reading's? (3,875 + 3,875 + 4,000 = $11,750.)</li>
     <li>Soho's budget occupancy is 0.85 of 34 sellable desks. How many desks is that? (About 29.) Soho's actual September occupancy was 6 of 34. What would you ask finance about this budget?</li>
     <li>Add the rows for October 2026 for both sites, following every rule. Use made-up numbers. Check you added exactly 2 rows.</li>
     <li>Made-up change: Reading takes 1 desk out from November. Which rows do you change, and which do you leave alone? Who do you tell?</li>
-    <li>Break it on purpose (in your copy only): type "£9,200" as text in one cell, and add a "Total" row. Write down how each would hurt the dashboards.</li>
+    <li>Break it on purpose (in your copy only): type "$11,500" as text in one cell, and add a "Total" row. Write down how each would hurt the dashboards.</li>
 </ol>
 
 <hr/>

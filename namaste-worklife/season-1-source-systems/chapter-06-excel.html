@@ -72,7 +72,7 @@
 
 <p>Click inside each table → <b>Table Design → Table Name</b>. Name them: <code>Contracts</code>, <code>Resources</code>, <code>Members</code>, <code>Companies</code>, <code>Bookings</code>, <code>GL</code>, <code>Budget</code>.</p>
 
-<p>Why? Because <code>=SUM(Contracts[monthly_price_gbp])</code> is readable and grows automatically. <code>=SUM(I2:I8)</code> silently breaks the day someone adds row 9. Structured references are the spreadsheet version of column names in SQL.</p>
+<p>Why? Because <code>=SUM(Contracts[monthly_price_usd])</code> is readable and grows automatically. <code>=SUM(I2:I8)</code> silently breaks the day someone adds row 9. Structured references are the spreadsheet version of column names in SQL.</p>
 
 <hr/>
 
@@ -122,7 +122,7 @@
 
 <pre>
 MRR (B2):
-=SUMIFS(Contracts[monthly_price_gbp], Contracts[site_code], A2, Contracts[is_active], TRUE)
+=SUMIFS(Contracts[monthly_price_usd], Contracts[site_code], A2, Contracts[is_active], TRUE)
 
 Desks contracted (C2):
 =SUMIFS(Contracts[desks], Contracts[site_code], A2, Contracts[is_active], TRUE)
@@ -144,8 +144,8 @@ Total offices (G2):
 
 <table border="1" cellpadding="10">
 <tr><th>Site</th><th>MRR</th><th>Desks contracted</th><th>Sellable</th><th>Desk occupancy</th><th>Office occupancy</th></tr>
-<tr><td>SOHO</td><td>£3,040</td><td>6 (4 office + 2 hot)</td><td>34</td><td>17.6%</td><td>1 / 3 = 33%</td></tr>
-<tr><td>RDG</td><td>£2,700</td><td>6</td><td>31</td><td>19.4%</td><td>1 / 2 = 50%</td></tr>
+<tr><td>SOHO</td><td>$3,800</td><td>6 (4 office + 2 hot)</td><td>34</td><td>17.6%</td><td>1 / 3 = 33%</td></tr>
+<tr><td>RDG</td><td>$3,375</td><td>6</td><td>31</td><td>19.4%</td><td>1 / 2 = 50%</td></tr>
 </table>
 
 <p>Now count <b>active members</b>. This is harder than it looks: contracts point to <i>one</i> member (the contract holder), but Pixel Chai has 4 people. Members belong to companies, and companies hold contracts. Try:</p>
@@ -170,18 +170,18 @@ Active members at SOHO (people in those companies):
 
 <pre>
 Actual revenue SOHO (H2):
-=SUMIFS(GL[amount_gbp], GL[location], "Soho", GL[account_type], "Income")
-   → £3,475
+=SUMIFS(GL[amount_usd], GL[location], "Soho", GL[account_type], "Income")
+   → $4,343.75
 
 Actual direct costs SOHO (I2):  (accounts 5000-5999 = site costs)
-=SUMIFS(GL[amount_gbp], GL[location], "Soho", GL[account], "&gt;=5000", GL[account], "&lt;6000")
-   → £7,650
+=SUMIFS(GL[amount_usd], GL[location], "Soho", GL[account], "&gt;=5000", GL[account], "&lt;6000")
+   → $9,562.50
 
 Budget revenue SOHO (J2):
-=XLOOKUP("SOHO2026-09", Budget[site_code] &amp; Budget[month], Budget[budget_revenue_gbp])
-   → £9,200
+=XLOOKUP("SOHO2026-09", Budget[site_code] &amp; Budget[month], Budget[budget_revenue_usd])
+   → $11,500
 
-Variance (K2):  =H2 - J2   → −£5,725   (−62%)
+Variance (K2):  =H2 - J2   → −$7,156.25   (−62%)
 </pre>
 
 <p>⚠️ <b>Did you notice?</b> The GL says <code>location = "Soho"</code> but the budget says <code>site_code = "SOHO"</code>. Two systems, two spellings for the same site. You needed a <b>mapping</b> in your head. In the warehouse we write that mapping down as a table (<code>dim_site</code>). That is "master data", and it's one of the most valuable things in the whole project.</p>
@@ -194,29 +194,29 @@ Variance (K2):  =H2 - J2   → −£5,725   (−62%)
     <li>Click inside the <code>GL</code> table → <b>Insert → PivotTable</b>.</li>
     <li>Rows: <code>account_type</code>, then <code>account_name</code>.</li>
     <li>Columns: <code>location</code>.</li>
-    <li>Values: Sum of <code>amount_gbp</code>.</li>
+    <li>Values: Sum of <code>amount_usd</code>.</li>
 </ol>
 
 <pre>
                          Reading       Soho
    Income
-     Office Revenue        2,700      2,400
-     Coworking Revenue         -        640
-     Meeting Room Revenue    200        435   ← 525 billed − 90 credit
+     Office Revenue        3,375      3,000
+     Coworking Revenue         -        800
+     Meeting Room Revenue    250        543.75   ← 656.25 billed − 112.50 credit
    Expense
-     Rent                  1,300      4,500
-     Business Rates          250        900
-     Service Charge          150        400
-     Utilities               200        350
-     Cleaning                150        300
-     Site Staff              400      1,200
-     Central Overheads       500      1,000
+     Rent                  1,625      5,625
+     Business Rates          312.50        1,125
+     Service Charge          187.50        500
+     Utilities               250        437.50
+     Cleaning                187.50        375
+     Site Staff              500      1,500
+     Central Overheads       625      1,250
 
-   Contribution (before central)   +450     −4,175
-   After central costs              −50     −5,175
+   Contribution (before central)   +562.50     −5,218.75
+   After central costs              −62.50     −6,468.75
 </pre>
 
-<p>So: <b>is Soho profitable?</b> No. <b>Why?</b> Look back at Lab 6.4: Office 102 (8 desks, £5,000 list) has been empty all year and Office 103 has been empty since Brightline left. The costs are fixed, so empty offices go straight to the bottom line. Just like Chapter 01 said. You just did the leadership team's question by hand. 🎯</p>
+<p>So: <b>is Soho profitable?</b> No. <b>Why?</b> Look back at Lab 6.4: Office 102 (8 desks, $6,250 list) has been empty all year and Office 103 has been empty since Brightline left. The costs are fixed, so empty offices go straight to the bottom line. Just like Chapter 01 said. You just did the leadership team's question by hand. 🎯</p>
 
 <p>And Reading? Profitable <i>before</i> central costs, slightly loss-making <i>after</i>. Same question, two honest answers. Context matters.</p>
 
@@ -291,7 +291,7 @@ Variance (K2):  =H2 - J2   → −£5,725   (−62%)
 <tr><td><b>Power Query</b></td><td>A mini ETL pipeline on your laptop.</td></tr>
 <tr><td><b>Active contract</b></td><td>start ≤ date AND (end is blank OR end ≥ date).</td></tr>
 <tr><td><b>Master data</b></td><td>"Soho" vs "SOHO": you need one site mapping table.</td></tr>
-<tr><td><b>Soho result</b></td><td>MRR £3,040, revenue £3,475, costs £7,650 → losing money because 2 offices are empty.</td></tr>
+<tr><td><b>Soho result</b></td><td>MRR $3,800, revenue $4,343.75, costs $9,562.50 → losing money because 2 offices are empty.</td></tr>
 </table>
 
 <hr/>

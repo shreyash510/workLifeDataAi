@@ -1,4 +1,4 @@
-plan_code,plan_name,type,monthly_price_gbp,min_term_months,includes
-P-HOT,Unlimited Coworking,coworking,320,1,Any free hot desk Mon-Fri; meeting rooms charged per hour
-P-FLEX10,Flex 10 Days,coworking,180,1,10 day passes per month at any site; meeting rooms charged per hour
+plan_code,plan_name,type,monthly_price_usd,min_term_months,includes
+P-HOT,Unlimited Coworking,coworking,400,1,Any free hot desk Mon-Fri; meeting rooms charged per hour
+P-FLEX10,Flex 10 Days,coworking,225,1,10 day passes per month at any site; meeting rooms charged per hour
 P-OFFICE,Private Office,office,priced per office,3,Dedicated lockable office; meeting rooms charged per hour

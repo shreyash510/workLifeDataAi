@@ -1,11 +1,11 @@
-resource_code,site_code,resource_type,name,capacity_people,list_price_gbp,price_unit
-SOHO-O101,SOHO,private_office,Office 101,4,2600,month
-SOHO-O102,SOHO,private_office,Office 102,8,5000,month
-SOHO-O103,SOHO,private_office,Office 103,2,1400,month
-SOHO-HOT,SOHO,hot_desk_area,Soho Coworking Floor,20,320,member/month
-SOHO-MR-BRICK,SOHO,meeting_room,Brick Lane,8,45,hour
-SOHO-MR-CARN,SOHO,meeting_room,Carnaby,4,30,hour
-RDG-O201,RDG,private_office,Office 201,6,2700,month
-RDG-O202,RDG,private_office,Office 202,10,4200,month
-RDG-HOT,RDG,hot_desk_area,Reading Coworking Floor,15,320,member/month
-RDG-MR-THAMES,RDG,meeting_room,Thames,10,40,hour
+resource_code,site_code,resource_type,name,capacity_people,list_price_usd,price_unit
+SOHO-O101,SOHO,private_office,Office 101,4,3250,month
+SOHO-O102,SOHO,private_office,Office 102,8,6250,month
+SOHO-O103,SOHO,private_office,Office 103,2,1750,month
+SOHO-HOT,SOHO,hot_desk_area,Soho Coworking Floor,20,400,member/month
+SOHO-MR-BRICK,SOHO,meeting_room,Brick Lane,8,56.25,hour
+SOHO-MR-CARN,SOHO,meeting_room,Carnaby,4,37.5,hour
+RDG-O201,RDG,private_office,Office 201,6,3375,month
+RDG-O202,RDG,private_office,Office 202,10,5250,month
+RDG-HOT,RDG,hot_desk_area,Reading Coworking Floor,15,400,member/month
+RDG-MR-THAMES,RDG,meeting_room,Thames,10,50,hour

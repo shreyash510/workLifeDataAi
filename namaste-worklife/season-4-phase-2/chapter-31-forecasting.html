@@ -28,18 +28,18 @@
 
 <p>A leader asks the AI: <i>"What will Reading's revenue be in March?"</i></p>
 
-<p>Bad answer: <b>"£6,900."</b> One number, no explanation. Where did it come from? Does it assume GreenRoot renews? Does it count Ortho Robotics, who haven't signed anything?</p>
+<p>Bad answer: <b>"$8,625."</b> One number, no explanation. Where did it come from? Does it assume GreenRoot renews? Does it count Ortho Robotics, who haven't signed anything?</p>
 
 <p>Good answer:</p>
 <pre>
    Reading, March 2027 — FORECAST (not actuals)
 
-   Already contracted ........................  £0       (GreenRoot's term ends 31 Dec)
-   + expected renewals .......................  £1,680   (GreenRoot: 60% × £2,800)
-   + expected new business ...................  £1,260   (Ortho Robotics: 30% × £4,200)
+   Already contracted ........................  $0       (GreenRoot's term ends 31 Dec)
+   + expected renewals .......................  $2,100   (GreenRoot: 60% × $3,500)
+   + expected new business ...................  $1,575   (Ortho Robotics: 30% × $5,250)
                                                ───────
-   Expected ..................................  £2,940
-   Range .....................................  £0 – £7,000
+   Expected ..................................  $3,675
+   Range .....................................  $0 – $8,750
    Biggest swing: whether GreenRoot renews.
    (probabilities made up for the lab)
 </pre>
@@ -104,16 +104,16 @@
 <p>From the lab <code>contracts.csv</code>, the office contracts still running after September 2026:</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Contract</th><th>Company</th><th>Office</th><th>£/month</th><th>Ends</th></tr>
-<tr><td>K002</td><td>Pixel Chai</td><td>SOHO Office 101</td><td>2,400</td><td>2027-03-31</td></tr>
-<tr><td>K005</td><td>GreenRoot Foods</td><td>RDG Office 201</td><td>2,700</td><td>2026-12-31</td></tr>
+<tr><th>Contract</th><th>Company</th><th>Office</th><th>$/month</th><th>Ends</th></tr>
+<tr><td>K002</td><td>Pixel Chai</td><td>SOHO Office 101</td><td>3,000</td><td>2027-03-31</td></tr>
+<tr><td>K005</td><td>GreenRoot Foods</td><td>RDG Office 201</td><td>3,375</td><td>2026-12-31</td></tr>
 </table>
 
 <pre>
    RESIDENT REVENUE · SIGNED CONTRACTS ONLY (lab)
 
    Oct 26  Nov 26  Dec 26 │ Jan 27  Feb 27  Mar 27 │ Apr 27  May 27  Jun 27
-   5,100   5,100   5,100  │ 2,400   2,400   2,400  │   0       0       0
+   6,375   6,375   6,375  │ 3,000   3,000   3,000  │   0       0       0
    ███████████████████████│████████████████       │
                           ▲                        ▲
                     GreenRoot ends            Pixel Chai ends
@@ -123,7 +123,7 @@
 
 <pre>
 -- for each future month, sum contracts that are signed and still running
-select m.month, c.site_code, sum(c.monthly_price_gbp) as contracted_gbp
+select m.month, c.site_code, sum(c.monthly_price_usd) as contracted_usd
 from {{ ref('dim_month') }} m
 join {{ ref('int_contracts') }} c          -- contract-grain model (one row per contract)
   on c.start_date &lt;= last_day(m.month)
@@ -142,25 +142,25 @@ group by 1, 2
 <p>Now add the <b>expected</b> value of each renewal: probability × renewal price. The probabilities come from history (what share of similar contracts renewed?) or from Chapter 30's risk score.</p>
 
 <table border="1" cellpadding="10">
-<tr><th>Renewal</th><th>From</th><th>Price</th><th>Renewal probability (made up)</th><th>Expected £/month</th></tr>
-<tr><td>GreenRoot Foods</td><td>Jan 2027</td><td>£2,800 (proposal sent)</td><td>60% (high risk in Chapter 30)</td><td>£1,680</td></tr>
-<tr><td>Pixel Chai</td><td>Apr 2027</td><td>£2,400 (assume same)</td><td>80% (low risk)</td><td>£1,920</td></tr>
+<tr><th>Renewal</th><th>From</th><th>Price</th><th>Renewal probability (made up)</th><th>Expected $/month</th></tr>
+<tr><td>GreenRoot Foods</td><td>Jan 2027</td><td>$3,500 (proposal sent)</td><td>60% (high risk in Chapter 30)</td><td>$2,100</td></tr>
+<tr><td>Pixel Chai</td><td>Apr 2027</td><td>$3,000 (assume same)</td><td>80% (low risk)</td><td>$2,400</td></tr>
 </table>
 
 <pre>
    RESIDENT REVENUE (lab)            Oct–Dec 26   Jan–Mar 27   Apr–Jun 27
    ─────────────────────────────     ──────────   ──────────   ──────────
-   Signed contracts                    5,100        2,400            0
-   + expected renewals                     0        1,680        3,600
+   Signed contracts                    6,375        3,000            0
+   + expected renewals                     0        2,100        4,500
                                        ─────        ─────        ─────
-   Resident projection                 5,100        4,080        3,600   per month
+   Resident projection                 6,375        5,100        4,500   per month
 
    Optional third line, kept SEPARATE:
-   + weighted pipeline (new deals)     1,260*       1,260        1,260
-   * Ortho Robotics, Office 202, £4,200 × 30% (made up), from Nov
+   + weighted pipeline (new deals)     1,575*       1,575        1,575
+   * Ortho Robotics, Office 202, $5,250 × 30% (made up), from Nov
 </pre>
 
-<p>Workings: Jan–Mar = Pixel Chai's signed £2,400 + GreenRoot's expected £1,680. Apr–Jun = nothing signed + £1,680 + £1,920. New business from the pipeline is a <b>different kind of uncertain</b> (a stranger signing vs a current member staying), so keep it on its own line. Mixing them hides risk.</p>
+<p>Workings: Jan–Mar = Pixel Chai's signed $3,000 + GreenRoot's expected $2,100. Apr–Jun = nothing signed + $2,100 + $2,400. New business from the pipeline is a <b>different kind of uncertain</b> (a stranger signing vs a current member staying), so keep it on its own line. Mixing them hides risk.</p>
 
 <p>And this is where Chapter 30 pays off: if the account manager's context pack conversation goes well, GreenRoot's probability goes up, and the forecast moves. Forecasts and renewals are one system.</p>
 
@@ -177,9 +177,9 @@ group by 1, 2
       + expected new coworking MRR              ← from history / seasonality
 </pre>
 
-<p>In the lab, the coworking pool is two Soho hot desks: Nomad Analytics and Kite &amp; Key, <b>£640 a month</b>. Two members is far too few to forecast statistically; in the real business, with thousands of members across 14 sites, the rates become stable and this formula works well. Do it per site and per plan (Unlimited Coworking £320, Flex 10 Days £180), because they behave differently.</p>
+<p>In the lab, the coworking pool is two Soho hot desks: Nomad Analytics and Kite &amp; Key, <b>$800 a month</b>. Two members is far too few to forecast statistically; in the real business, with thousands of members across 14 sites, the rates become stable and this formula works well. Do it per site and per plan (Unlimited Coworking $400, Flex 10 Days $225), because they behave differently.</p>
 
-<p>Watch for <b>transfers</b>: in August, Kite &amp; Key moved from Reading Flex to Soho hot desk. At business level the pool grew by £140 a month; Reading lost £180 and Soho gained £320. Use <code>fct_contract_events</code> (Chapter 29) so moves aren't counted as churn plus new.</p>
+<p>Watch for <b>transfers</b>: in August, Kite &amp; Key moved from Reading Flex to Soho hot desk. At business level the pool grew by $175 a month; Reading lost $225 and Soho gained $400. Use <code>fct_contract_events</code> (Chapter 29) so moves aren't counted as churn plus new.</p>
 
 <hr/>
 
@@ -210,7 +210,7 @@ group by 1, 2
 
 <h3>8. Seasonality: Yearly and Weekly</h3>
 
-<p><b>Yearly seasonality.</b> The lab's Excel budget has a note for Soho August: <i>"August is quiet - holidays"</i>. But look: Soho's budget revenue is £9,000 in both July and August. Why isn't August lower?</p>
+<p><b>Yearly seasonality.</b> The lab's Excel budget has a note for Soho August: <i>"August is quiet - holidays"</i>. But look: Soho's budget revenue is $11,250 in both July and August. Why isn't August lower?</p>
 
 <p>Because <b>contracted revenue doesn't take holidays</b>. Office contracts bill the same every month. Seasonality hits the parts that depend on people turning up or buying:</p>
 <ul>
@@ -258,12 +258,12 @@ group by 1, 2
 
 <table border="1" cellpadding="10">
 <tr><th>Room</th><th>Site</th><th>Hours booked</th><th>Utilisation</th><th>Revenue</th></tr>
-<tr><td>Brick Lane (8 people)</td><td>SOHO</td><td>9</td><td>4.1%</td><td>£405</td></tr>
-<tr><td>Carnaby (4 people)</td><td>SOHO</td><td>4</td><td>1.8%</td><td>£120</td></tr>
-<tr><td>Thames (10 people)</td><td>RDG</td><td>5</td><td>2.3%</td><td>£200</td></tr>
+<tr><td>Brick Lane (8 people)</td><td>SOHO</td><td>9</td><td>4.1%</td><td>$506.25</td></tr>
+<tr><td>Carnaby (4 people)</td><td>SOHO</td><td>4</td><td>1.8%</td><td>$150</td></tr>
+<tr><td>Thames (10 people)</td><td>RDG</td><td>5</td><td>2.3%</td><td>$250</td></tr>
 </table>
 
-<p>Look closer at Brick Lane: all 9 hours are Pixel Chai, and <b>8 of them</b> are one slot: member M001, every Thursday, 10:00–12:00 (3, 10, 17 and 24 September). That's a <b>recurring</b> booking: it's almost "contracted" demand. October 2026 has five Thursdays, so if the habit continues, that's 10 hours and £450 (an assumption, not a booking).</p>
+<p>Look closer at Brick Lane: all 9 hours are Pixel Chai, and <b>8 of them</b> are one slot: member M001, every Thursday, 10:00–12:00 (3, 10, 17 and 24 September). That's a <b>recurring</b> booking: it's almost "contracted" demand. October 2026 has five Thursdays, so if the habit continues, that's 10 hours and $562.50 (an assumption, not a booking).</p>
 
 <pre>
    MEETING ROOM FORECAST = KNOWN + PATTERN + ONE-OFF

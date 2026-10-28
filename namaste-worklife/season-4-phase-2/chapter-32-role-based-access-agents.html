@@ -113,7 +113,7 @@ FILTER USING (TRUE);
 <p>Now the same query gives different answers depending on who runs it:</p>
 
 <pre>
-   SELECT site_code, revenue_gbp FROM ai_safe.fct_site_month_kpis
+   SELECT site_code, revenue_usd FROM ai_safe.fct_site_month_kpis
    WHERE month = '2026-09-01'
 
    run by leadership ............  SOHO  …  |  RDG  …
@@ -150,7 +150,7 @@ FILTER USING (
 
 <table border="1" cellpadding="10">
 <tr><th>Column</th><th>Tag (made up)</th><th>Who can read</th></tr>
-<tr><td><code>fct_gl.amount_gbp</code> on cost accounts</td><td>finance_detail</td><td>Leadership, Finance</td></tr>
+<tr><td><code>fct_gl.amount_usd</code> on cost accounts</td><td>finance_detail</td><td>Leadership, Finance</td></tr>
 <tr><td><code>fct_contract_month.discount_pct</code></td><td>commercial</td><td>Leadership, Finance, Sales, Account managers</td></tr>
 <tr><td><code>dim_company.company_name</code></td><td>(none)</td><td>Everyone with row access</td></tr>
 </table>
@@ -189,7 +189,7 @@ FILTER USING (
 <tr><td><b>Data watchdog</b></td><td>Wrong data is caught before a leader sees it</td><td>After each refresh: check row counts, freshness, dbt test results, sudden jumps (for example Soho MRR −40% overnight) → hold the digest if something looks broken</td><td>The named data owner at Work.Life and the support partner</td></tr>
 </table>
 
-<p>Notice the third one. It doesn't add insight; it protects <b>trust</b>. One broken overnight sync that says "Reading revenue: £0" in a leadership email does more damage than ten clever insights do good.</p>
+<p>Notice the third one. It doesn't add insight; it protects <b>trust</b>. One broken overnight sync that says "Reading revenue: $0" in a leadership email does more damage than ten clever insights do good.</p>
 
 <p>Lab example: on <b>2 October 2026</b> the renewal-prep agent would find GreenRoot Foods (Office 201, ends 31 December, 90 days away) and produce exactly the context pack from Chapter 30. (It could also flag, from the CRM, that Ortho Robotics has toured and wants Office 202 at the same site from November, which is useful context for the Reading site team.)</p>
 
